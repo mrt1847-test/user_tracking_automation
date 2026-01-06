@@ -413,8 +413,64 @@ class NetworkTracker:
         Returns:
             추출된 goodscode (_p_prod 우선, 없으면 x_object_id) 또는 None
         """
+        def find_value_recursive(obj: Any, target_keys: List[str], visited: Optional[set] = None) -> Optional[str]:
+            """
+            재귀적으로 딕셔너리/리스트를 탐색하여 target_keys 중 하나를 찾음
+            순환 참조 방지를 위해 visited set 사용
+            
+            Args:
+                obj: 탐색할 객체 (dict, list, 또는 기타)
+                target_keys: 찾을 키 목록 (우선순위 순서)
+                visited: 방문한 객체 ID 집합 (순환 참조 방지)
+            
+            Returns:
+                찾은 값의 문자열 변환 또는 None
+            """
+            if visited is None:
+                visited = set()
+            
+            # 순환 참조 방지 (dict와 list만 체크)
+            if isinstance(obj, (dict, list)):
+                obj_id = id(obj)
+                if obj_id in visited:
+                    return None
+                visited.add(obj_id)
+            
+            # 딕셔너리인 경우
+            if isinstance(obj, dict):
+                # 우선순위에 따라 키 확인 (_p_prod 우선)
+                for key in target_keys:
+                    if key in obj:
+                        value = obj[key]
+                        if value:
+                            return str(value)
+                
+                # 'parsed' 키가 있으면 우선적으로 탐색 (디코딩된 데이터 구조)
+                if 'parsed' in obj and isinstance(obj['parsed'], (dict, list)):
+                    result = find_value_recursive(obj['parsed'], target_keys, visited)
+                    if result:
+                        return result
+                
+                # 모든 값에 대해 재귀 탐색
+                for value in obj.values():
+                    result = find_value_recursive(value, target_keys, visited)
+                    if result:
+                        return result
+            
+            # 리스트인 경우
+            elif isinstance(obj, list):
+                for item in obj:
+                    result = find_value_recursive(item, target_keys, visited)
+                    if result:
+                        return result
+            
+            # 방문 기록 제거 (재귀 종료 시)
+            if isinstance(obj, (dict, list)):
+                visited.discard(id(obj))
+            
+            return None
+        
         payload = log.get('payload')
-        log_type = log.get('type')
         
         if not isinstance(payload, dict):
             return None
@@ -425,139 +481,29 @@ class NetworkTracker:
             if value:
                 return str(value)
         
-        # decoded_gokey의 params에서 찾기
-        decoded_gokey = payload.get('decoded_gokey', {})
-        params = decoded_gokey.get('params', {})
-        
-        # 2. 로그 타입에 따라 특정 파라미터 확인
-        if log_type == 'Exposure':
-            # Exposure의 경우 expdata 내부의 params-exp 확인
-            if 'expdata' in params:
-                expdata_info = params['expdata']
-                if isinstance(expdata_info, dict) and 'parsed' in expdata_info:
-                    expdata_list = expdata_info['parsed']
-                    if isinstance(expdata_list, list) and len(expdata_list) > 0:
-                        # 첫 번째 아이템의 exargs.params-exp 확인
-                        first_item = expdata_list[0]
-                        if isinstance(first_item, dict) and 'exargs' in first_item:
-                            exargs = first_item['exargs']
-                            if isinstance(exargs, dict) and 'params-exp' in exargs:
-                                params_exp_info = exargs['params-exp']
-                                if isinstance(params_exp_info, dict) and 'parsed' in params_exp_info:
-                                    parsed_params = params_exp_info['parsed']
-                                    # _p_prod 확인 (우선순위 1)
-                                    if '_p_prod' in parsed_params:
-                                        value = parsed_params['_p_prod']
-                                        if value:
-                                            return str(value)
-                                    # utLogMap 내부의 x_object_id 확인 (우선순위 2)
-                                    if 'utLogMap' in parsed_params:
-                                        utlogmap_info = parsed_params['utLogMap']
-                                        if isinstance(utlogmap_info, dict) and 'parsed' in utlogmap_info:
-                                            utlogmap = utlogmap_info['parsed']
-                                            if isinstance(utlogmap, dict) and 'x_object_id' in utlogmap:
-                                                value = utlogmap['x_object_id']
-                                                if value:
-                                                    return str(value)
-            
-            # 직접 params-exp도 확인 (gokey의 직접 파라미터인 경우)
-            if 'params-exp' in params:
-                param_data = params['params-exp']
-                if isinstance(param_data, dict) and 'parsed' in param_data:
-                    parsed = param_data['parsed']
-                    # _p_prod 확인
-                    if '_p_prod' in parsed:
-                        value = parsed['_p_prod']
-                        if value:
-                            return str(value)
-                    # utLogMap 내부의 x_object_id 확인
-                    if 'utLogMap' in parsed:
-                        utlogmap_info = parsed['utLogMap']
-                        if isinstance(utlogmap_info, dict) and 'parsed' in utlogmap_info:
-                            utlogmap = utlogmap_info['parsed']
-                            if isinstance(utlogmap, dict) and 'x_object_id' in utlogmap:
-                                value = utlogmap['x_object_id']
-                                if value:
-                                    return str(value)
-                            
-        elif log_type == 'Click':
-            # Click의 경우 params-clk의 _p_prod 또는 utLogMap.x_object_id 확인
-            if 'params-clk' in params:
-                param_data = params['params-clk']
-                if isinstance(param_data, dict) and 'parsed' in param_data:
-                    parsed = param_data['parsed']
-                    # _p_prod 확인 (우선순위 1)
-                    if '_p_prod' in parsed:
-                        value = parsed['_p_prod']
-                        if value:
-                            return str(value)
-                    # utLogMap 내부의 x_object_id 확인 (우선순위 2)
-                    if 'utLogMap' in parsed:
-                        utlogmap_info = parsed['utLogMap']
-                        if isinstance(utlogmap_info, dict) and 'parsed' in utlogmap_info:
-                            utlogmap = utlogmap_info['parsed']
-                            if isinstance(utlogmap, dict) and 'x_object_id' in utlogmap:
-                                value = utlogmap['x_object_id']
-                                if value:
-                                    return str(value)
-        
-        # 3. params-exp, params-clk 모두 확인 (타입이 Unknown인 경우 대비)
-        for param_key in ['params-exp', 'params-clk']:
-            if param_key in params:
-                param_data = params[param_key]
-                if isinstance(param_data, dict) and 'parsed' in param_data:
-                    parsed = param_data['parsed']
-                    # _p_prod 확인 (우선순위 1)
-                    if '_p_prod' in parsed:
-                        value = parsed['_p_prod']
-                        if value:
-                            return str(value)
-                    # utLogMap 내부의 x_object_id 확인 (우선순위 2)
-                    if 'utLogMap' in parsed:
-                        utlogmap_info = parsed['utLogMap']
-                        if isinstance(utlogmap_info, dict) and 'parsed' in utlogmap_info:
-                            utlogmap = utlogmap_info['parsed']
-                            if isinstance(utlogmap, dict) and 'x_object_id' in utlogmap:
-                                value = utlogmap['x_object_id']
-                                if value:
-                                    return str(value)
-        
-        # 4. expdata 내부 확인 (타입이 Unknown인 경우)
-        if 'expdata' in params:
-            expdata_info = params['expdata']
-            if isinstance(expdata_info, dict) and 'parsed' in expdata_info:
-                expdata_list = expdata_info['parsed']
-                if isinstance(expdata_list, list):
-                    for item in expdata_list:
-                        if isinstance(item, dict) and 'exargs' in item:
-                            exargs = item['exargs']
-                            if isinstance(exargs, dict) and 'params-exp' in exargs:
-                                params_exp_info = exargs['params-exp']
-                                if isinstance(params_exp_info, dict) and 'parsed' in params_exp_info:
-                                    parsed_params = params_exp_info['parsed']
-                                    # _p_prod 확인
-                                    if '_p_prod' in parsed_params:
-                                        value = parsed_params['_p_prod']
-                                        if value:
-                                            return str(value)
-                                    # utLogMap 내부의 x_object_id 확인
-                                    if 'utLogMap' in parsed_params:
-                                        utlogmap_info = parsed_params['utLogMap']
-                                        if isinstance(utlogmap_info, dict) and 'parsed' in utlogmap_info:
-                                            utlogmap = utlogmap_info['parsed']
-                                            if isinstance(utlogmap, dict) and 'x_object_id' in utlogmap:
-                                                value = utlogmap['x_object_id']
-                                                if value:
-                                                    return str(value)
-        
-        # 5. payload에서 직접 확인 (다양한 키 이름 시도)
-        for key in ['goodscode', 'goodsCode', 'goods_code', 'goodscd', 'goodsCd', 'x_object_id']:
+        # 2. payload에서 직접 확인 (다양한 키 이름 시도)
+        for key in ['goodscode', 'goodsCode', 'goods_code', 'goodscd', 'goodsCd']:
             if key in payload:
                 value = payload[key]
                 if value:
                     return str(value)
         
-        # 6. decoded_gokey의 params에서 직접 확인
+        # 3. decoded_gokey 내부를 재귀적으로 탐색
+        # _p_prod를 우선적으로 찾고, 없으면 x_object_id 찾기
+        decoded_gokey = payload.get('decoded_gokey', {})
+        if decoded_gokey:
+            # _p_prod 우선 탐색
+            result = find_value_recursive(decoded_gokey, ['_p_prod'])
+            if result:
+                return result
+            
+            # x_object_id 탐색
+            result = find_value_recursive(decoded_gokey, ['x_object_id'])
+            if result:
+                return result
+        
+        # 4. decoded_gokey의 params에서 직접 확인 (다양한 키 이름 시도)
+        params = decoded_gokey.get('params', {})
         for key in ['goodscode', 'goodsCode', 'goods_code', 'goodscd', 'goodsCd']:
             if key in params:
                 value = params[key]
