@@ -4,6 +4,8 @@ from pom.SrpPage import Srp
 from pom.Etc import Etc
 import json
 from utils.NetworkTracker import NetworkTracker
+from utils.validation_helpers import validate_tracking_logs, EVENT_TYPE_METHODS
+from config.validation_rules import SRP_VALIDATION_RULES
 import pytest
 import io
 import contextlib
@@ -47,52 +49,50 @@ def test_01_srp_1(page, keyword, case_id, request):
     logger.info(f"수집된 전체 로그 개수: {len(tracker.get_logs())}")
     logger.info(f"검색할 goodscode: {goodscode}")
     
-    # goodscode 기준으로 PV 로그 확인
-    pv_logs = tracker.get_pv_logs_by_goodscode(goodscode)
-    logger.info(f"goodscode={goodscode}의 PV 로그 개수: {len(pv_logs)}")
-    if len(pv_logs) > 0:
-        logger.info(f"PV 로그 예시 URL: {pv_logs[0].get('url')}")
-        # 필요시 payload 정합성 검증
-        # tracker.validate_payload(pv_logs[0], {"pageId": "expected_value"})
+    # 프론트에서 데이터 읽기 (사용자가 직접 구현)
+    # 예시: frontend_data = {"price": "50000", "keyword": keyword, "goodscode": goodscode}
+    frontend_data = None  # 사용자가 직접 구현한 함수로 프론트 데이터 추출
     
-    # goodscode 기준으로 Exposure 로그 확인
-    exposure_logs = tracker.get_exposure_logs_by_goodscode(goodscode)
-    logger.info(f"goodscode={goodscode}의 Exposure 로그 개수: {len(exposure_logs)}")
-    if len(exposure_logs) > 0:
-        logger.info(f"Exposure 로그 예시 URL: {exposure_logs[0].get('url')}")
+    # 정합성 검증 (간결하게)
+    # module_config는 None이면 자동으로 JSON 파일에서 로드됨
+    success, errors = validate_tracking_logs(
+        tracker=tracker,
+        goodscode=goodscode,
+        module_title="먼저 둘러보세요",
+        rules=SRP_VALIDATION_RULES,
+        frontend_data=frontend_data
+    )
     
-    # goodscode 기준으로 Click 로그 확인
-    click_logs = tracker.get_click_logs_by_goodscode(goodscode)
-    logger.info(f"goodscode={goodscode}의 Click 로그 개수: {len(click_logs)}")
-    if len(click_logs) > 0:
-        logger.info(f"Click 로그 예시 URL: {click_logs[0].get('url')}")
+    assert success, f"트래킹 데이터 정합성 검증 실패:\n" + "\n".join(errors)
     
-    # 최소한 Exposure 또는 Click 로그는 발생해야 함 (해당 상품 관련 로그)
-    assert len(exposure_logs) > 0 or len(click_logs) > 0, \
-        f"goodscode={goodscode}에 대한 Exposure 또는 Click 로그가 발생해야 합니다. keyword: {keyword}"
-    
-    # 필터링된 트래킹 로그를 JSON 파일로 저장 (디버깅용 임시)
+    # 디버깅용: 필터링된 트래킹 로그를 JSON 파일로 저장 (유지)
     try:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         
-        # Exposure 로그 저장
-        if len(exposure_logs) > 0:
-            exposure_filepath = Path(f'json/tracking_exposure_{goodscode}_{timestamp}.json')
-            exposure_filepath.parent.mkdir(parents=True, exist_ok=True)
-            with open(exposure_filepath, 'w', encoding='utf-8') as f:
-                json.dump(exposure_logs, f, ensure_ascii=False, indent=2, default=str)
-            logger.info(f"Exposure 로그 저장 완료: {exposure_filepath.resolve()}")
+        # 각 이벤트 타입별 로그 저장
+        for event_type, method_name in [
+            ('pv', 'get_pv_logs_by_goodscode'),
+            ('module_exposure', 'get_module_exposure_logs_by_goodscode'),
+            ('product_exposure', 'get_product_exposure_logs_by_goodscode'),
+            ('product_click', 'get_product_click_logs_by_goodscode'),
+            ('product_a2c_click', 'get_product_a2c_click_logs_by_goodscode'),
+        ]:
+            get_logs_method = getattr(tracker, method_name)
+            logs = get_logs_method(goodscode)
+            
+            if len(logs) > 0:
+                filepath = Path(f'json/tracking_{event_type}_{goodscode}_{timestamp}.json')
+                filepath.parent.mkdir(parents=True, exist_ok=True)
+                with open(filepath, 'w', encoding='utf-8') as f:
+                    json.dump(logs, f, ensure_ascii=False, indent=2, default=str)
+                logger.info(f"{event_type} 로그 저장 완료: {filepath.resolve()}")
         
-        # Click 로그 저장
-        if len(click_logs) > 0:
-            click_filepath = Path(f'json/tracking_click_{goodscode}_{timestamp}.json')
-            click_filepath.parent.mkdir(parents=True, exist_ok=True)
-            with open(click_filepath, 'w', encoding='utf-8') as f:
-                json.dump(click_logs, f, ensure_ascii=False, indent=2, default=str)
-            logger.info(f"Click 로그 저장 완료: {click_filepath.resolve()}")
+        # 전체 로그 저장
+        all_logs = []
+        for method_name in EVENT_TYPE_METHODS.values():
+            get_logs_method = getattr(tracker, method_name)
+            all_logs.extend(get_logs_method(goodscode))
         
-        # 전체 로그 저장 (Exposure + Click)
-        all_logs = exposure_logs + click_logs
         if len(all_logs) > 0:
             all_filepath = Path(f'json/tracking_all_{goodscode}_{timestamp}.json')
             all_filepath.parent.mkdir(parents=True, exist_ok=True)

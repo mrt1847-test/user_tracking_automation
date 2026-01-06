@@ -1,0 +1,13 @@
+{
+  "먼저 둘러보세요": {
+    "area_code": "AREA_001",
+    "module_id": "MODULE_001",
+    "description": "먼저 둘러보세요 모듈"
+  },
+  "추천 상품": {
+    "area_code": "AREA_002",
+    "module_id": "MODULE_002",
+    "description": "추천 상품 모듈"
+  }
+}
+

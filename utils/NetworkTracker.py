@@ -29,26 +29,157 @@ class NetworkTracker:
         # 타겟 도메인 패턴
         self.domain_pattern = re.compile(r'aplus\.gmarket\.co(\.kr|m)')
     
-    def _classify_request_type(self, url: str) -> str:
+    def _classify_request_type(self, url: str, payload: Optional[Dict[str, Any]] = None) -> str:
         """
-        URL 패턴에 따라 요청 타입을 분류
+        URL 패턴과 payload를 분석하여 이벤트 타입을 세분화하여 분류
         
         Args:
             url: 요청 URL
+            payload: 파싱된 payload (선택사항)
             
         Returns:
-            'PV', 'Exposure', 'Click', 또는 'Unknown'
+            'PV', 'Module Exposure', 'Product Exposure', 'Product Click', 'Product A2C Click', 또는 'Unknown'
         """
         url_lower = url.lower()
         
+        # PV: gif 요청
         if 'gif' in url_lower:
             return 'PV'
+        
+        # Exposure 타입 구분
         elif 'exposure' in url_lower:
-            return 'Exposure'
+            # payload를 분석하여 Module Exposure vs Product Exposure 구분
+            if payload and isinstance(payload, dict):
+                decoded_gokey = payload.get('decoded_gokey', {})
+                params = decoded_gokey.get('params', {})
+                
+                # expdata가 있고 모듈 정보가 있으면 Module Exposure
+                if 'expdata' in params:
+                    return 'Module Exposure'
+                # _p_prod가 있으면 Product Exposure
+                elif self._has_product_info(params):
+                    return 'Product Exposure'
+            
+            return 'Exposure'  # 기본값
+        
+        # Click 타입 구분
         elif 'click' in url_lower:
-            return 'Click'
-        else:
-            return 'Unknown'
+            if payload and isinstance(payload, dict):
+                decoded_gokey = payload.get('decoded_gokey', {})
+                params = decoded_gokey.get('params', {})
+                
+                # A2C 관련 파라미터가 있으면 Product A2C Click
+                if self._is_a2c_click(params):
+                    return 'Product A2C Click'
+                # _p_prod가 있으면 Product Click
+                elif self._has_product_info(params):
+                    return 'Product Click'
+            
+            return 'Click'  # 기본값
+        
+        return 'Unknown'
+    
+    def _has_product_info(self, params: Dict[str, Any]) -> bool:
+        """
+        params에 상품 정보(_p_prod)가 있는지 확인
+        
+        Args:
+            params: decoded_gokey의 params 딕셔너리
+        
+        Returns:
+            _p_prod가 있으면 True, 없으면 False
+        """
+        def find_value_recursive(obj: Any, target_key: str, visited: Optional[set] = None) -> bool:
+            """재귀적으로 _p_prod 찾기"""
+            if visited is None:
+                visited = set()
+            
+            if isinstance(obj, (dict, list)):
+                obj_id = id(obj)
+                if obj_id in visited:
+                    return False
+                visited.add(obj_id)
+            
+            if isinstance(obj, dict):
+                if target_key in obj:
+                    return True
+                
+                if 'parsed' in obj and isinstance(obj['parsed'], (dict, list)):
+                    if find_value_recursive(obj['parsed'], target_key, visited):
+                        return True
+                
+                for value in obj.values():
+                    if find_value_recursive(value, target_key, visited):
+                        return True
+            
+            elif isinstance(obj, list):
+                for item in obj:
+                    if find_value_recursive(item, target_key, visited):
+                        return True
+            
+            if isinstance(obj, (dict, list)):
+                visited.discard(id(obj))
+            
+            return False
+        
+        return find_value_recursive(params, '_p_prod')
+    
+    def _is_a2c_click(self, params: Dict[str, Any]) -> bool:
+        """
+        A2C 클릭인지 확인 (구매 버튼 관련 파라미터 확인)
+        
+        Args:
+            params: decoded_gokey의 params 딕셔너리
+        
+        Returns:
+            A2C 클릭이면 True, 아니면 False
+        """
+        # A2C 관련 키워드 확인
+        a2c_keywords = ['add_to_cart', 'buy_now', 'a2c', 'purchase', 'addtocart']
+        
+        def check_in_value(obj: Any, keywords: List[str], visited: Optional[set] = None) -> bool:
+            """재귀적으로 A2C 키워드 찾기"""
+            if visited is None:
+                visited = set()
+            
+            if isinstance(obj, (dict, list)):
+                obj_id = id(obj)
+                if obj_id in visited:
+                    return False
+                visited.add(obj_id)
+            
+            if isinstance(obj, dict):
+                # 키 이름 확인
+                for key in obj.keys():
+                    key_lower = str(key).lower()
+                    if any(keyword in key_lower for keyword in keywords):
+                        return True
+                
+                # 값 확인
+                for value in obj.values():
+                    if isinstance(value, str):
+                        value_lower = value.lower()
+                        if any(keyword in value_lower for keyword in keywords):
+                            return True
+                    elif check_in_value(value, keywords, visited):
+                        return True
+            
+            elif isinstance(obj, list):
+                for item in obj:
+                    if check_in_value(item, keywords, visited):
+                        return True
+            
+            elif isinstance(obj, str):
+                obj_lower = obj.lower()
+                if any(keyword in obj_lower for keyword in keywords):
+                    return True
+            
+            if isinstance(obj, (dict, list)):
+                visited.discard(id(obj))
+            
+            return False
+        
+        return check_in_value(params, a2c_keywords)
     
     def _decode_utlogmap(self, utlogmap_str: str) -> Optional[Dict[str, Any]]:
         """
@@ -309,8 +440,8 @@ class NetworkTracker:
             post_data = request.post_data()
             parsed_payload = self._parse_payload(post_data)
             
-            # 요청 타입 분류
-            request_type = self._classify_request_type(url)
+            # 요청 타입 분류 (payload 포함하여 세분화)
+            request_type = self._classify_request_type(url, parsed_payload)
             
             # 로그 저장
             log_entry = {
@@ -573,6 +704,54 @@ class NetworkTracker:
         """
         return self.get_logs_by_goodscode(goodscode, 'Click')
     
+    def get_module_exposure_logs_by_goodscode(self, goodscode: str) -> List[Dict[str, Any]]:
+        """
+        goodscode 기준으로 Module Exposure 로그만 반환
+        
+        Args:
+            goodscode: 상품 번호
+        
+        Returns:
+            해당 goodscode의 Module Exposure 로그 리스트
+        """
+        return self.get_logs_by_goodscode(goodscode, 'Module Exposure')
+    
+    def get_product_exposure_logs_by_goodscode(self, goodscode: str) -> List[Dict[str, Any]]:
+        """
+        goodscode 기준으로 Product Exposure 로그만 반환
+        
+        Args:
+            goodscode: 상품 번호
+        
+        Returns:
+            해당 goodscode의 Product Exposure 로그 리스트
+        """
+        return self.get_logs_by_goodscode(goodscode, 'Product Exposure')
+    
+    def get_product_click_logs_by_goodscode(self, goodscode: str) -> List[Dict[str, Any]]:
+        """
+        goodscode 기준으로 Product Click 로그만 반환
+        
+        Args:
+            goodscode: 상품 번호
+        
+        Returns:
+            해당 goodscode의 Product Click 로그 리스트
+        """
+        return self.get_logs_by_goodscode(goodscode, 'Product Click')
+    
+    def get_product_a2c_click_logs_by_goodscode(self, goodscode: str) -> List[Dict[str, Any]]:
+        """
+        goodscode 기준으로 Product A2C Click 로그만 반환
+        
+        Args:
+            goodscode: 상품 번호
+        
+        Returns:
+            해당 goodscode의 Product A2C Click 로그 리스트
+        """
+        return self.get_logs_by_goodscode(goodscode, 'Product A2C Click')
+    
     def get_decoded_gokey_params(self, log: Dict[str, Any], param_key: Optional[str] = None) -> Dict[str, Any]:
         """
         로그에서 디코딩된 gokey 파라미터 조회
@@ -599,14 +778,14 @@ class NetworkTracker:
     
     def validate_payload(self, log: Dict[str, Any], expected_data: Dict[str, Any]) -> bool:
         """
-        로그의 payload 정합성 검증 (디코딩된 값 사용)
+        로그의 payload 정합성 검증 (디코딩된 값 사용, 개선된 버전)
         
         Args:
             log: 검증할 로그 딕셔너리
             expected_data: 기대하는 데이터 (키-값 쌍)
-                          예: {'pageId': '123', 'gokey.params.keyword': 'test'}
-                          gokey 내부 파라미터는 'gokey.params.키' 형식으로 접근
-                          params-clk, params-exp 내부는 'gokey.params.params-clk.parsed.키' 형식
+                          - 경로 방식: 'gokey.params.params-exp.parsed._p_prod' (기존 방식 지원)
+                          - 재귀 탐색: '_p_prod' (자동으로 찾음, 간단한 키 이름만 제공)
+                          - 일반 키: 'pageId' (payload 최상위 키)
         
         Returns:
             검증 성공 시 True, 실패 시 AssertionError 발생
@@ -614,6 +793,52 @@ class NetworkTracker:
         Raises:
             AssertionError: 검증 실패 시
         """
+        def find_value_by_path(obj: Dict[str, Any], path: str) -> Optional[Any]:
+            """경로를 따라 값을 찾기"""
+            keys = path.split('.')
+            current = obj
+            for key in keys:
+                if current is None or not isinstance(current, dict):
+                    return None
+                current = current.get(key)
+            return current
+        
+        def find_value_recursive(obj: Any, target_key: str, visited: Optional[set] = None) -> Optional[Any]:
+            """재귀적으로 키를 찾아서 값 반환"""
+            if visited is None:
+                visited = set()
+            
+            if isinstance(obj, (dict, list)):
+                obj_id = id(obj)
+                if obj_id in visited:
+                    return None
+                visited.add(obj_id)
+            
+            if isinstance(obj, dict):
+                if target_key in obj:
+                    return obj[target_key]
+                
+                if 'parsed' in obj and isinstance(obj['parsed'], (dict, list)):
+                    result = find_value_recursive(obj['parsed'], target_key, visited)
+                    if result is not None:
+                        return result
+                
+                for value in obj.values():
+                    result = find_value_recursive(value, target_key, visited)
+                    if result is not None:
+                        return result
+            
+            elif isinstance(obj, list):
+                for item in obj:
+                    result = find_value_recursive(item, target_key, visited)
+                    if result is not None:
+                        return result
+            
+            if isinstance(obj, (dict, list)):
+                visited.discard(id(obj))
+            
+            return None
+        
         payload = log.get('payload')
         
         if payload is None:
@@ -636,41 +861,33 @@ class NetworkTracker:
         # 기대 데이터 검증
         errors = []
         for key, expected_value in expected_data.items():
-            # gokey 내부 파라미터 접근 (예: 'gokey.params.keyword' 또는 'gokey.params.params-clk.parsed.utLogMap')
+            actual_value = None
+            
+            # gokey 내부 파라미터 접근 (경로 방식)
             if key.startswith('gokey.params.'):
-                param_path = key.replace('gokey.params.', '').split('.')
-                actual_value = payload.get('decoded_gokey', {}).get('params', {})
-                
-                # 중첩된 키 경로 탐색
-                for path_key in param_path:
-                    if actual_value is None:
-                        break
-                    elif isinstance(actual_value, dict):
-                        # 'parsed' 키가 있으면 parsed 내부를 확인 (params-clk, params-exp 같은 경우)
-                        if path_key == 'parsed' and 'parsed' in actual_value:
-                            actual_value = actual_value['parsed']
-                        else:
-                            actual_value = actual_value.get(path_key)
-                    else:
-                        actual_value = None
-                        break
-                
-                if actual_value is None:
-                    errors.append(f"키 경로 '{key}'에 해당하는 값이 없습니다.")
-                elif actual_value != expected_value:
-                    errors.append(
-                        f"키 경로 '{key}'의 값이 일치하지 않습니다. "
-                        f"기대값: {expected_value}, 실제값: {actual_value}"
-                    )
+                param_path = key.replace('gokey.params.', '')
+                actual_value = find_value_by_path(
+                    payload.get('decoded_gokey', {}).get('params', {}),
+                    param_path
+                )
+            
+            # 재귀 탐색 방식 (간단한 키 이름만 제공)
+            elif '.' not in key and key not in payload:
+                # payload 전체에서 재귀적으로 찾기
+                actual_value = find_value_recursive(payload, key)
+            
+            # 일반 payload 키 검증
             else:
-                # 일반 payload 키 검증
-                if key not in payload:
-                    errors.append(f"키 '{key}'가 payload에 없습니다.")
-                elif payload[key] != expected_value:
-                    errors.append(
-                        f"키 '{key}'의 값이 일치하지 않습니다. "
-                        f"기대값: {expected_value}, 실제값: {payload[key]}"
-                    )
+                actual_value = payload.get(key)
+            
+            # 값 검증
+            if actual_value is None:
+                errors.append(f"키 '{key}'에 해당하는 값이 없습니다.")
+            elif actual_value != expected_value:
+                errors.append(
+                    f"키 '{key}'의 값이 일치하지 않습니다. "
+                    f"기대값: {expected_value}, 실제값: {actual_value}"
+                )
         
         if errors:
             error_msg = "\n".join(errors)
