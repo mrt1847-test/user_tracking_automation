@@ -1,10 +1,41 @@
 {
   "먼저 둘러보세요": {
-    "area_code": "AREA_001",
-    "module_id": "MODULE_001",
-    "description": "먼저 둘러보세요 모듈"
+    "gmkt_area_code": "200003315",
+    "cguid": "11412244806446005562000000",
+    "spm-url": "gmktpc.home.searchtop.dsearchbox.1fbf486anQlGXO",
+    "spm-pre": "",
+    "spm-cnt": "gmktpc.searchlist.0.0.5b772ebahe2AN1",
+    "spm": "gmktpc.searchlist.prime.d0_0",
+    "channel_code": "200003514",
+    "is_ad": "Y",
+    "_p_prod": "4448231882",
+    "_p_sku": "0",
+    "_p_catalog": "",
+    "_p_group": "",
+    "utLogMap": {
+      "scene": "search",
+      "sub_scene": "main_srp",
+      "x_object_id": "4448231882",
+      "x_object_type": "item",
+      "x_sku_id": "0",
+      "pageIndex": "0",
+      "pagePos": "0",
+      "pageSize": "5",
+      "listno": "0",
+      "sort": "popularity",
+      "searchScenario": "keyword",
+      "query": "물티슈",
+      "pvid": "b8b22bd8facf42a58278c9778fd4b5dd",
+      "pvid_sys": "gmarket server",
+      "search_session_id": "ab0ff96a-f12e-4d5a-99f7-1d7ab21248c2",
+      "origin_price": "24900",
+      "promotion_price": "24900",
+      "coupon_price": "21170",
+      "ab_buckets": "#108^3#B",
+      "trafficType": "ad"
+    }
   },
-  "추천 상품": {
+  "일반 상품": {
     "area_code": "AREA_002",
     "module_id": "MODULE_002",
     "description": "추천 상품 모듈"

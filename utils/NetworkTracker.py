@@ -320,6 +320,42 @@ class NetworkTracker:
         
         return decoded_payload
     
+    def _parse_query_string(self, query_string: str) -> Dict[str, Any]:
+        """
+        쿼리 문자열을 파싱하고 디코딩
+        
+        Args:
+            query_string: URL 인코딩된 쿼리 문자열
+            
+        Returns:
+            파싱된 딕셔너리
+        """
+        parsed_params = {}
+        
+        if not query_string:
+            return parsed_params
+        
+        try:
+            # &로 분리하여 각 파라미터 파싱
+            for item in query_string.split('&'):
+                if '=' in item:
+                    key, value = item.split('=', 1)
+                    decoded_key = unquote(key)
+                    decoded_value = unquote(value)
+                    
+                    # gokey가 있으면 디코딩
+                    if decoded_key == 'gokey' and decoded_value:
+                        decoded_gokey_info = self._decode_gokey(decoded_value)
+                        parsed_params[decoded_key] = decoded_value
+                        parsed_params['decoded_gokey'] = decoded_gokey_info
+                    else:
+                        parsed_params[decoded_key] = decoded_value
+        except Exception as e:
+            logger.debug(f'쿼리 문자열 파싱 중 오류: {e}')
+            parsed_params['_raw'] = query_string
+        
+        return parsed_params
+    
     def _parse_payload(self, post_data: Optional[str]) -> Any:
         """
         POST Body 데이터를 파싱
@@ -341,7 +377,15 @@ class NetworkTracker:
                 return self._decode_payload(parsed)
             return parsed
         except (json.JSONDecodeError, TypeError):
-            # JSON이 아니면 raw string 반환
+            # JSON이 아니면 쿼리 문자열 파싱 시도
+            try:
+                # 쿼리 문자열 형태인지 확인 (& 또는 = 포함)
+                if '&' in post_data or '=' in post_data:
+                    return self._parse_query_string(post_data)
+            except Exception as e:
+                logger.debug(f'쿼리 문자열 파싱 실패: {e}')
+            
+            # 모든 파싱이 실패하면 raw string 반환
             return post_data
     
     def _on_request(self, request: Request):
