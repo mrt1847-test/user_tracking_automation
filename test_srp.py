@@ -57,9 +57,12 @@ def test_01_srp_1(page):
     module_config = load_module_config()
     module_title = "먼저 둘러보세요"
     module_spm = None
+    gmkt_area_code = None
     if module_title in module_config:
         module_spm = module_config[module_title].get('spm')
+        gmkt_area_code = module_config[module_title].get('gmkt_area_code')
         logger.info(f"모듈 '{module_title}'의 SPM 값: {module_spm}")
+        logger.info(f"모듈 '{module_title}'의 gmkt_area_code 값: {gmkt_area_code}")
     
     # 정합성 검증 (간결하게)
     # module_config는 None이면 자동으로 JSON 파일에서 로드됨
@@ -82,7 +85,7 @@ def test_01_srp_1(page):
         event_configs = [
             ('pv', 'get_pv_logs', None),  # goodscode 없이 전체 PV 로그 (PDP PV 제외)
             ('pdp_pv', 'get_pdp_pv_logs', None),  # goodscode 없이 전체 PDP PV 로그
-            ('module_exposure', 'get_logs', 'Module Exposure'),  # goodscode 없이 전체 Module Exposure 로그
+            ('module_exposure', 'get_module_exposure_logs_by_spm', None),  # spm으로 필터링된 Module Exposure 로그
             ('product_exposure', 'get_product_exposure_logs_by_goodscode', None),
             ('product_click', 'get_product_click_logs_by_goodscode', None),
             ('product_a2c_click', 'get_product_a2c_click_logs_by_goodscode', None),
@@ -90,11 +93,23 @@ def test_01_srp_1(page):
         
         for event_type, method_name, method_arg in event_configs:
             get_logs_method = getattr(tracker, method_name)
-            # PV, PDP PV, Module Exposure는 goodscode 없이 호출, 나머지는 goodscode로 필터링
-            if method_arg:
-                logs = get_logs_method(method_arg)  # Module Exposure
-            elif method_name in ['get_pv_logs', 'get_pdp_pv_logs']:
+            # PV, PDP PV는 goodscode 없이 호출
+            if method_name in ['get_pv_logs', 'get_pdp_pv_logs']:
                 logs = get_logs_method()  # PV, PDP PV
+            elif method_name == 'get_module_exposure_logs_by_spm':
+                # Module Exposure는 spm으로 필터링
+                if module_spm:
+                    logs = get_logs_method(module_spm)
+                else:
+                    # spm이 없으면 전체 Module Exposure 로그 사용
+                    logs = tracker.get_logs('Module Exposure')
+                    logger.warning(f"모듈 '{module_title}'의 SPM 값이 없어 전체 Module Exposure 로그를 사용합니다.")
+            elif method_name in ['get_product_exposure_logs_by_goodscode', 'get_product_click_logs_by_goodscode']:
+                # Product Exposure/Click은 gmkt_area_code로 추가 필터링
+                if gmkt_area_code:
+                    logs = get_logs_method(goodscode, gmkt_area_code)
+                else:
+                    logs = get_logs_method(goodscode)
             else:
                 logs = get_logs_method(goodscode)  # 나머지는 goodscode로 필터링
             
@@ -123,8 +138,13 @@ def test_01_srp_1(page):
         
         # PDP PV, Product 관련 이벤트는 goodscode로 필터링
         all_logs.extend(tracker.get_pdp_pv_logs_by_goodscode(goodscode))
-        all_logs.extend(tracker.get_product_exposure_logs_by_goodscode(goodscode))
-        all_logs.extend(tracker.get_product_click_logs_by_goodscode(goodscode))
+        # Product Exposure/Click은 gmkt_area_code로 추가 필터링
+        if gmkt_area_code:
+            all_logs.extend(tracker.get_product_exposure_logs_by_goodscode(goodscode, gmkt_area_code))
+            all_logs.extend(tracker.get_product_click_logs_by_goodscode(goodscode, gmkt_area_code))
+        else:
+            all_logs.extend(tracker.get_product_exposure_logs_by_goodscode(goodscode))
+            all_logs.extend(tracker.get_product_click_logs_by_goodscode(goodscode))
         all_logs.extend(tracker.get_product_a2c_click_logs_by_goodscode(goodscode))
         
         if len(all_logs) > 0:

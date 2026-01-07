@@ -46,9 +46,21 @@ class NetworkTracker:
         
         # PV: gif 요청
         if 'gif' in url_lower:
-            # payload에서 _p_prod를 확인하여 PDP PV인지 판단
+            # payload에서 PDP PV인지 판단
             if payload and isinstance(payload, dict):
-                # decoded_gokey 내부에서 _p_prod 직접 확인
+                # 1. _p_ispdp 필드 확인 (1이면 PDP PV)
+                if '_p_ispdp' in payload:
+                    ispdp = payload.get('_p_ispdp')
+                    if str(ispdp) == '1':
+                        return 'PDP PV'
+                
+                # 2. _p_typ 필드 확인 (pdp이면 PDP PV)
+                if '_p_typ' in payload:
+                    ptyp = payload.get('_p_typ', '').lower()
+                    if ptyp == 'pdp':
+                        return 'PDP PV'
+                
+                # 3. decoded_gokey 내부에서 _p_prod 직접 확인
                 decoded_gokey = payload.get('decoded_gokey', {})
                 if decoded_gokey:
                     params = decoded_gokey.get('params', {})
@@ -83,6 +95,10 @@ class NetworkTracker:
                     
                     if find_p_prod_recursive(decoded_gokey):
                         return 'PDP PV'
+                
+                # 4. payload에서 직접 _p_prod 확인 (일부 PV 로그는 payload에 직접 포함)
+                if '_p_prod' in payload and payload['_p_prod']:
+                    return 'PDP PV'
             return 'PV'
         
         # Product A2C Click: ATC 관련 URL 패턴
@@ -665,6 +681,55 @@ class NetworkTracker:
         
         return None
     
+    def _extract_gmkt_area_code_from_log(self, log: Dict[str, Any]) -> Optional[str]:
+        """
+        로그에서 gmkt_area_code 추출
+        
+        Args:
+            log: 로그 딕셔너리
+        
+        Returns:
+            추출된 gmkt_area_code 또는 None
+        """
+        payload = log.get('payload', {})
+        decoded_gokey = payload.get('decoded_gokey', {})
+        params = decoded_gokey.get('params', {})
+        
+        # Product Exposure: expdata.parsed 배열의 각 항목에서 확인
+        if 'expdata' in params:
+            expdata = params['expdata']
+            if isinstance(expdata, dict) and 'parsed' in expdata:
+                parsed_list = expdata['parsed']
+                if isinstance(parsed_list, list) and len(parsed_list) > 0:
+                    # 첫 번째 항목의 params-exp.parsed.gmkt_area_code 확인
+                    first_item = parsed_list[0]
+                    if isinstance(first_item, dict) and 'exargs' in first_item:
+                        exargs = first_item['exargs']
+                        if isinstance(exargs, dict) and 'params-exp' in exargs:
+                            params_exp = exargs['params-exp']
+                            if isinstance(params_exp, dict) and 'parsed' in params_exp:
+                                parsed = params_exp['parsed']
+                                if isinstance(parsed, dict) and 'gmkt_area_code' in parsed:
+                                    return str(parsed['gmkt_area_code'])
+        
+        # Product Click: params-clk.parsed.gmkt_area_code 확인
+        if 'params-clk' in params:
+            params_clk = params['params-clk']
+            if isinstance(params_clk, dict) and 'parsed' in params_clk:
+                parsed = params_clk['parsed']
+                if isinstance(parsed, dict) and 'gmkt_area_code' in parsed:
+                    return str(parsed['gmkt_area_code'])
+        
+        # Module Exposure: params-exp.parsed.gmkt_area_code 확인
+        if 'params-exp' in params:
+            params_exp = params['params-exp']
+            if isinstance(params_exp, dict) and 'parsed' in params_exp:
+                parsed = params_exp['parsed']
+                if isinstance(parsed, dict) and 'gmkt_area_code' in parsed:
+                    return str(parsed['gmkt_area_code'])
+        
+        return None
+    
     def get_logs_by_goodscode(self, goodscode: str, request_type: Optional[str] = None) -> List[Dict[str, Any]]:
         """
         goodscode 기준으로 로그 필터링
@@ -813,29 +878,55 @@ class NetworkTracker:
         
         return filtered_logs
     
-    def get_product_exposure_logs_by_goodscode(self, goodscode: str) -> List[Dict[str, Any]]:
+    def get_product_exposure_logs_by_goodscode(self, goodscode: str, gmkt_area_code: Optional[str] = None) -> List[Dict[str, Any]]:
         """
         goodscode 기준으로 Product Exposure 로그만 반환
+        gmkt_area_code가 제공되면 추가로 필터링
         
         Args:
             goodscode: 상품 번호
+            gmkt_area_code: 모듈 area code (선택적)
         
         Returns:
             해당 goodscode의 Product Exposure 로그 리스트
         """
-        return self.get_logs_by_goodscode(goodscode, 'Product Exposure')
+        logs = self.get_logs_by_goodscode(goodscode, 'Product Exposure')
+        
+        # gmkt_area_code로 추가 필터링
+        if gmkt_area_code:
+            filtered_logs = []
+            for log in logs:
+                log_gmkt_area_code = self._extract_gmkt_area_code_from_log(log)
+                if log_gmkt_area_code == gmkt_area_code:
+                    filtered_logs.append(log)
+            return filtered_logs
+        
+        return logs
     
-    def get_product_click_logs_by_goodscode(self, goodscode: str) -> List[Dict[str, Any]]:
+    def get_product_click_logs_by_goodscode(self, goodscode: str, gmkt_area_code: Optional[str] = None) -> List[Dict[str, Any]]:
         """
         goodscode 기준으로 Product Click 로그만 반환
+        gmkt_area_code가 제공되면 추가로 필터링
         
         Args:
             goodscode: 상품 번호
+            gmkt_area_code: 모듈 area code (선택적)
         
         Returns:
             해당 goodscode의 Product Click 로그 리스트
         """
-        return self.get_logs_by_goodscode(goodscode, 'Product Click')
+        logs = self.get_logs_by_goodscode(goodscode, 'Product Click')
+        
+        # gmkt_area_code로 추가 필터링
+        if gmkt_area_code:
+            filtered_logs = []
+            for log in logs:
+                log_gmkt_area_code = self._extract_gmkt_area_code_from_log(log)
+                if log_gmkt_area_code == gmkt_area_code:
+                    filtered_logs.append(log)
+            return filtered_logs
+        
+        return logs
     
     def get_product_a2c_click_logs_by_goodscode(self, goodscode: str) -> List[Dict[str, Any]]:
         """
@@ -873,7 +964,7 @@ class NetworkTracker:
         
         return params
     
-    def validate_payload(self, log: Dict[str, Any], expected_data: Dict[str, Any]) -> bool:
+    def validate_payload(self, log: Dict[str, Any], expected_data: Dict[str, Any], goodscode: Optional[str] = None, event_type: Optional[str] = None) -> bool:
         """
         로그의 payload 정합성 검증 (디코딩된 값 사용, 개선된 버전)
         
@@ -883,6 +974,8 @@ class NetworkTracker:
                           - 경로 방식: 'gokey.params.params-exp.parsed._p_prod' (기존 방식 지원)
                           - 재귀 탐색: '_p_prod' (자동으로 찾음, 간단한 키 이름만 제공)
                           - 일반 키: 'pageId' (payload 최상위 키)
+            goodscode: 상품 번호 (Product Exposure의 경우 expdata.parsed 배열에서 필터링용)
+            event_type: 이벤트 타입 ('Product Exposure', 'Product Click' 등)
         
         Returns:
             검증 성공 시 True, 실패 시 AssertionError 발생
@@ -955,6 +1048,38 @@ class NetworkTracker:
                 f"URL: {log.get('url')}, Payload 타입: {type(payload)}"
             )
         
+        # Product Exposure의 경우 expdata.parsed 배열에서 goodscode와 일치하는 항목 찾기
+        matched_expdata_item = None
+        if event_type == 'Product Exposure' and goodscode:
+            decoded_gokey = payload.get('decoded_gokey', {})
+            params = decoded_gokey.get('params', {})
+            expdata = params.get('expdata', {})
+            
+            if isinstance(expdata, dict) and 'parsed' in expdata:
+                parsed_list = expdata.get('parsed', [])
+                if isinstance(parsed_list, list):
+                    for item in parsed_list:
+                        if isinstance(item, dict) and 'exargs' in item:
+                            exargs = item['exargs']
+                            if isinstance(exargs, dict) and 'params-exp' in exargs:
+                                params_exp = exargs['params-exp']
+                                if isinstance(params_exp, dict) and 'parsed' in params_exp:
+                                    parsed = params_exp['parsed']
+                                    # _p_prod 또는 utLogMap.x_object_id로 goodscode 확인
+                                    item_goodscode = None
+                                    if isinstance(parsed, dict):
+                                        item_goodscode = parsed.get('_p_prod')
+                                        if not item_goodscode and 'utLogMap' in parsed:
+                                            utlogmap = parsed['utLogMap']
+                                            if isinstance(utlogmap, dict) and 'parsed' in utlogmap:
+                                                utlogmap_parsed = utlogmap['parsed']
+                                                if isinstance(utlogmap_parsed, dict):
+                                                    item_goodscode = utlogmap_parsed.get('x_object_id')
+                                    
+                                    if item_goodscode and str(item_goodscode) == str(goodscode):
+                                        matched_expdata_item = parsed
+                                        break
+        
         # 기대 데이터 검증
         errors = []
         for key, expected_value in expected_data.items():
@@ -963,10 +1088,28 @@ class NetworkTracker:
             # gokey 내부 파라미터 접근 (경로 방식)
             if key.startswith('gokey.params.'):
                 param_path = key.replace('gokey.params.', '')
-                actual_value = find_value_by_path(
-                    payload.get('decoded_gokey', {}).get('params', {}),
-                    param_path
-                )
+                
+                # Product Exposure이고 matched_expdata_item이 있으면 특별 처리
+                if event_type == 'Product Exposure' and matched_expdata_item and param_path.startswith('params-exp.parsed.'):
+                    # expdata.parsed[*].exargs.params-exp.parsed.* 경로 처리
+                    field_name = param_path.replace('params-exp.parsed.', '')
+                    if field_name.startswith('utLogMap.parsed.'):
+                        # utLogMap.parsed.* 경로
+                        utlogmap_path = field_name.replace('utLogMap.parsed.', '')
+                        utlogmap = matched_expdata_item.get('utLogMap', {})
+                        if isinstance(utlogmap, dict) and 'parsed' in utlogmap:
+                            utlogmap_parsed = utlogmap['parsed']
+                            if isinstance(utlogmap_parsed, dict):
+                                actual_value = utlogmap_parsed.get(utlogmap_path)
+                    else:
+                        # 일반 필드
+                        actual_value = matched_expdata_item.get(field_name) if isinstance(matched_expdata_item, dict) else None
+                else:
+                    # 일반 경로 처리
+                    actual_value = find_value_by_path(
+                        payload.get('decoded_gokey', {}).get('params', {}),
+                        param_path
+                    )
             
             # 재귀 탐색 방식 (간단한 키 이름만 제공)
             elif '.' not in key and key not in payload:
