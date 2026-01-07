@@ -4,7 +4,7 @@ import time
 import logging
 from urllib.parse import unquote
 from typing import Dict, List, Optional, Any
-from playwright.sync_api import Page, Request
+from playwright.sync_api import Page, Request, BrowserContext
 
 # 로거 설정
 logger = logging.getLogger(__name__)
@@ -23,6 +23,8 @@ class NetworkTracker:
             page: Playwright Page 객체
         """
         self.page = page
+        self.context = page.context
+        self.tracked_pages: List[Page] = [page]  # 추적 중인 페이지 목록
         self.logs: List[Dict[str, Any]] = []
         self.is_tracking = False
         
@@ -31,155 +33,83 @@ class NetworkTracker:
     
     def _classify_request_type(self, url: str, payload: Optional[Dict[str, Any]] = None) -> str:
         """
-        URL 패턴과 payload를 분석하여 이벤트 타입을 세분화하여 분류
+        URL 패턴을 분석하여 이벤트 타입을 분류
         
         Args:
             url: 요청 URL
-            payload: 파싱된 payload (선택사항)
+            payload: 파싱된 payload (goodscode 확인용)
             
         Returns:
-            'PV', 'Module Exposure', 'Product Exposure', 'Product Click', 'Product A2C Click', 또는 'Unknown'
+            'PV', 'PDP PV', 'Module Exposure', 'Product Exposure', 'Product Click', 'Product A2C Click', 또는 'Unknown'
         """
         url_lower = url.lower()
         
         # PV: gif 요청
         if 'gif' in url_lower:
+            # payload에서 _p_prod를 확인하여 PDP PV인지 판단
+            if payload and isinstance(payload, dict):
+                # decoded_gokey 내부에서 _p_prod 직접 확인
+                decoded_gokey = payload.get('decoded_gokey', {})
+                if decoded_gokey:
+                    params = decoded_gokey.get('params', {})
+                    # params에서 _p_prod 직접 확인
+                    if '_p_prod' in params and params['_p_prod']:
+                        return 'PDP PV'
+                    # 또는 decoded_gokey 내부를 재귀적으로 탐색하여 _p_prod 찾기
+                    def find_p_prod_recursive(obj: Any, visited: Optional[set] = None) -> bool:
+                        """재귀적으로 _p_prod 찾기"""
+                        if visited is None:
+                            visited = set()
+                        if isinstance(obj, (dict, list)):
+                            obj_id = id(obj)
+                            if obj_id in visited:
+                                return False
+                            visited.add(obj_id)
+                        
+                        if isinstance(obj, dict):
+                            if '_p_prod' in obj and obj['_p_prod']:
+                                return True
+                            for value in obj.values():
+                                if find_p_prod_recursive(value, visited):
+                                    return True
+                        elif isinstance(obj, list):
+                            for item in obj:
+                                if find_p_prod_recursive(item, visited):
+                                    return True
+                        
+                        if isinstance(obj, (dict, list)):
+                            visited.discard(id(obj))
+                        return False
+                    
+                    if find_p_prod_recursive(decoded_gokey):
+                        return 'PDP PV'
             return 'PV'
         
-        # Exposure 타입 구분
-        elif 'exposure' in url_lower:
-            # payload를 분석하여 Module Exposure vs Product Exposure 구분
-            if payload and isinstance(payload, dict):
-                decoded_gokey = payload.get('decoded_gokey', {})
-                params = decoded_gokey.get('params', {})
-                
-                # expdata가 있고 모듈 정보가 있으면 Module Exposure
-                if 'expdata' in params:
-                    return 'Module Exposure'
-                # _p_prod가 있으면 Product Exposure
-                elif self._has_product_info(params):
-                    return 'Product Exposure'
-            
-            return 'Exposure'  # 기본값
+        # Product A2C Click: ATC 관련 URL 패턴
+        if '/pdp.atc.click' in url_lower or '/product.atc.click' in url_lower:
+            return 'Product A2C Click'
         
-        # Click 타입 구분
-        elif 'click' in url_lower:
-            if payload and isinstance(payload, dict):
-                decoded_gokey = payload.get('decoded_gokey', {})
-                params = decoded_gokey.get('params', {})
-                
-                # A2C 관련 파라미터가 있으면 Product A2C Click
-                if self._is_a2c_click(params):
-                    return 'Product A2C Click'
-                # _p_prod가 있으면 Product Click
-                elif self._has_product_info(params):
-                    return 'Product Click'
-            
-            return 'Click'  # 기본값
+        # Product Click: Product.Click.Event 패턴
+        if '/product.click.event' in url_lower:
+            return 'Product Click'
+        
+        # Module Exposure: Module.Exposure.Event 패턴
+        if '/module.exposure.event' in url_lower:
+            return 'Module Exposure'
+        
+        # Product Exposure: Product.Exposure.Event 패턴
+        if '/product.exposure.event' in url_lower:
+            return 'Product Exposure'
+        
+        # 기본 Exposure (URL에 exposure 포함하지만 위 패턴에 매칭되지 않음)
+        if 'exposure' in url_lower:
+            return 'Exposure'
+        
+        # 기본 Click (URL에 click 포함하지만 위 패턴에 매칭되지 않음)
+        if 'click' in url_lower:
+            return 'Click'
         
         return 'Unknown'
-    
-    def _has_product_info(self, params: Dict[str, Any]) -> bool:
-        """
-        params에 상품 정보(_p_prod)가 있는지 확인
-        
-        Args:
-            params: decoded_gokey의 params 딕셔너리
-        
-        Returns:
-            _p_prod가 있으면 True, 없으면 False
-        """
-        def find_value_recursive(obj: Any, target_key: str, visited: Optional[set] = None) -> bool:
-            """재귀적으로 _p_prod 찾기"""
-            if visited is None:
-                visited = set()
-            
-            if isinstance(obj, (dict, list)):
-                obj_id = id(obj)
-                if obj_id in visited:
-                    return False
-                visited.add(obj_id)
-            
-            if isinstance(obj, dict):
-                if target_key in obj:
-                    return True
-                
-                if 'parsed' in obj and isinstance(obj['parsed'], (dict, list)):
-                    if find_value_recursive(obj['parsed'], target_key, visited):
-                        return True
-                
-                for value in obj.values():
-                    if find_value_recursive(value, target_key, visited):
-                        return True
-            
-            elif isinstance(obj, list):
-                for item in obj:
-                    if find_value_recursive(item, target_key, visited):
-                        return True
-            
-            if isinstance(obj, (dict, list)):
-                visited.discard(id(obj))
-            
-            return False
-        
-        return find_value_recursive(params, '_p_prod')
-    
-    def _is_a2c_click(self, params: Dict[str, Any]) -> bool:
-        """
-        A2C 클릭인지 확인 (구매 버튼 관련 파라미터 확인)
-        
-        Args:
-            params: decoded_gokey의 params 딕셔너리
-        
-        Returns:
-            A2C 클릭이면 True, 아니면 False
-        """
-        # A2C 관련 키워드 확인
-        a2c_keywords = ['add_to_cart', 'buy_now', 'a2c', 'purchase', 'addtocart']
-        
-        def check_in_value(obj: Any, keywords: List[str], visited: Optional[set] = None) -> bool:
-            """재귀적으로 A2C 키워드 찾기"""
-            if visited is None:
-                visited = set()
-            
-            if isinstance(obj, (dict, list)):
-                obj_id = id(obj)
-                if obj_id in visited:
-                    return False
-                visited.add(obj_id)
-            
-            if isinstance(obj, dict):
-                # 키 이름 확인
-                for key in obj.keys():
-                    key_lower = str(key).lower()
-                    if any(keyword in key_lower for keyword in keywords):
-                        return True
-                
-                # 값 확인
-                for value in obj.values():
-                    if isinstance(value, str):
-                        value_lower = value.lower()
-                        if any(keyword in value_lower for keyword in keywords):
-                            return True
-                    elif check_in_value(value, keywords, visited):
-                        return True
-            
-            elif isinstance(obj, list):
-                for item in obj:
-                    if check_in_value(item, keywords, visited):
-                        return True
-            
-            elif isinstance(obj, str):
-                obj_lower = obj.lower()
-                if any(keyword in obj_lower for keyword in keywords):
-                    return True
-            
-            if isinstance(obj, (dict, list)):
-                visited.discard(id(obj))
-            
-            return False
-        
-        return check_in_value(params, a2c_keywords)
     
     def _decode_utlogmap(self, utlogmap_str: str) -> Optional[Dict[str, Any]]:
         """
@@ -425,8 +355,9 @@ class NetworkTracker:
             return
         
         try:
-            url = request.url()
-            method = request.method()
+            # Playwright Request 객체의 url과 method는 속성일 수도 있고 메서드일 수도 있음
+            url = request.url if isinstance(request.url, str) else request.url()
+            method = request.method if isinstance(request.method, str) else request.method()
             
             # 도메인 필터링
             if not self.domain_pattern.search(url):
@@ -437,10 +368,10 @@ class NetworkTracker:
                 return
             
             # POST Body 가져오기
-            post_data = request.post_data()
+            post_data = request.post_data() if callable(getattr(request, 'post_data', None)) else getattr(request, 'post_data', None)
             parsed_payload = self._parse_payload(post_data)
             
-            # 요청 타입 분류 (payload 포함하여 세분화)
+            # 요청 타입 분류 (URL 패턴 및 payload 기반)
             request_type = self._classify_request_type(url, parsed_payload)
             
             # 로그 저장
@@ -462,14 +393,43 @@ class NetworkTracker:
     def start(self):
         """
         네트워크 트래킹 시작
+        Context 레벨에서 추적하여 모든 페이지(기존 + 새 탭)의 네트워크 요청을 감지
         """
         if self.is_tracking:
             logger.warning('이미 트래킹이 시작되어 있습니다.')
             return
         
         self.is_tracking = True
+        
+        # 기존 페이지에 리스너 추가
         self.page.on('request', self._on_request)
-        logger.info('네트워크 트래킹 시작')
+        
+        # Context에 새 페이지 이벤트 리스너 추가 (새 탭이 열릴 때마다 추적)
+        self.context.on('page', self._on_new_page)
+        
+        # 이미 열려있는 모든 페이지에도 리스너 추가
+        for page in self.context.pages:
+            if page not in self.tracked_pages:
+                page.on('request', self._on_request)
+                self.tracked_pages.append(page)
+        
+        logger.info(f'네트워크 트래킹 시작 (페이지 수: {len(self.tracked_pages)})')
+    
+    def _on_new_page(self, page: Page):
+        """
+        새 페이지(새 탭)가 열릴 때 호출되는 콜백
+        
+        Args:
+            page: 새로 생성된 Page 객체
+        """
+        if not self.is_tracking:
+            return
+        
+        # 새 페이지에 리스너 추가
+        if page not in self.tracked_pages:
+            page.on('request', self._on_request)
+            self.tracked_pages.append(page)
+            logger.info(f'새 페이지 추적 시작: {page.url if page.url else "로딩 중"}')
     
     def stop(self):
         """
@@ -480,12 +440,21 @@ class NetworkTracker:
             return
         
         self.is_tracking = False
-        # Playwright sync_api에서는 같은 핸들러를 off()에 전달하여 제거
+        
+        # 모든 추적 중인 페이지에서 리스너 제거
+        for page in self.tracked_pages:
+            try:
+                if not page.is_closed():
+                    page.off('request', self._on_request)
+            except Exception as e:
+                logger.warning(f'페이지 리스너 제거 중 오류 (무시됨): {e}')
+        
+        # Context 리스너 제거
         try:
-            self.page.off('request', self._on_request)
+            self.context.off('page', self._on_new_page)
         except Exception as e:
-            # off()가 실패하더라도 is_tracking 플래그로 제어되므로 계속 진행
-            logger.warning(f'리스너 제거 시도 중 오류 (무시됨): {e}')
+            logger.warning(f'Context 리스너 제거 중 오류 (무시됨): {e}')
+        
         logger.info('네트워크 트래킹 중지')
     
     def get_logs(self, request_type: Optional[str] = None) -> List[Dict[str, Any]]:
@@ -505,12 +474,21 @@ class NetworkTracker:
     
     def get_pv_logs(self) -> List[Dict[str, Any]]:
         """
-        PV 타입 로그만 반환
+        PV 타입 로그만 반환 (PDP PV 제외)
         
         Returns:
             PV 로그 리스트
         """
         return self.get_logs('PV')
+    
+    def get_pdp_pv_logs(self) -> List[Dict[str, Any]]:
+        """
+        PDP PV 타입 로그만 반환 (goodscode가 있는 PV)
+        
+        Returns:
+            PDP PV 로그 리스트
+        """
+        return self.get_logs('PDP PV')
     
     def get_exposure_logs(self) -> List[Dict[str, Any]]:
         """
@@ -670,15 +648,30 @@ class NetworkTracker:
     
     def get_pv_logs_by_goodscode(self, goodscode: str) -> List[Dict[str, Any]]:
         """
-        goodscode 기준으로 PV 로그만 반환
+        goodscode 기준으로 PV 로그만 반환 (PDP PV 포함)
         
         Args:
             goodscode: 상품 번호
         
         Returns:
-            해당 goodscode의 PV 로그 리스트
+            해당 goodscode의 PV/PDP PV 로그 리스트
         """
-        return self.get_logs_by_goodscode(goodscode, 'PV')
+        # PV와 PDP PV 모두에서 goodscode로 필터링
+        pv_logs = self.get_logs_by_goodscode(goodscode, 'PV')
+        pdp_pv_logs = self.get_logs_by_goodscode(goodscode, 'PDP PV')
+        return pv_logs + pdp_pv_logs
+    
+    def get_pdp_pv_logs_by_goodscode(self, goodscode: str) -> List[Dict[str, Any]]:
+        """
+        goodscode 기준으로 PDP PV 로그만 반환
+        
+        Args:
+            goodscode: 상품 번호
+        
+        Returns:
+            해당 goodscode의 PDP PV 로그 리스트
+        """
+        return self.get_logs_by_goodscode(goodscode, 'PDP PV')
     
     def get_exposure_logs_by_goodscode(self, goodscode: str) -> List[Dict[str, Any]]:
         """
@@ -715,6 +708,66 @@ class NetworkTracker:
             해당 goodscode의 Module Exposure 로그 리스트
         """
         return self.get_logs_by_goodscode(goodscode, 'Module Exposure')
+    
+    def _extract_spm_from_log(self, log: Dict[str, Any]) -> Optional[str]:
+        """
+        로그에서 spm 값 추출
+        
+        Args:
+            log: 로그 딕셔너리
+        
+        Returns:
+            추출된 spm 값 또는 None
+        """
+        payload = log.get('payload')
+        
+        if not isinstance(payload, dict):
+            return None
+        
+        # decoded_gokey.params.spm에서 확인
+        decoded_gokey = payload.get('decoded_gokey', {})
+        params = decoded_gokey.get('params', {})
+        
+        # 1. params 최상위에서 spm 확인
+        if 'spm' in params and params['spm']:
+            return str(params['spm'])
+        
+        # 2. expdata 내부의 spm 확인 (Module Exposure의 경우)
+        expdata = params.get('expdata', {})
+        if isinstance(expdata, dict) and 'parsed' in expdata:
+            parsed_expdata = expdata['parsed']
+            if isinstance(parsed_expdata, list):
+                # 리스트의 각 아이템에서 spm 찾기 (첫 번째 것 사용)
+                for item in parsed_expdata:
+                    if isinstance(item, dict) and 'spm' in item:
+                        spm_value = item.get('spm')
+                        if spm_value:
+                            return str(spm_value)
+        
+        return None
+    
+    def get_module_exposure_logs_by_spm(self, spm: str) -> List[Dict[str, Any]]:
+        """
+        spm 기준으로 Module Exposure 로그만 반환
+        
+        Args:
+            spm: SPM 값 (예: "gmktpc.searchlist.prime.d0_0")
+        
+        Returns:
+            해당 spm의 Module Exposure 로그 리스트
+        """
+        filtered_logs = []
+        
+        # Module Exposure 로그만 필터링
+        module_exposure_logs = self.get_logs('Module Exposure')
+        
+        for log in module_exposure_logs:
+            log_spm = self._extract_spm_from_log(log)
+            # spm이 부분 일치하는지 확인 (예: "gmktpc.searchlist.prime"로 시작하는 경우)
+            if log_spm and (log_spm == spm or log_spm.startswith(spm)):
+                filtered_logs.append(log)
+        
+        return filtered_logs
     
     def get_product_exposure_logs_by_goodscode(self, goodscode: str) -> List[Dict[str, Any]]:
         """

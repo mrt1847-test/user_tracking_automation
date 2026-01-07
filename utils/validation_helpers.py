@@ -10,6 +10,7 @@ from utils.NetworkTracker import NetworkTracker
 # 이벤트 타입과 메서드 이름 매핑
 EVENT_TYPE_METHODS = {
     'PV': 'get_pv_logs_by_goodscode',
+    'PDP PV': 'get_pdp_pv_logs_by_goodscode',
     'Module Exposure': 'get_module_exposure_logs_by_goodscode',
     'Product Exposure': 'get_product_exposure_logs_by_goodscode',
     'Product Click': 'get_product_click_logs_by_goodscode',

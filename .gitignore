@@ -1,0 +1,26 @@
+__pycache__/
+*.py[cod]
+*$py.class
+
+# log
+*.log
+*.log.*
+
+# idea
+.idea/
+
+# local db
+_local_db
+
+# node_modules
+node_modules/
+
+
+# Environments
+.env
+.python-version
+
+# netrc
+.netrc
+json/
+state.json
