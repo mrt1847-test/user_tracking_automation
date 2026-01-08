@@ -8,6 +8,14 @@ from datetime import datetime
 from pathlib import Path
 import json
 import time
+import logging
+
+# 로깅 설정
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 
 
 # # 브라우저 fixture (세션 단위, 한 번만 실행)

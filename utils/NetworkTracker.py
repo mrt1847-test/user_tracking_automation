@@ -434,6 +434,10 @@ class NetworkTracker:
             # 요청 타입 분류 (URL 패턴 및 payload 기반)
             request_type = self._classify_request_type(url, parsed_payload)
             
+            # Module Exposure 관련 URL 디버깅
+            if 'exposure' in url.lower() or 'module' in url.lower():
+                logger.debug(f'Exposure/Module 관련 URL 감지: {url}, 분류: {request_type}')
+            
             # 로그 저장
             log_entry = {
                 'type': request_type,
@@ -461,16 +465,17 @@ class NetworkTracker:
         
         self.is_tracking = True
         
-        # 기존 페이지에 리스너 추가
-        self.page.on('request', self._on_request)
+        # Context 레벨에서 리스너 추가 (모든 페이지의 요청 감지)
+        # 이렇게 하면 새 탭에서 열린 페이지의 PV 이벤트도 확실하게 수집 가능
+        # Context 레벨 리스너만 사용하여 중복 방지
+        self.context.on('request', self._on_request)
         
         # Context에 새 페이지 이벤트 리스너 추가 (새 탭이 열릴 때마다 추적)
         self.context.on('page', self._on_new_page)
         
-        # 이미 열려있는 모든 페이지에도 리스너 추가
+        # 기존 페이지 목록 추적 (Page 레벨 리스너는 추가하지 않음 - Context 레벨 리스너가 모든 요청을 감지하므로)
         for page in self.context.pages:
             if page not in self.tracked_pages:
-                page.on('request', self._on_request)
                 self.tracked_pages.append(page)
         
         logger.info(f'네트워크 트래킹 시작 (페이지 수: {len(self.tracked_pages)})')
@@ -481,13 +486,16 @@ class NetworkTracker:
         
         Args:
             page: 새로 생성된 Page 객체
+        
+        Note:
+            Context 레벨 리스너가 모든 페이지의 요청을 감지하므로,
+            여기서는 페이지 추적 목록에만 추가하고 리스너는 추가하지 않음
         """
         if not self.is_tracking:
             return
         
-        # 새 페이지에 리스너 추가
+        # 새 페이지를 추적 목록에 추가 (리스너는 추가하지 않음 - Context 레벨 리스너가 모든 요청을 감지)
         if page not in self.tracked_pages:
-            page.on('request', self._on_request)
             self.tracked_pages.append(page)
             logger.info(f'새 페이지 추적 시작: {page.url if page.url else "로딩 중"}')
     
@@ -501,16 +509,9 @@ class NetworkTracker:
         
         self.is_tracking = False
         
-        # 모든 추적 중인 페이지에서 리스너 제거
-        for page in self.tracked_pages:
-            try:
-                if not page.is_closed():
-                    page.off('request', self._on_request)
-            except Exception as e:
-                logger.warning(f'페이지 리스너 제거 중 오류 (무시됨): {e}')
-        
-        # Context 리스너 제거
+        # Context 리스너 제거 (Context 레벨 리스너만 사용하므로 이것만 제거)
         try:
+            self.context.off('request', self._on_request)
             self.context.off('page', self._on_new_page)
         except Exception as e:
             logger.warning(f'Context 리스너 제거 중 오류 (무시됨): {e}')
@@ -820,7 +821,10 @@ class NetworkTracker:
     
     def _extract_spm_from_log(self, log: Dict[str, Any]) -> Optional[str]:
         """
-        로그에서 spm 값 추출
+        로그에서 spm 값 추출 (우선순위 기반 탐색)
+        
+        Module Exposure의 경우 decoded_gokey.params.spm을 우선적으로 확인하고,
+        없으면 재귀적으로 탐색
         
         Args:
             log: 로그 딕셔너리
@@ -833,34 +837,103 @@ class NetworkTracker:
         if not isinstance(payload, dict):
             return None
         
-        # decoded_gokey.params.spm에서 확인
+        # Module Exposure의 경우: decoded_gokey.params.spm 우선 확인
         decoded_gokey = payload.get('decoded_gokey', {})
-        params = decoded_gokey.get('params', {})
+        if isinstance(decoded_gokey, dict):
+            params = decoded_gokey.get('params', {})
+            if isinstance(params, dict) and 'spm' in params and params['spm']:
+                return str(params['spm'])
         
-        # 1. params 최상위에서 spm 확인
-        if 'spm' in params and params['spm']:
-            return str(params['spm'])
+        # 우선 경로에서 못 찾았으면 재귀적으로 탐색
+        def find_spm_recursive(obj: Any, visited: Optional[set] = None) -> Optional[str]:
+            """
+            재귀적으로 딕셔너리/리스트를 탐색하여 'spm' 키를 찾음
+            순환 참조 방지를 위해 visited set 사용
+            
+            Args:
+                obj: 탐색할 객체 (dict, list, 또는 기타)
+                visited: 방문한 객체 ID 집합 (순환 참조 방지)
+            
+            Returns:
+                찾은 spm 값의 문자열 변환 또는 None
+            """
+            if visited is None:
+                visited = set()
+            
+            # 순환 참조 방지 (dict와 list만 체크)
+            if isinstance(obj, (dict, list)):
+                obj_id = id(obj)
+                if obj_id in visited:
+                    return None
+                visited.add(obj_id)
+            
+            # 딕셔너리인 경우
+            if isinstance(obj, dict):
+                # 'spm' 키가 있고 값이 있으면 반환
+                if 'spm' in obj and obj['spm']:
+                    return str(obj['spm'])
+                
+                # 모든 값에 대해 재귀적으로 탐색
+                for value in obj.values():
+                    result = find_spm_recursive(value, visited)
+                    if result is not None:
+                        return result
+            
+            # 리스트인 경우
+            elif isinstance(obj, list):
+                for item in obj:
+                    result = find_spm_recursive(item, visited)
+                    if result is not None:
+                        return result
+            
+            # 순환 참조 방지를 위해 방문 기록 제거
+            if isinstance(obj, (dict, list)):
+                visited.discard(id(obj))
+            
+            return None
         
-        # 2. expdata 내부의 spm 확인 (Module Exposure의 경우)
-        expdata = params.get('expdata', {})
-        if isinstance(expdata, dict) and 'parsed' in expdata:
-            parsed_expdata = expdata['parsed']
-            if isinstance(parsed_expdata, list):
-                # 리스트의 각 아이템에서 spm 찾기 (첫 번째 것 사용)
-                for item in parsed_expdata:
-                    if isinstance(item, dict) and 'spm' in item:
-                        spm_value = item.get('spm')
-                        if spm_value:
-                            return str(spm_value)
+        # payload 전체에서 재귀적으로 spm 찾기
+        return find_spm_recursive(payload)
+    
+    def _check_spm_match(self, log_spm: str, target_spm: str) -> bool:
+        """
+        두 spm 값이 매칭되는지 확인 (양방향 접두사 매칭)
         
-        return None
+        Args:
+            log_spm: 로그에서 추출한 spm 값
+            target_spm: 비교 대상 spm 값
+        
+        Returns:
+            매칭되면 True, 아니면 False
+        
+        예시:
+            - "gmktpc.searchlist.cpc"와 "gmktpc.searchlist.cpc.d0_0" -> True
+            - "gmktpc.searchlist.cpc"와 "gmktpc.searchlist.prime" -> False
+            - "gmktpc.searchlist.prime"와 "gmktpc.searchlist.cpc" -> False
+        """
+        if not log_spm or not target_spm:
+            return False
+        
+        # 정확히 일치
+        if log_spm == target_spm:
+            return True
+        
+        # log_spm이 "target_spm."으로 시작하면 매칭 (예: target_spm="gmktpc.searchlist.cpc", log_spm="gmktpc.searchlist.cpc.d0_0")
+        if log_spm.startswith(target_spm + '.'):
+            return True
+        
+        # target_spm이 "log_spm."으로 시작하면 매칭 (예: target_spm="gmktpc.searchlist.prime.d0_0", log_spm="gmktpc.searchlist.prime")
+        if target_spm.startswith(log_spm + '.'):
+            return True
+        
+        return False
     
     def get_module_exposure_logs_by_spm(self, spm: str) -> List[Dict[str, Any]]:
         """
         spm 기준으로 Module Exposure 로그만 반환
         
         Args:
-            spm: SPM 값 (예: "gmktpc.searchlist.prime.d0_0")
+            spm: SPM 값 (예: "gmktpc.searchlist.cpc")
         
         Returns:
             해당 spm의 Module Exposure 로그 리스트
@@ -872,61 +945,128 @@ class NetworkTracker:
         
         for log in module_exposure_logs:
             log_spm = self._extract_spm_from_log(log)
-            # spm이 부분 일치하는지 확인 (예: "gmktpc.searchlist.prime"로 시작하는 경우)
-            if log_spm and (log_spm == spm or log_spm.startswith(spm)):
-                filtered_logs.append(log)
+            # spm이 정확히 일치하거나, 서로가 접두사 관계인지 확인
+            if log_spm:
+                if self._check_spm_match(log_spm, spm):
+                    filtered_logs.append(log)
+                else:
+                    # 디버깅: 매칭되지 않은 로그 정보
+                    logger.debug(f"SPM 필터링 불일치: log_spm='{log_spm}', target_spm='{spm}'")
+            else:
+                logger.debug(f"SPM 추출 실패: 로그에서 spm을 찾을 수 없음")
+        
+        logger.info(f"SPM '{spm}'로 필터링된 Module Exposure 로그: {len(filtered_logs)}/{len(module_exposure_logs)}개")
         
         return filtered_logs
     
-    def get_product_exposure_logs_by_goodscode(self, goodscode: str, gmkt_area_code: Optional[str] = None) -> List[Dict[str, Any]]:
+    def _extract_spm_from_product_exposure_item(self, item: Dict[str, Any]) -> Optional[str]:
+        """
+        Product Exposure의 expdata.parsed 배열 항목에서 spm 추출
+        
+        Args:
+            item: expdata.parsed 배열의 항목
+        
+        Returns:
+            추출된 spm 값 또는 None
+        """
+        if isinstance(item, dict):
+            # 직접 spm 필드 확인
+            if 'spm' in item and item['spm']:
+                return str(item['spm'])
+        return None
+    
+    def get_product_exposure_logs_by_goodscode(self, goodscode: str, spm: Optional[str] = None) -> List[Dict[str, Any]]:
         """
         goodscode 기준으로 Product Exposure 로그만 반환
-        gmkt_area_code가 제공되면 추가로 필터링
+        spm이 제공되면 추가로 필터링
         
         Args:
             goodscode: 상품 번호
-            gmkt_area_code: 모듈 area code (선택적)
+            spm: SPM 값 (선택적, 예: "gmktpc.searchlist.cpc")
         
         Returns:
             해당 goodscode의 Product Exposure 로그 리스트
         """
         logs = self.get_logs_by_goodscode(goodscode, 'Product Exposure')
         
-        # gmkt_area_code로 추가 필터링
-        if gmkt_area_code:
-            filtered_logs = []
-            for log in logs:
-                log_gmkt_area_code = self._extract_gmkt_area_code_from_log(log)
-                if log_gmkt_area_code == gmkt_area_code:
-                    filtered_logs.append(log)
-            return filtered_logs
+        # spm 필터링이 없으면 바로 반환
+        if not spm:
+            return logs
         
-        return logs
+        filtered_logs = []
+        total_items = 0
+        matched_items = 0
+        
+        for log in logs:
+            # expdata.parsed 배열에서 goodscode와 spm이 모두 매칭되는 항목이 있는지 확인
+            payload = log.get('payload', {})
+            decoded_gokey = payload.get('decoded_gokey', {})
+            params = decoded_gokey.get('params', {}) if isinstance(decoded_gokey, dict) else {}
+            expdata = params.get('expdata', {}) if isinstance(params, dict) else {}
+            
+            matched = False
+            if isinstance(expdata, dict) and 'parsed' in expdata:
+                parsed_list = expdata.get('parsed', [])
+                if isinstance(parsed_list, list):
+                    for item in parsed_list:
+                        total_items += 1
+                        
+                        # 항목에서 goodscode 추출
+                        item_goodscode = None
+                        if isinstance(item, dict) and 'exargs' in item:
+                            exargs = item.get('exargs', {})
+                            if isinstance(exargs, dict) and 'params-exp' in exargs:
+                                params_exp = exargs.get('params-exp', {})
+                                if isinstance(params_exp, dict) and 'parsed' in params_exp:
+                                    parsed = params_exp.get('parsed', {})
+                                    if isinstance(parsed, dict):
+                                        # _p_prod 우선 확인
+                                        if '_p_prod' in parsed:
+                                            item_goodscode = str(parsed['_p_prod'])
+                                        # 없으면 utLogMap.x_object_id 확인
+                                        elif 'utLogMap' in parsed:
+                                            utlogmap = parsed.get('utLogMap', {})
+                                            if isinstance(utlogmap, dict) and 'parsed' in utlogmap:
+                                                utlogmap_parsed = utlogmap.get('parsed', {})
+                                                if isinstance(utlogmap_parsed, dict) and 'x_object_id' in utlogmap_parsed:
+                                                    item_goodscode = str(utlogmap_parsed['x_object_id'])
+                        
+                        # goodscode가 일치하는지 확인
+                        if item_goodscode != goodscode:
+                            continue
+                        
+                        # spm 추출 및 매칭 확인
+                        item_spm = self._extract_spm_from_product_exposure_item(item)
+                        if item_spm:
+                            if self._check_spm_match(item_spm, spm):
+                                matched = True
+                                matched_items += 1
+                                logger.debug(f"Product Exposure 매칭: goodscode={item_goodscode}, spm={item_spm}, target_spm={spm}")
+                            else:
+                                logger.debug(f"Product Exposure SPM 필터링 불일치: goodscode={item_goodscode}, item_spm='{item_spm}', target_spm='{spm}'")
+                        else:
+                            logger.debug(f"Product Exposure SPM 추출 실패: goodscode={item_goodscode}")
+            
+            if matched:
+                filtered_logs.append(log)
+            else:
+                logger.debug(f"Product Exposure 로그 필터링 제외: goodscode={goodscode}, spm={spm}와 매칭되는 항목 없음")
+        
+        logger.info(f"SPM '{spm}'로 필터링된 Product Exposure 로그: {len(filtered_logs)}/{len(logs)}개 (매칭된 항목: {matched_items}/{total_items}개)")
+        
+        return filtered_logs
     
-    def get_product_click_logs_by_goodscode(self, goodscode: str, gmkt_area_code: Optional[str] = None) -> List[Dict[str, Any]]:
+    def get_product_click_logs_by_goodscode(self, goodscode: str) -> List[Dict[str, Any]]:
         """
         goodscode 기준으로 Product Click 로그만 반환
-        gmkt_area_code가 제공되면 추가로 필터링
         
         Args:
             goodscode: 상품 번호
-            gmkt_area_code: 모듈 area code (선택적)
         
         Returns:
             해당 goodscode의 Product Click 로그 리스트
         """
-        logs = self.get_logs_by_goodscode(goodscode, 'Product Click')
-        
-        # gmkt_area_code로 추가 필터링
-        if gmkt_area_code:
-            filtered_logs = []
-            for log in logs:
-                log_gmkt_area_code = self._extract_gmkt_area_code_from_log(log)
-                if log_gmkt_area_code == gmkt_area_code:
-                    filtered_logs.append(log)
-            return filtered_logs
-        
-        return logs
+        return self.get_logs_by_goodscode(goodscode, 'Product Click')
     
     def get_product_a2c_click_logs_by_goodscode(self, goodscode: str) -> List[Dict[str, Any]]:
         """

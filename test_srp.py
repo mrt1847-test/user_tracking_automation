@@ -22,7 +22,7 @@ def test_01_srp_1(page):
 
     etc = Etc(page)
     srp_page = Srp(page)  
-    # 네트워크 트래킹 시작
+    # 네트워크 트래킹 시작 (기존 tracking 로그용)
     tracker = NetworkTracker(page)
     tracker.start()
     
@@ -34,11 +34,17 @@ def test_01_srp_1(page):
     # 일반회원 로그인
     # etc.login("t4adbuy01", "Gmkt1004!!")
     # keyword 로 검색창에 검색
-    srp_page.search_product("물티슈")
+    keyword = "물티슈"
+    srp_page.search_product(keyword)
     # 먼저 둘러보세요 모듈로 이동 후 확인
     srp_page.search_module_by_title("먼저 둘러보세요")
     # 먼저 둘러보세요 모듈내 광고 상품 곽인
     goodscode = srp_page.assert_item_in_module("먼저 둘러보세요")
+    
+    # 가격 정보 추출 (상품 클릭 전에 추출해야 함)
+    price_info = srp_page.get_product_price_info(goodscode)
+    logger.info(f"추출된 가격 정보: {price_info}")
+    
     # 상품 클릭후 해당 vip 이동 확인
     srp_page.montelena_goods_click(goodscode)
     
@@ -46,12 +52,31 @@ def test_01_srp_1(page):
     time.sleep(2)
     
     # 네트워크 로그 정합성 검증 (goodscode 기준)
-    logger.info(f"수집된 전체 로그 개수: {len(tracker.get_logs())}")
+    all_logs = tracker.get_logs()
+    logger.info(f"수집된 전체 로그 개수: {len(all_logs)}")
     logger.info(f"검색할 goodscode: {goodscode}")
     
-    # 프론트에서 데이터 읽기 (사용자가 직접 구현)
-    # 예시: frontend_data = {"price": "50000", "keyword": keyword, "goodscode": goodscode}
-    frontend_data = None  # 사용자가 직접 구현한 함수로 프론트 데이터 추출
+    # 디버깅: 모든 로그 타입별 개수 출력
+    log_types = {}
+    for log in all_logs:
+        log_type = log.get('type', 'Unknown')
+        log_types[log_type] = log_types.get(log_type, 0) + 1
+    logger.info(f"로그 타입별 개수: {log_types}")
+    
+    # Module Exposure 관련 URL 확인
+    exposure_urls = [log.get('url', '') for log in all_logs if 'exposure' in log.get('url', '').lower() or 'module' in log.get('url', '').lower()]
+    if exposure_urls:
+        logger.info(f"Exposure/Module 관련 URL 발견: {len(exposure_urls)}개")
+        for url in exposure_urls[:5]:  # 최대 5개만 출력
+            logger.info(f"  - {url}")
+    else:
+        logger.warning("Exposure/Module 관련 URL이 수집되지 않았습니다.")
+    
+    # 프론트에서 데이터 읽기 (가격 정보 및 검색어 포함)
+    frontend_data = price_info.copy() if price_info else {}
+    frontend_data['keyword'] = keyword
+    if frontend_data:
+        logger.info(f"정합성 검증에 사용할 frontend_data: {frontend_data}")
     
     # 모듈 설정 로드
     module_config = load_module_config()
@@ -59,8 +84,18 @@ def test_01_srp_1(page):
     module_spm = None
     gmkt_area_code = None
     if module_title in module_config:
-        module_spm = module_config[module_title].get('spm')
-        gmkt_area_code = module_config[module_title].get('gmkt_area_code')
+        # common 섹션에서 spm 가져오기
+        common_config = module_config[module_title].get('common', {})
+        if common_config:
+            module_spm = common_config.get('spm')
+        # product_exposure 섹션에서 gmkt_area_code 가져오기
+        product_exposure_config = module_config[module_title].get('product_exposure', {})
+        if product_exposure_config:
+            params_exp = product_exposure_config.get('params-exp', {})
+            if params_exp:
+                parsed = params_exp.get('parsed', {})
+                if parsed:
+                    gmkt_area_code = parsed.get('gmkt_area_code')
         logger.info(f"모듈 '{module_title}'의 SPM 값: {module_spm}")
         logger.info(f"모듈 '{module_title}'의 gmkt_area_code 값: {gmkt_area_code}")
     
@@ -104,21 +139,43 @@ def test_01_srp_1(page):
                     # spm이 없으면 전체 Module Exposure 로그 사용
                     logs = tracker.get_logs('Module Exposure')
                     logger.warning(f"모듈 '{module_title}'의 SPM 값이 없어 전체 Module Exposure 로그를 사용합니다.")
-            elif method_name in ['get_product_exposure_logs_by_goodscode', 'get_product_click_logs_by_goodscode']:
-                # Product Exposure/Click은 gmkt_area_code로 추가 필터링
-                if gmkt_area_code:
-                    logs = get_logs_method(goodscode, gmkt_area_code)
+            elif method_name == 'get_product_exposure_logs_by_goodscode':
+                # Product Exposure는 spm으로 추가 필터링
+                if module_spm:
+                    logs = get_logs_method(goodscode, module_spm)
                 else:
                     logs = get_logs_method(goodscode)
+            elif method_name == 'get_product_click_logs_by_goodscode':
+                # Product Click은 goodscode로만 필터링
+                logs = get_logs_method(goodscode)
             else:
                 logs = get_logs_method(goodscode)  # 나머지는 goodscode로 필터링
             
+            # 로그 저장 (0개여도 파일 생성)
+            filepath = Path(f'json/tracking_{event_type}_{goodscode}_{timestamp}.json')
+            filepath.parent.mkdir(parents=True, exist_ok=True)
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(logs, f, ensure_ascii=False, indent=2, default=str)
             if len(logs) > 0:
-                filepath = Path(f'json/tracking_{event_type}_{goodscode}_{timestamp}.json')
-                filepath.parent.mkdir(parents=True, exist_ok=True)
-                with open(filepath, 'w', encoding='utf-8') as f:
-                    json.dump(logs, f, ensure_ascii=False, indent=2, default=str)
                 logger.info(f"{event_type} 로그 저장 완료: {filepath.resolve()} (로그 개수: {len(logs)})")
+            else:
+                logger.warning(f"{event_type} 로그가 없어 빈 파일로 저장했습니다: {filepath.resolve()}")
+                if event_type == 'module_exposure' and module_spm:
+                    # Module Exposure 로그가 없을 때 디버깅 정보 출력
+                    all_module_logs = tracker.get_logs('Module Exposure')
+                    logger.warning(f"전체 Module Exposure 로그 개수: {len(all_module_logs)}")
+                    if len(all_module_logs) > 0:
+                        # 모든 Module Exposure 로그의 spm 추출하여 출력
+                        for idx, log in enumerate(all_module_logs[:5]):  # 최대 5개만 출력
+                            log_spm = tracker._extract_spm_from_log(log)
+                            logger.warning(f"Module Exposure 로그 #{idx+1}의 spm: {log_spm}")
+                        logger.warning(f"필터링하려는 spm: {module_spm}")
+                        
+                        # 필터링 테스트
+                        filtered_test = tracker.get_module_exposure_logs_by_spm(module_spm)
+                        logger.warning(f"필터링 후 Module Exposure 로그 개수: {len(filtered_test)}")
+                    else:
+                        logger.warning(f"전체 Module Exposure 로그가 없습니다.")
         
         # 전체 로그 저장 (goodscode 필터링된 Product Exposure/Click/PDP PV + 전체 PV + spm 필터링된 Module Exposure)
         all_logs = []
@@ -138,13 +195,13 @@ def test_01_srp_1(page):
         
         # PDP PV, Product 관련 이벤트는 goodscode로 필터링
         all_logs.extend(tracker.get_pdp_pv_logs_by_goodscode(goodscode))
-        # Product Exposure/Click은 gmkt_area_code로 추가 필터링
-        if gmkt_area_code:
-            all_logs.extend(tracker.get_product_exposure_logs_by_goodscode(goodscode, gmkt_area_code))
-            all_logs.extend(tracker.get_product_click_logs_by_goodscode(goodscode, gmkt_area_code))
+        # Product Exposure는 spm으로 추가 필터링
+        if module_spm:
+            all_logs.extend(tracker.get_product_exposure_logs_by_goodscode(goodscode, module_spm))
         else:
             all_logs.extend(tracker.get_product_exposure_logs_by_goodscode(goodscode))
-            all_logs.extend(tracker.get_product_click_logs_by_goodscode(goodscode))
+        # Product Click은 goodscode로만 필터링
+        all_logs.extend(tracker.get_product_click_logs_by_goodscode(goodscode))
         all_logs.extend(tracker.get_product_a2c_click_logs_by_goodscode(goodscode))
         
         if len(all_logs) > 0:

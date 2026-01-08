@@ -1,5 +1,8 @@
 import time
 import logging
+import json
+import re
+from urllib.parse import unquote, parse_qs, urlparse
 
 from playwright.sync_api import Page, expect
 
@@ -57,6 +60,118 @@ class Srp():
         
         return goodscode
 
+    def get_product_price_info(self, goodscode):
+        """
+        특정 상품 번호의 가격 정보를 HTML과 URL에서 추출
+        :param (str) goodscode : 상품 번호
+        :return (dict) price_info: 가격 정보 딕셔너리
+        :example:
+            {
+                "origin_price": "38000",  # 원가 (HTML에서 추출)
+                "seller_price": "15390",   # 판매가 (HTML에서 추출)
+                "discount_rate": "59",     # 할인률 (HTML에서 추출, % 제거)
+                "promotion_price": "16390", # 프로모션가 (URL에서 추출)
+                "coupon_price": "13290"    # 쿠폰적용가 (URL에서 추출)
+            }
+        """
+        logger.debug(f'가격 정보 추출 시작: goodscode={goodscode}')
+        price_info = {}
+        
+        try:
+            # goodscode로 상품 요소 찾기
+            product_element = self.page.locator(f'a[data-montelena-goodscode="{goodscode}"]').first
+            product_element.scroll_into_view_if_needed()
+            
+            # 상품 요소의 부모 컨테이너에서 가격 정보 추출
+            item_container = product_element.locator("xpath=ancestor::div[contains(@class, 'box__item-container')]")
+            
+            # HTML에서 가격 정보 추출
+            try:
+                # 원가 추출
+                original_price_elem = item_container.locator('.box__price-original .text__value').first
+                if original_price_elem.count() > 0:
+                    original_price_text = original_price_elem.inner_text().strip()
+                    # 쉼표 제거
+                    price_info['origin_price'] = original_price_text.replace(',', '').replace('원', '').strip()
+                    logger.debug(f'원가 추출: {price_info["origin_price"]}')
+            except Exception as e:
+                logger.warning(f'원가 추출 실패: {e}')
+            
+            try:
+                # 판매가 추출
+                seller_price_elem = item_container.locator('.box__price-seller .text__value').first
+                if seller_price_elem.count() > 0:
+                    seller_price_text = seller_price_elem.inner_text().strip()
+                    # 쉼표 제거
+                    price_info['seller_price'] = seller_price_text.replace(',', '').replace('원', '').strip()
+                    logger.debug(f'판매가 추출: {price_info["seller_price"]}')
+            except Exception as e:
+                logger.warning(f'판매가 추출 실패: {e}')
+            
+            try:
+                # 할인률 추출
+                discount_rate_elem = item_container.locator('.box__discount .text__value').first
+                if discount_rate_elem.count() > 0:
+                    discount_rate_text = discount_rate_elem.inner_text().strip()
+                    # % 제거
+                    price_info['discount_rate'] = discount_rate_text.replace('%', '').strip()
+                    logger.debug(f'할인률 추출: {price_info["discount_rate"]}')
+            except Exception as e:
+                logger.warning(f'할인률 추출 실패: {e}')
+            
+            # URL에서 가격 정보 추출
+            try:
+                product_url = product_element.get_attribute('href')
+                if product_url:
+                    # 상대 경로인 경우 절대 경로로 변환
+                    if product_url.startswith('/'):
+                        product_url = f"https://item.gmarket.co.kr{product_url}"
+                    
+                    # URL 파싱
+                    parsed_url = urlparse(product_url)
+                    query_params = parse_qs(parsed_url.query)
+                    
+                    # utparam-url 파라미터 추출
+                    if 'utparam-url' in query_params:
+                        utparam_url = query_params['utparam-url'][0]
+                        # URL 디코딩
+                        decoded_utparam = unquote(utparam_url)
+                        
+                        # JSON 파싱 시도
+                        try:
+                            utparam_data = json.loads(decoded_utparam)
+                            
+                            # 가격 정보 추출
+                            if 'origin_price' in utparam_data:
+                                price_info['origin_price_url'] = str(utparam_data['origin_price'])
+                                logger.debug(f'URL에서 원가 추출: {price_info["origin_price_url"]}')
+                            
+                            if 'promotion_price' in utparam_data:
+                                price_info['promotion_price'] = str(utparam_data['promotion_price'])
+                                logger.debug(f'프로모션가 추출: {price_info["promotion_price"]}')
+                            
+                            if 'coupon_price' in utparam_data:
+                                price_info['coupon_price'] = str(utparam_data['coupon_price'])
+                                logger.debug(f'쿠폰적용가 추출: {price_info["coupon_price"]}')
+                                
+                        except json.JSONDecodeError as e:
+                            logger.warning(f'utparam-url JSON 파싱 실패: {e}')
+                            
+            except Exception as e:
+                logger.warning(f'URL에서 가격 정보 추출 실패: {e}')
+            
+            # origin_price가 HTML에서 추출되지 않았고 URL에서 추출된 경우, origin_price_url을 origin_price로 사용
+            if 'origin_price' not in price_info and 'origin_price_url' in price_info:
+                price_info['origin_price'] = price_info.pop('origin_price_url')
+                logger.debug(f'URL에서 추출한 원가를 origin_price로 사용: {price_info["origin_price"]}')
+            
+            logger.info(f'가격 정보 추출 완료: goodscode={goodscode}, price_info={price_info}')
+            
+        except Exception as e:
+            logger.error(f'가격 정보 추출 중 오류 발생: {e}', exc_info=True)
+        
+        return price_info
+
     def montelena_goods_click(self, goodscode):
         """
         특정 상품 번호 아이템 클릭
@@ -71,8 +186,18 @@ class Srp():
         with self.page.context.expect_page() as new_page_info:
             element.click()
         new_page = new_page_info.value
+        
+        # 새 페이지가 완전히 로드될 때까지 대기 (네트워크 요청이 완료될 때까지)
+        try:
+            new_page.wait_for_load_state('networkidle', timeout=5000)
+            logger.debug(f'새 페이지 네트워크 로딩 완료: {goodscode}')
+        except Exception as e:
+            # networkidle이 타임아웃되면 load 상태만 확인
+            logger.debug(f'networkidle 대기 실패, load 상태로 대기: {e}')
+            new_page.wait_for_load_state('load', timeout=30000)
+            logger.debug(f'새 페이지 로딩 완료: {goodscode}')
+        
         url = new_page.url
-        time.sleep(2)
         logger.info(f'상품 클릭 완료: goodscode={goodscode}')
 
         logger.debug(f'상품 이동 확인 시작: goodscode={goodscode}')
