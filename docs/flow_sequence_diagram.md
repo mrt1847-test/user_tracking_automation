@@ -2,46 +2,39 @@
 
 ```mermaid
 sequenceDiagram
-    participant Tester
-    participant Browser as Playwright
-    participant Tracker as Network Tracker
-    participant Validator as Validation Engine
+    autonumber
+    
+    %% 참여자 색상 설정 (배경 대비 가독성 최적화)
+    participant T as 💡 Tester
+    participant B as 🌐 Browser
+    participant I as 🛰️ Interceptor
+    participant V as ✅ Validator
 
-    %% 1. Setup
-    Tester->>Browser: Initialize scenario
-    Tester->>Tracker: Start tracking (aplus domain)
-    Note right of Tracker: Continuous monitoring<br/>of POST requests
+    %% Phase 01: Setup (Thin Line)
+    Note over T, I: [01] 초기화: 인터셉트 규칙 주입
+    T->>I: 규칙 적용 (aplus.*)
+    T->>B: 컨텍스트 활성화
 
-    %% 2. User Journey (with parallel tracking)
-    rect rgb(240, 250, 255)
-    Note over Tester,Browser: User Journey Execution
-    par User Actions
-        Tester->>Browser: Navigate & search product
-        Tester->>Browser: Scroll & assert module item
-        Browser-->>Tester: Return goodscode & frontend data
-    and Tracking Collection
-        Browser-->>Tracker: PV, Module Exposure,<br/>Product Exposure events
-        Tracker->>Tracker: Collect & classify logs
-    end
-    end
-
-    %% 3. Final Tracking Capture
-    rect rgb(255, 250, 240)
-    Note over Browser,Tracker: Product Click & Final Events
-    Tester->>Browser: Click product
-    Browser-->>Tracker: Product Click, PDP PV events
-    Tracker->>Tracker: Collect & classify logs
+    %% Phase 02: Execution (Modern Blue Rect)
+    %% 가장 중요한 실행 단계에 시선을 집중시키는 Slate Blue 배경
+    rect rgb(241, 245, 249)
+        Note over T, B: [02] 실행: 유저 저니 & 로그 캡처
+        par 실시간 데이터 추출
+            T->>B: 상품 노출 및 클릭
+            B-->>T: UI 데이터 (ID/SPM)
+        and 네트워크 패킷 가로채기
+            B-X I: 로그 요청 차단 (POST)
+            I->>I: 데이터 분류/스택 저장
+        end
     end
 
-    %% 4. Validation
-    rect rgb(230, 255, 230)
-    Tester->>Validator: Validate tracking logs
-    Note right of Validator: Load config rules<br/>Build expected payload<br/>Match logs by goodscode & SPM<br/>Deep compare actual vs expected
-    Validator-->>Tester: Validation result
-    end
-
-    %% 5. Result
-    Tester->>Tester: Persist logs & assert result
+    %% Phase 03: Validation (Clean White)
+    Note over T, V: [03] 검증: 정합성 엔진 리포팅
+    T->>I: 네트워크 수집 완료 대기
+    T->>V: 검증 요청 (Captured vs Expected)
+    V->>V: 매칭 알고리즘 실행
+    V-->>T: Pass/Fail 결과 반환
+    T->>T: TestRail 리포트 전송
 ```
 
 ## 주요 컴포넌트 설명
