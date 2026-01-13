@@ -23,7 +23,7 @@ sequenceDiagram
             T->>B: 상품 노출 및 클릭
             B-->>T: UI 데이터 (ID/SPM)
         and 네트워크 패킷 가로채기
-            B-X I: 로그 요청 차단 (POST)
+            B->>I: 로그 요청 감지 (POST)
             I->>I: 데이터 분류/스택 저장
         end
     end
