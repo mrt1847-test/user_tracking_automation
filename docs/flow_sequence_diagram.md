@@ -31,7 +31,8 @@ sequenceDiagram
     %% Phase 03: Validation (Clean White)
     Note over T, V: [03] 검증: 정합성 엔진 리포팅
     T->>I: 네트워크 수집 완료 대기
-    T->>V: 검증 요청 (Captured vs Expected)
+    T->>V: 검증 요청 (tracker + frontend_data)
+    V->>I: 로그 데이터 조회
     V->>V: 매칭 알고리즘 실행
     V-->>T: Pass/Fail 결과 반환
     T->>T: TestRail 리포트 전송
