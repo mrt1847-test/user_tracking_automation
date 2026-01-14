@@ -144,25 +144,26 @@ def replace_placeholders(value: Any, goodscode: str, frontend_data: Optional[Dic
     return value
 
 
-def build_tracking_path(field_name: str, event_type: str) -> str:
-    """
-    필드명과 이벤트 타입을 기반으로 트래킹 로그 경로 생성
-    
-    Args:
-        field_name: 필드명
-        event_type: 이벤트 타입 ('Module Exposure', 'Product Exposure', 'Product Click' 등)
-    
-    Returns:
-        트래킹 로그 경로 (예: 'gokey.params.channel_code' 또는 'gokey.params.params-exp.parsed.gmkt_area_code')
-    """
-    # 최상위 필드는 gokey.params.* 경로
-    if field_name in TOP_LEVEL_FIELDS:
-        return f'gokey.params.{field_name}'
-    
-    # 나머지 필드는 params-exp/clk.parsed.* 경로
-    # (utLogMap은 build_expected_from_module_config에서 별도 처리)
-    params_key = EVENT_TYPE_PARAMS_MAP.get(event_type, 'params-exp')
-    return f'gokey.params.{params_key}.parsed.{field_name}'
+# 더 이상 사용하지 않음: 재귀적 탐색으로 전환하여 경로 생성 불필요
+# def build_tracking_path(field_name: str, event_type: str) -> str:
+#     """
+#     필드명과 이벤트 타입을 기반으로 트래킹 로그 경로 생성
+#     
+#     Args:
+#         field_name: 필드명
+#         event_type: 이벤트 타입 ('Module Exposure', 'Product Exposure', 'Product Click' 등)
+#     
+#     Returns:
+#         트래킹 로그 경로 (예: 'gokey.params.channel_code' 또는 'gokey.params.params-exp.parsed.gmkt_area_code')
+#     """
+#     # 최상위 필드는 gokey.params.* 경로
+#     if field_name in TOP_LEVEL_FIELDS:
+#         return f'gokey.params.{field_name}'
+#     
+#     # 나머지 필드는 params-exp/clk.parsed.* 경로
+#     # (utLogMap은 build_expected_from_module_config에서 별도 처리)
+#     params_key = EVENT_TYPE_PARAMS_MAP.get(event_type, 'params-exp')
+#     return f'gokey.params.{params_key}.parsed.{field_name}'
 
 
 def build_expected_from_module_config(
@@ -174,6 +175,7 @@ def build_expected_from_module_config(
 ) -> Dict[str, Any]:
     """
     module_config.json의 이벤트 타입별 필드를 재귀적으로 순회하여 expected_values 딕셔너리 생성
+    필드명만 저장하여 validate_payload에서 재귀 탐색으로 찾을 수 있도록 함
     
     Args:
         module_config: 모듈 설정 딕셔너리 (common, module_exposure, product_exposure 등 포함)
@@ -183,7 +185,7 @@ def build_expected_from_module_config(
         exclude_fields: 제외할 필드 목록
     
     Returns:
-        expected_values 딕셔너리 (경로: 값 형태)
+        expected_values 딕셔너리 (필드명: 값 형태)
     """
     if exclude_fields is None:
         exclude_fields = []
@@ -218,6 +220,7 @@ def _process_config_section(
 ):
     """
     config 섹션을 재귀적으로 처리하여 expected 값 생성
+    필드명만 저장하여 validate_payload에서 재귀 탐색으로 찾을 수 있도록 함
     
     Args:
         config_section: 처리할 config 섹션
@@ -226,12 +229,10 @@ def _process_config_section(
         frontend_data: 프론트 데이터
         exclude_fields: 제외할 필드 목록
         expected: 결과를 저장할 딕셔너리 (in-place 수정)
-        is_common: common 섹션인지 여부 (common은 최상위 필드로 처리)
-        parent_path: 부모 경로 (예: 'params-exp.parsed')
-        is_utlogmap: utLogMap 내부인지 여부
+        is_common: common 섹션인지 여부 (사용하지 않지만 호환성을 위해 유지)
+        parent_path: 부모 경로 (사용하지 않지만 호환성을 위해 유지)
+        is_utlogmap: utLogMap 내부인지 여부 (사용하지 않지만 호환성을 위해 유지)
     """
-    params_key = EVENT_TYPE_PARAMS_MAP.get(event_type, 'params-exp')
-    
     for key, value in config_section.items():
         if key in exclude_fields:
             continue
@@ -239,13 +240,12 @@ def _process_config_section(
         # PDP PV의 경우 payload 최상위에 직접 필드 존재 (pdp_pv 섹션인 경우)
         if event_type == 'PDP PV' and not is_common:
             if isinstance(value, dict):
-                # 중첩된 딕셔너리: 재귀 처리 (단, pdp_pv는 평탄한 구조이므로 실제로는 리프 노드만 있을 것)
+                # 중첩된 딕셔너리: 재귀 처리
                 _process_config_section(value, event_type, goodscode, frontend_data, exclude_fields, expected, is_common=False, parent_path='', is_utlogmap=is_utlogmap)
             else:
                 # 리프 노드: payload 최상위에 직접 필드 (validate_payload에서 payload.get(key)로 접근)
-                tracking_path = key
                 processed_value = replace_placeholders(value, goodscode, frontend_data)
-                expected[tracking_path] = processed_value
+                expected[key] = processed_value
             continue
         
         # params-exp/clk 구조 처리
@@ -253,48 +253,24 @@ def _process_config_section(
             parsed = value.get('parsed', {})
             if parsed:
                 # params-exp.parsed 또는 params-clk.parsed 내부 처리
-                _process_config_section(parsed, event_type, goodscode, frontend_data, exclude_fields, expected, is_common=False, parent_path=key + '.parsed', is_utlogmap=False)
+                _process_config_section(parsed, event_type, goodscode, frontend_data, exclude_fields, expected, is_common=False, parent_path='', is_utlogmap=False)
             continue
         
         # utLogMap 객체인 경우
         if key == 'utLogMap' and isinstance(value, dict):
             # utLogMap 내부 필드들을 재귀적으로 처리
-            _process_config_section(value, event_type, goodscode, frontend_data, exclude_fields, expected, is_common=False, parent_path=parent_path, is_utlogmap=True)
+            _process_config_section(value, event_type, goodscode, frontend_data, exclude_fields, expected, is_common=False, parent_path='', is_utlogmap=True)
             continue
         
         # 중첩된 딕셔너리 처리
         if isinstance(value, dict):
-            _process_config_section(value, event_type, goodscode, frontend_data, exclude_fields, expected, is_common=False, parent_path=parent_path + '.' + key if parent_path else key, is_utlogmap=is_utlogmap)
+            _process_config_section(value, event_type, goodscode, frontend_data, exclude_fields, expected, is_common=False, parent_path='', is_utlogmap=is_utlogmap)
             continue
         
-        # 리프 노드: 경로 생성 및 값 처리
-        if event_type == 'PDP PV' and not is_common:
-            # PDP PV는 payload 최상위에 직접 필드 존재
-            # validate_payload에서 payload.get(key)로 접근하므로 그냥 key만 사용
-            tracking_path = key
-        elif is_common:
-            # common 필드는 gokey.params.* 경로
-            if key in TOP_LEVEL_FIELDS:
-                tracking_path = f'gokey.params.{key}'
-            else:
-                # common 필드 중 TOP_LEVEL_FIELDS가 아니면 params-exp/clk.parsed.* 경로
-                tracking_path = f'gokey.params.{params_key}.parsed.{key}'
-        elif is_utlogmap:
-            # utLogMap 내부 필드: gokey.params.{params_key}.parsed.utLogMap.parsed.{필드명}
-            tracking_path = f'gokey.params.{params_key}.parsed.utLogMap.parsed.{key}'
-        elif parent_path:
-            # parent_path가 있으면 해당 경로 사용 (예: params-exp.parsed.{필드명})
-            if parent_path.startswith('params-'):
-                tracking_path = f'gokey.params.{parent_path}.{key}'
-            else:
-                tracking_path = f'gokey.params.{params_key}.parsed.{parent_path}.{key}' if parent_path else f'gokey.params.{params_key}.parsed.{key}'
-        else:
-            # 일반 필드: build_tracking_path 사용
-            tracking_path = build_tracking_path(key, event_type)
-        
-        # 플레이스홀더 대체
+        # 리프 노드: 필드명만 저장 (경로 생성 제거)
+        # validate_payload에서 재귀 탐색으로 찾을 수 있도록 필드명만 키로 사용
         processed_value = replace_placeholders(value, goodscode, frontend_data)
-        expected[tracking_path] = processed_value
+        expected[key] = processed_value
 
 
 def validate_event_type_logs(
@@ -366,7 +342,19 @@ def validate_event_type_logs(
     else:
         return True, []  # 알 수 없는 이벤트 타입
     
-    # 로그가 없으면 검증 스킵 (module_config.json에 정의되어 있어도 로그가 없으면 스킵)
+    # module_config.json에 이벤트가 정의되어 있는데 로그가 없으면 실패
+    # (프론트엔드 동작 실패로 인한 이벤트 수집 실패)
+    if event_config_key and event_config_key in module_config_data:
+        if len(logs) == 0:
+            error_msg = (
+                f"{event_type} 이벤트가 module_config.json에 정의되어 있으나, "
+                f"실제 로그가 수집되지 않았습니다. "
+                f"프론트엔드 동작이 실패했을 가능성이 있습니다. "
+                f"(모듈: {module_title}, goodscode: {goodscode})"
+            )
+            return False, [error_msg]
+    
+    # 로그가 없고 config에도 정의되지 않은 경우는 스킵 (정상)
     if len(logs) == 0:
         return True, []
     

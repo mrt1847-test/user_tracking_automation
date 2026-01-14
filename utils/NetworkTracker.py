@@ -1106,14 +1106,13 @@ class NetworkTracker:
     
     def validate_payload(self, log: Dict[str, Any], expected_data: Dict[str, Any], goodscode: Optional[str] = None, event_type: Optional[str] = None) -> bool:
         """
-        로그의 payload 정합성 검증 (디코딩된 값 사용, 개선된 버전)
+        로그의 payload 정합성 검증 (재귀적 탐색 방식)
         
         Args:
             log: 검증할 로그 딕셔너리
             expected_data: 기대하는 데이터 (키-값 쌍)
-                          - 경로 방식: 'gokey.params.params-exp.parsed._p_prod' (기존 방식 지원)
-                          - 재귀 탐색: '_p_prod' (자동으로 찾음, 간단한 키 이름만 제공)
-                          - 일반 키: 'pageId' (payload 최상위 키)
+                          - 키는 필드명만 사용 (예: '_p_prod', 'channel_code', 'query')
+                          - validate_payload에서 재귀적으로 찾음
             goodscode: 상품 번호 (Product Exposure의 경우 expdata.parsed 배열에서 필터링용)
             event_type: 이벤트 타입 ('Product Exposure', 'Product Click' 등)
         
@@ -1123,16 +1122,6 @@ class NetworkTracker:
         Raises:
             AssertionError: 검증 실패 시
         """
-        def find_value_by_path(obj: Dict[str, Any], path: str) -> Optional[Any]:
-            """경로를 따라 값을 찾기"""
-            keys = path.split('.')
-            current = obj
-            for key in keys:
-                if current is None or not isinstance(current, dict):
-                    return None
-                current = current.get(key)
-            return current
-        
         def find_value_recursive(obj: Any, target_key: str, visited: Optional[set] = None) -> Optional[Any]:
             """재귀적으로 키를 찾아서 값 반환"""
             if visited is None:
@@ -1220,45 +1209,22 @@ class NetworkTracker:
                                         matched_expdata_item = parsed
                                         break
         
-        # 기대 데이터 검증
+        # 기대 데이터 검증 (재귀적 탐색 사용)
         errors = []
         for key, expected_value in expected_data.items():
             actual_value = None
             
-            # gokey 내부 파라미터 접근 (경로 방식)
-            if key.startswith('gokey.params.'):
-                param_path = key.replace('gokey.params.', '')
-                
-                # Product Exposure이고 matched_expdata_item이 있으면 특별 처리
-                if event_type == 'Product Exposure' and matched_expdata_item and param_path.startswith('params-exp.parsed.'):
-                    # expdata.parsed[*].exargs.params-exp.parsed.* 경로 처리
-                    field_name = param_path.replace('params-exp.parsed.', '')
-                    if field_name.startswith('utLogMap.parsed.'):
-                        # utLogMap.parsed.* 경로
-                        utlogmap_path = field_name.replace('utLogMap.parsed.', '')
-                        utlogmap = matched_expdata_item.get('utLogMap', {})
-                        if isinstance(utlogmap, dict) and 'parsed' in utlogmap:
-                            utlogmap_parsed = utlogmap['parsed']
-                            if isinstance(utlogmap_parsed, dict):
-                                actual_value = utlogmap_parsed.get(utlogmap_path)
-                    else:
-                        # 일반 필드
-                        actual_value = matched_expdata_item.get(field_name) if isinstance(matched_expdata_item, dict) else None
-                else:
-                    # 일반 경로 처리
-                    actual_value = find_value_by_path(
-                        payload.get('decoded_gokey', {}).get('params', {}),
-                        param_path
-                    )
-            
-            # 재귀 탐색 방식 (간단한 키 이름만 제공)
-            elif '.' not in key and key not in payload:
-                # payload 전체에서 재귀적으로 찾기
-                actual_value = find_value_recursive(payload, key)
-            
-            # 일반 payload 키 검증
-            else:
+            # PDP PV는 payload 최상위에 직접 필드가 있으므로 직접 접근
+            if event_type == 'PDP PV':
                 actual_value = payload.get(key)
+            
+            # Product Exposure이고 matched_expdata_item이 있으면 해당 항목 내에서 재귀 탐색
+            elif event_type == 'Product Exposure' and matched_expdata_item:
+                actual_value = find_value_recursive(matched_expdata_item, key)
+            
+            # 그 외의 경우: payload 전체에서 재귀적으로 탐색
+            else:
+                actual_value = find_value_recursive(payload, key)
             
             # 값 검증
             if actual_value is None:
