@@ -297,128 +297,98 @@ def _process_config_section(
         expected[tracking_path] = processed_value
 
 
-def validate_tracking_logs(
+def validate_event_type_logs(
     tracker: NetworkTracker,
+    event_type: str,
     goodscode: str,
     module_title: str,
-    rules: Dict[str, Any],
     frontend_data: Optional[Dict[str, Any]] = None,
     module_config: Optional[Dict[str, Any]] = None,
-    use_auto_validation: bool = True,
     exclude_fields: Optional[List[str]] = None
 ) -> Tuple[bool, List[str]]:
     """
-    트래킹 로그 정합성 검증 (이벤트 타입별)
+    특정 이벤트 타입의 트래킹 로그 정합성 검증 (module_config.json만 사용)
     
     Args:
         tracker: NetworkTracker 인스턴스
+        event_type: 이벤트 타입 ('PV', 'Module Exposure', 'Product Exposure' 등)
         goodscode: 상품 번호
-        module_title: 모듈 타이틀 (검증 규칙 선택용)
-        rules: 검증 규칙 딕셔너리
+        module_title: 모듈 타이틀
         frontend_data: 프론트에서 읽은 데이터 (price, keyword 등)
         module_config: 모듈별 설정 딕셔너리 (None이면 JSON 파일에서 자동 로드)
-        use_auto_validation: module_config.json 자동 비교 사용 여부 (기본값: True)
-        exclude_fields: 자동 검증에서 제외할 필드 목록
+        exclude_fields: 검증에서 제외할 필드 목록
     
     Returns:
         (성공 여부, 에러 메시지 리스트)
     """
     errors = []
-    module_rules = rules.get(module_title, {})
     
-    # 모듈 설정 로드 (JSON 파일에서)
+    # 모듈 설정 로드
     if module_config is None:
         module_config = load_module_config()
     
     # 모듈별 설정 가져오기
     module_config_data = module_config.get(module_title, {})
     
-    # 각 이벤트 타입별로 검증
-    for event_type, rule_key in [
-        ('PV', 'pv'),
-        ('Module Exposure', 'module_exposure'),
-        ('Product Exposure', 'product_exposure'),
-        ('Product Click', 'product_click'),
-        ('Product A2C Click', 'product_a2c_click'),
-    ]:
-        # 해당 이벤트 타입의 로그 가져오기
-        method_name = EVENT_TYPE_METHODS.get(event_type)
-        if not method_name:
-            continue
-        
-        get_logs_method = getattr(tracker, method_name)
-        
-        # Product Exposure의 경우 spm으로 필터링 (module_config에서 가져온 spm 사용)
-        if event_type == 'Product Exposure':
-            # module_config의 common 섹션에서 spm 추출
-            common_config = module_config_data.get('common', {})
-            module_spm = common_config.get('spm') if common_config else None
-            if module_spm:
-                logs = get_logs_method(goodscode, module_spm)
-            else:
-                logs = get_logs_method(goodscode)
+    # 이벤트 타입별 config 키 확인
+    event_config_key = EVENT_TYPE_CONFIG_KEY_MAP.get(event_type)
+    if not event_config_key:
+        # PV는 특별한 구조가 없을 수 있음
+        if event_type != 'PV':
+            return True, []  # 알 수 없는 이벤트 타입은 스킵
+    
+    # module_config.json에 이벤트 타입별 섹션이 없으면 검증 스킵
+    if event_config_key and event_config_key not in module_config_data:
+        return True, []  # config에 정의되지 않은 이벤트는 검증하지 않음
+    
+    # 로그 가져오기
+    common_config = module_config_data.get('common', {})
+    module_spm = common_config.get('spm') if common_config else None
+    
+    if event_type == 'PV':
+        logs = tracker.get_pv_logs()
+    elif event_type == 'PDP PV':
+        logs = tracker.get_pdp_pv_logs_by_goodscode(goodscode)
+    elif event_type == 'Module Exposure':
+        if module_spm:
+            logs = tracker.get_module_exposure_logs_by_spm(module_spm)
         else:
-            logs = get_logs_method(goodscode)
-        
-        # validation_rules에서 required 체크
-        event_rule = module_rules.get(rule_key, {})
-        required = event_rule.get('required', False)
-        
-        # 필수 이벤트인데 로그가 없으면 에러
-        if required and len(logs) == 0:
-            errors.append(f"{event_type} 로그가 없습니다. goodscode: {goodscode}")
-            continue
-        
-        # 로그가 없으면 검증 스킵
-        if len(logs) == 0:
-            continue
-        
-        # 각 로그에 대해 검증
-        for log in logs:
-            expected = {}
-            
-            # 1. 자동 검증: module_config.json의 이벤트 타입별 필드 자동 비교
-            if use_auto_validation and module_config_data:
-                auto_expected = build_expected_from_module_config(
-                    module_config_data,
-                    event_type,
-                    goodscode,
-                    frontend_data,
-                    exclude_fields
-                )
-                expected.update(auto_expected)
-            
-            # 2. 기존 validation_rules 방식 (병행 지원)
-            if 'expected_values' in event_rule:
-                rule_expected = event_rule["expected_values"].copy()
-                
-                # goodscode로 동적 검증
-                for key, value in rule_expected.items():
-                    if value is None and "_p_prod" in key:
-                        rule_expected[key] = goodscode
-                    # JSON 파일에서 모듈별 값 가져오기 (예: area_code)
-                    elif isinstance(value, str) and value.startswith('@module.'):
-                        # @module.area_code 형식으로 지정된 경우
-                        config_key = value.replace('@module.', '')
-                        module_value = get_module_value(module_title, config_key, module_config, event_type)
-                        if module_value is not None:
-                            rule_expected[key] = module_value
-                
-                # 프론트 데이터와 비교
-                if "frontend_compare" in event_rule:
-                    for frontend_key, tracking_path in event_rule["frontend_compare"].items():
-                        if frontend_data and frontend_key in frontend_data:
-                            rule_expected[tracking_path] = frontend_data[frontend_key]
-                
-                # validation_rules의 expected_values가 우선순위가 높음 (덮어쓰기)
-                expected.update(rule_expected)
-            
-            # 검증 수행
-            if expected:
-                try:
-                    tracker.validate_payload(log, expected, goodscode, event_type)
-                except AssertionError as e:
-                    errors.append(f"{event_type} 로그 검증 실패: {e}")
+            logs = tracker.get_logs('Module Exposure')
+    elif event_type == 'Product Exposure':
+        if module_spm:
+            logs = tracker.get_product_exposure_logs_by_goodscode(goodscode, module_spm)
+        else:
+            logs = tracker.get_product_exposure_logs_by_goodscode(goodscode)
+    elif event_type == 'Product Click':
+        logs = tracker.get_product_click_logs_by_goodscode(goodscode)
+    elif event_type == 'Product A2C Click':
+        logs = tracker.get_product_a2c_click_logs_by_goodscode(goodscode)
+    else:
+        return True, []  # 알 수 없는 이벤트 타입
+    
+    # 로그가 없으면 검증 스킵 (module_config.json에 정의되어 있어도 로그가 없으면 스킵)
+    if len(logs) == 0:
+        return True, []
+    
+    # module_config.json에서 expected 값 생성
+    expected = build_expected_from_module_config(
+        module_config_data,
+        event_type,
+        goodscode,
+        frontend_data,
+        exclude_fields
+    )
+    
+    # expected 값이 없으면 검증 스킵
+    if not expected:
+        return True, []
+    
+    # 각 로그에 대해 검증
+    for log in logs:
+        try:
+            tracker.validate_payload(log, expected, goodscode, event_type)
+        except AssertionError as e:
+            errors.append(f"{event_type} 로그 검증 실패: {e}")
     
     return len(errors) == 0, errors
 

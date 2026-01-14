@@ -1,3 +1,15 @@
+pytest_plugins = [
+    "pytest_bdd",
+    "steps.home_steps",
+    "steps.login_steps",
+    "steps.srp_steps",
+    "steps.product_steps",
+    "steps.cart_steps",
+    "steps.checkout_steps",
+    "steps.order_steps",
+]
+
+
 import shutil
 from playwright.sync_api import sync_playwright, Browser, BrowserContext, Page
 # from src.gtas_python_core.gtas_python_core_vault import Vault
@@ -144,11 +156,91 @@ def page(browser, ensure_login_state):
     context.close()
 
 
+# BDD를 위한 scenario context fixture
+@pytest.fixture(scope="function")
+def bdd_context():
+    """
+    BDD step definitions 간 데이터 공유를 위한 context dictionary
+    각 scenario마다 새로 초기화됨
+    """
+    return {}
+
+
 def pytest_report_teststatus(report, config):
     # 이름에 'wait_'가 들어간 테스트는 리포트 출력에서 숨김
     if any(keyword in report.nodeid for keyword in ["wait_", "fetch"]):
         return report.outcome, None, ""
     return None
+
+
+# TestRail 연동을 위한 전역 변수 (주석 처리된 TestRail 코드 활성화 시 사용)
+testrail_run_id = None
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_bdd_after_step(request, feature, scenario, step, step_func, step_func_args):
+    """
+    각 스텝 실행 후 TestRail에 기록
+    스텝 파라미터에서 TC 번호를 추출하여 TestRail에 기록
+    """
+    outcome = yield
+    
+    try:
+        # 스텝 실행 결과 확인
+        if outcome.excinfo is not None:
+            step_status = "failed"
+            error_msg = str(outcome.excinfo[1]) if outcome.excinfo[1] else "Unknown error"
+        else:
+            step_status = "passed"
+            error_msg = None
+        
+        # TC 번호 추출 시도
+        step_case_id = None
+        
+        # 1. step_func_args에서 TC 번호 파라미터 찾기 (tc_id, tc_module_exposure 등)
+        if step_func_args:
+            for arg_name, arg_value in step_func_args.items():
+                # TC 번호 형식 확인 (C로 시작하는 문자열)
+                if isinstance(arg_value, str) and arg_value.startswith("C") and len(arg_value) > 1 and arg_value[1:].isdigit():
+                    step_case_id = arg_value
+                    break
+        
+        # 2. step_func_args에서 bdd_context를 통해 TC 번호 찾기
+        if step_case_id is None and step_func_args:
+            bdd_context = step_func_args.get('bdd_context')
+            if bdd_context and isinstance(bdd_context, dict):
+                step_case_id = bdd_context.get('testrail_tc_id')
+        
+        # TestRail 기록 (testrail_run_id가 설정되어 있고 TC 번호가 있을 때만)
+        if step_case_id and testrail_run_id:
+            # Cxxxx → 숫자만 추출
+            case_id_num = int(step_case_id[1:]) if step_case_id.startswith("C") else int(step_case_id)
+            
+            status_id = 5 if step_status == "failed" else 1
+            comment = f"스텝: {step.name}\n"
+            if error_msg:
+                comment += f"오류: {error_msg}"
+            
+            payload = {
+                "status_id": status_id,
+                "comment": comment,
+            }
+            
+            try:
+                # testrail_post 함수는 TestRail 연동 코드가 활성화되면 사용 가능
+                # testrail_post(
+                #     f"add_result_for_case/{testrail_run_id}/{case_id_num}", 
+                #     payload
+                # )
+                print(f"[TestRail] 스텝 '{step.name}' 결과 기록 (case_id: {step_case_id}, status: {step_status})")
+            except Exception as e:
+                print(f"[WARNING] 스텝 TestRail 기록 실패: {e}")
+        elif step_case_id:
+            # TC 번호는 있지만 testrail_run_id가 없는 경우 (TestRail 연동 미활성화)
+            print(f"[TestRail] 스텝 '{step.name}' TC 번호 발견: {step_case_id} (TestRail 연동 미활성화)")
+    
+    except Exception as e:
+        print(f"[ERROR] pytest_bdd_after_step 처리 중 예외 발생: {e}")
 
 
 # JSON 파일이 들어 있는 폴더 지정
