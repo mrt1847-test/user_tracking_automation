@@ -1,0 +1,28 @@
+{
+    "case_id": [
+        ""
+    ],
+    "driver": "Chrome",
+    "match_rate": 0.88,
+    "milestone_id": "1537",
+    "project_id": "197",
+    "section_id": "60638",
+    "suite_id": "1041",
+    "tr_url": "http://172.30.2.20",
+    "multiple_test_use": false,
+    "environment": "prod",
+    "urls": {
+        "dev": {
+            "base": "https://www-dev.gmarket.co.kr",
+            "item": "https://item-dev.gmarket.co.kr"
+        },
+        "stg": {
+            "base": "https://www-stg.gmarket.co.kr",
+            "item": "https://item-staging.gmarket.co.kr"
+        },
+        "prod": {
+            "base": "https://www.gmarket.co.kr",
+            "item": "https://item.gmarket.co.kr"
+        }
+    }
+}
