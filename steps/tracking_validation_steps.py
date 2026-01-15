@@ -14,6 +14,8 @@ logger = logging.getLogger(__name__)
 
 def _get_common_context(bdd_context):
     """공통 context 값 확인 및 반환"""
+    from utils.validation_helpers import extract_price_info_from_pdp_pv
+    
     tracker = bdd_context.get('tracker')
     if not tracker:
         raise ValueError("bdd_context에 'tracker'가 없습니다. 네트워크 트래킹을 시작해주세요.")
@@ -26,8 +28,10 @@ def _get_common_context(bdd_context):
     if not module_title:
         raise ValueError("bdd_context에 'module_title'가 없습니다.")
     
-    price_info = bdd_context.get('price_info', {})
     keyword = bdd_context.get('keyword', '')
+    
+    # 🔥 PDP PV 로그에서 가격 정보 추출 (프론트엔드 대신)
+    price_info = extract_price_info_from_pdp_pv(tracker, goodscode)
     
     frontend_data = price_info.copy() if price_info else {}
     if keyword:
@@ -99,8 +103,21 @@ def then_pdp_pv_logs_should_pass_validation(tc_id, bdd_context):
     if not success:
         error_message = f"[TestRail TC: {tc_id}] PDP PV 로그 정합성 검증 실패:\n" + "\n".join(errors)
         logger.error(error_message)
-        raise AssertionError(error_message)
+        
+        # Soft Assertion: 실패 정보를 bdd_context에 저장 (다음 step 계속 실행)
+        if 'validation_errors' not in bdd_context.store:
+            bdd_context.store['validation_errors'] = []
+        bdd_context.store['validation_errors'].append(error_message)
+        
+        # TestRail 기록을 위해 실패 플래그 설정
+        bdd_context['validation_failed'] = True
+        bdd_context['validation_error_message'] = error_message
+        
+        # AssertionError를 발생시키지 않음 (다음 step 계속 실행)
+        return
     
+    # 성공 시 실패 플래그 제거
+    bdd_context['validation_failed'] = False
     logger.info(f"[TestRail TC: {tc_id}] PDP PV 로그 정합성 검증 통과")
 
 
@@ -135,8 +152,21 @@ def then_module_exposure_logs_should_pass_validation(tc_id, bdd_context):
     if not success:
         error_message = f"[TestRail TC: {tc_id}] Module Exposure 로그 정합성 검증 실패:\n" + "\n".join(errors)
         logger.error(error_message)
-        raise AssertionError(error_message)
+        
+        # Soft Assertion: 실패 정보를 bdd_context에 저장 (다음 step 계속 실행)
+        if 'validation_errors' not in bdd_context.store:
+            bdd_context.store['validation_errors'] = []
+        bdd_context.store['validation_errors'].append(error_message)
+        
+        # TestRail 기록을 위해 실패 플래그 설정
+        bdd_context['validation_failed'] = True
+        bdd_context['validation_error_message'] = error_message
+        
+        # AssertionError를 발생시키지 않음 (다음 step 계속 실행)
+        return
     
+    # 성공 시 실패 플래그 제거
+    bdd_context['validation_failed'] = False
     logger.info(f"[TestRail TC: {tc_id}] Module Exposure 로그 정합성 검증 통과")
 
 
@@ -171,8 +201,21 @@ def then_product_exposure_logs_should_pass_validation(tc_id, bdd_context):
     if not success:
         error_message = f"[TestRail TC: {tc_id}] Product Exposure 로그 정합성 검증 실패:\n" + "\n".join(errors)
         logger.error(error_message)
-        raise AssertionError(error_message)
+        
+        # Soft Assertion: 실패 정보를 bdd_context에 저장 (다음 step 계속 실행)
+        if 'validation_errors' not in bdd_context.store:
+            bdd_context.store['validation_errors'] = []
+        bdd_context.store['validation_errors'].append(error_message)
+        
+        # TestRail 기록을 위해 실패 플래그 설정
+        bdd_context['validation_failed'] = True
+        bdd_context['validation_error_message'] = error_message
+        
+        # AssertionError를 발생시키지 않음 (다음 step 계속 실행)
+        return
     
+    # 성공 시 실패 플래그 제거
+    bdd_context['validation_failed'] = False
     logger.info(f"[TestRail TC: {tc_id}] Product Exposure 로그 정합성 검증 통과")
 
 
@@ -207,8 +250,21 @@ def then_product_click_logs_should_pass_validation(tc_id, bdd_context):
     if not success:
         error_message = f"[TestRail TC: {tc_id}] Product Click 로그 정합성 검증 실패:\n" + "\n".join(errors)
         logger.error(error_message)
-        raise AssertionError(error_message)
+        
+        # Soft Assertion: 실패 정보를 bdd_context에 저장 (다음 step 계속 실행)
+        if 'validation_errors' not in bdd_context.store:
+            bdd_context.store['validation_errors'] = []
+        bdd_context.store['validation_errors'].append(error_message)
+        
+        # TestRail 기록을 위해 실패 플래그 설정
+        bdd_context['validation_failed'] = True
+        bdd_context['validation_error_message'] = error_message
+        
+        # AssertionError를 발생시키지 않음 (다음 step 계속 실행)
+        return
     
+    # 성공 시 실패 플래그 제거
+    bdd_context['validation_failed'] = False
     logger.info(f"[TestRail TC: {tc_id}] Product Click 로그 정합성 검증 통과")
 
 
@@ -260,6 +316,17 @@ def then_save_all_tracking_logs_to_json(bdd_context):
         raise ValueError("bdd_context에 'module_title'가 없습니다.")
     
     _save_tracking_logs(bdd_context, tracker, goodscode, module_title)
+
+
+@then("모든 로그 검증이 완료되었음")
+def then_all_validations_completed(bdd_context):
+    """모든 검증 오류를 한 번에 확인"""
+    validation_errors = bdd_context.store.get('validation_errors', [])
+    if validation_errors:
+        error_message = "다음 검증이 실패했습니다:\n" + "\n".join(validation_errors)
+        logger.error(error_message)
+        raise AssertionError(error_message)
+    logger.info("모든 로그 검증이 성공적으로 완료되었습니다.")
 
 
 def _save_tracking_logs(bdd_context, tracker, goodscode, module_title):

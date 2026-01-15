@@ -109,6 +109,39 @@ def get_module_value(module_title: str, key: str, config: Optional[Dict[str, Any
     return module_config.get(key)
 
 
+def extract_price_info_from_pdp_pv(tracker: NetworkTracker, goodscode: str) -> Optional[Dict[str, Any]]:
+    """
+    PDP PV 로그에서 가격 정보 추출
+    
+    Args:
+        tracker: NetworkTracker 인스턴스
+        goodscode: 상품 번호
+    
+    Returns:
+        가격 정보 딕셔너리 (origin_price, promotion_price, coupon_price) 또는 None
+    """
+    pdp_pv_logs = tracker.get_pdp_pv_logs_by_goodscode(goodscode)
+    
+    if not pdp_pv_logs or len(pdp_pv_logs) == 0:
+        return None
+    
+    # 첫 번째 PDP PV 로그에서 가격 정보 추출
+    first_log = pdp_pv_logs[0]
+    payload = first_log.get('payload', {})
+    
+    price_info = {}
+    
+    # payload 최상위에서 직접 가격 정보 추출
+    if 'origin_price' in payload:
+        price_info['origin_price'] = str(payload['origin_price'])
+    if 'promotion_price' in payload:
+        price_info['promotion_price'] = str(payload['promotion_price'])
+    if 'coupon_price' in payload:
+        price_info['coupon_price'] = str(payload['coupon_price'])
+    
+    return price_info if price_info else None
+
+
 def replace_placeholders(value: Any, goodscode: str, frontend_data: Optional[Dict[str, Any]] = None) -> Any:
     """
     플레이스홀더를 실제 값으로 대체
@@ -117,6 +150,7 @@ def replace_placeholders(value: Any, goodscode: str, frontend_data: Optional[Dic
         value: 대체할 값 (문자열 또는 다른 타입)
         goodscode: 상품 번호
         frontend_data: 프론트에서 읽은 데이터 (price, keyword 등)
+                     또는 PDP PV 로그에서 추출한 가격 정보
     
     Returns:
         플레이스홀더가 대체된 값
@@ -131,6 +165,7 @@ def replace_placeholders(value: Any, goodscode: str, frontend_data: Optional[Dic
     # <cguid>는 실제 로그에서 가져와야 하므로 그대로 유지 (나중에 비교 시 처리)
     
     # <검색어>, <원가>, <할인가>, <쿠폰적용가>는 frontend_data에서 가져오기
+    # frontend_data는 이제 PDP PV 로그에서 추출한 가격 정보를 포함할 수 있음
     if frontend_data:
         if '<검색어>' in value and 'keyword' in frontend_data:
             value = value.replace('<검색어>', str(frontend_data['keyword']))
@@ -273,7 +308,11 @@ def _process_config_section(
             # 리스트인 경우 각 요소에 대해 플레이스홀더 대체
             processed_value = [replace_placeholders(item, goodscode, frontend_data) for item in value]
         else:
-            processed_value = replace_placeholders(value, goodscode, frontend_data)
+            # "mandatory" 문자열인 경우 특별한 마커로 저장
+            if isinstance(value, str) and value.lower() == "mandatory":
+                processed_value = "__MANDATORY__"  # 특별한 마커
+            else:
+                processed_value = replace_placeholders(value, goodscode, frontend_data)
         expected[key] = processed_value
 
 

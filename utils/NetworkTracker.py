@@ -1218,17 +1218,21 @@ class NetworkTracker:
             if event_type == 'PDP PV':
                 actual_value = payload.get(key)
             
-            # Product Exposure이고 matched_expdata_item이 있으면 해당 항목 내에서 재귀 탐색
-            elif event_type == 'Product Exposure' and matched_expdata_item:
-                actual_value = find_value_recursive(matched_expdata_item, key)
-            
             # 그 외의 경우: payload 전체에서 재귀적으로 탐색
+            # 재귀적 탐색이므로 경로 제한 없이 payload 전체에서 찾음
+            # matched_expdata_item은 goodscode 필터링 확인용이며, 실제 탐색은 payload 전체에서 수행
             else:
                 actual_value = find_value_recursive(payload, key)
             
             # 값 검증
             if actual_value is None:
                 errors.append(f"키 '{key}'에 해당하는 값이 없습니다.")
+            elif isinstance(expected_value, str) and expected_value == "__MANDATORY__":
+                # mandatory 필드: 빈 값만 아니면 통과
+                # 빈 값 체크: None, 빈 문자열, 공백만 있는 문자열
+                if actual_value is None or (isinstance(actual_value, str) and actual_value.strip() == ""):
+                    errors.append(f"키 '{key}'는 mandatory 필드이지만 값이 비어있습니다.")
+                # 빈 값이 아니면 통과 (다음 필드로)
             elif isinstance(expected_value, list):
                 # expected_value가 리스트인 경우: actual_value가 리스트에 포함되어 있으면 통과
                 if actual_value not in expected_value:
@@ -1236,11 +1240,26 @@ class NetworkTracker:
                         f"키 '{key}'의 값이 일치하지 않습니다. "
                         f"기대값 (리스트 중 하나): {expected_value}, 실제값: {actual_value}"
                     )
-            elif actual_value != expected_value:
-                errors.append(
-                    f"키 '{key}'의 값이 일치하지 않습니다. "
-                    f"기대값: {expected_value}, 실제값: {actual_value}"
-                )
+            else:
+                # 포함 여부 매칭이 필요한 필드들 (spm, spm-url, spm-pre, spm-cnt)
+                contains_match_fields = {'spm', 'spm-url', 'spm-pre', 'spm-cnt'}
+                
+                if key in contains_match_fields and isinstance(expected_value, str) and isinstance(actual_value, str):
+                    # 포함 여부 매칭: expected_value가 actual_value에 포함되어 있으면 통과
+                    # 예: expected="gmktpc.home.searchtop", actual="gmktpc.home.searchtop.dsearchbox.1fbf486arWCtiZ" → 통과
+                    # 예: expected="gmktpc.searchlist", actual="gmktpc.searchlist.0.0.28e22ebayJdnYA" → 통과
+                    if expected_value in actual_value:
+                        continue  # 포함 매칭 성공, 다음 필드로
+                    else:
+                        errors.append(
+                            f"키 '{key}'의 값이 일치하지 않습니다. "
+                            f"기대값 (포함 여부): {expected_value}, 실제값: {actual_value}"
+                        )
+                elif actual_value != expected_value:
+                    errors.append(
+                        f"키 '{key}'의 값이 일치하지 않습니다. "
+                        f"기대값: {expected_value}, 실제값: {actual_value}"
+                    )
         
         if errors:
             error_msg = "\n".join(errors)

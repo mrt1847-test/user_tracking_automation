@@ -114,13 +114,8 @@ def user_confirms_and_clicks_product_in_module(browser_session, module_title, bd
     # 상품 코드 가져오기
     goodscode = search_page.get_product_code(product)
     
-    # 🔥 상품 클릭 전에 가격 정보 수집 (중요: 플레이스홀더 대체를 위해 필요)
-    price_info = search_page.get_product_price_info(goodscode)
-    if price_info:
-        bdd_context.store['price_info'] = price_info
-        logger.info(f"가격 정보 수집 완료: {price_info}")
-    else:
-        logger.warning(f"가격 정보 수집 실패: goodscode={goodscode}")
+    # 🔥 가격 정보는 이제 PDP PV 로그에서 추출하므로 프론트엔드에서 수집하지 않음
+    # (PDP PV 로그는 상품 페이지 이동 후 수집됨)
     
     # 상품 클릭
     new_page = search_page.click_product_and_wait_new_page(product)
@@ -140,11 +135,14 @@ def user_confirms_and_clicks_product_in_module(browser_session, module_title, bd
 def product_page_is_opened(browser_session, bdd_context):
     """
     상품 페이지 이동 확인 (검증)
+    PDP PV 로그 수집을 위해 networkidle 상태까지 대기
     
     Args:
         browser_session: BrowserSession 객체 (page 참조 관리)
         bdd_context: BDD context (step 간 데이터 공유용)
     """
+    import time
+    
     search_page = SearchPage(browser_session.page)
     
     # bdd context에서 값 가져오기 (store 또는 딕셔너리 방식 모두 지원)
@@ -162,4 +160,18 @@ def product_page_is_opened(browser_session, bdd_context):
         current_url = browser_session.page.url
         search_page.verify_product_code_in_url(current_url, goodscode)
     
-    logger.info(f"상품 페이지 이동 확인 완료: {goodscode}")
+    # 🔥 PDP PV 로그 수집을 위해 networkidle 상태까지 대기
+    try:
+        browser_session.page.wait_for_load_state("networkidle", timeout=10000)
+        logger.debug("networkidle 상태 대기 완료 (PDP PV 로그 수집 대기)")
+    except Exception as e:
+        logger.warning(f"networkidle 대기 실패, load 상태로 대기: {e}")
+        try:
+            browser_session.page.wait_for_load_state("load", timeout=30000)
+            logger.debug("load 상태 대기 완료")
+        except Exception as e2:
+            logger.warning(f"load 상태 대기도 실패: {e2}")
+    
+    # 추가 안전 대기 (PDP PV 로그가 비동기로 전송될 수 있음)
+    time.sleep(2)
+    logger.info(f"상품 페이지 이동 확인 완료: {goodscode} (PDP PV 로그 수집 대기 완료)")

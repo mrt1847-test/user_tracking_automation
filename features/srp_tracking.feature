@@ -15,6 +15,7 @@ Feature: G마켓 SRP 트래킹 로그 정합성 검증
     And Product Exposure 로그가 정합성 검증을 통과해야 함 (TC: <tc_product_exposure>)
     And Product Click 로그가 정합성 검증을 통과해야 함 (TC: <tc_product_click>)
     And PDP PV 로그가 정합성 검증을 통과해야 함 (TC: <tc_pdp_pv>)
+    Then 모든 로그 검증이 완료되었음
 
     Examples:
       | keyword | module_title      | tc_module_exposure | tc_product_exposure | tc_product_click | tc_pdp_pv |

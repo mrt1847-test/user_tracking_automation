@@ -341,8 +341,17 @@ def pytest_bdd_after_step(request, feature, scenario, step, step_func, step_func
             step_status = "failed"
             error_msg = str(outcome.excinfo[1]) if outcome.excinfo[1] else "Unknown error"
         else:
+            # Soft Assertion 지원: bdd_context에서 실패 여부 확인
             step_status = "passed"
             error_msg = None
+            
+            if step_func_args:
+                bdd_context = step_func_args.get('bdd_context')
+                if bdd_context and hasattr(bdd_context, 'get'):
+                    # validation_failed 플래그 확인
+                    if bdd_context.get('validation_failed'):
+                        step_status = "failed"
+                        error_msg = bdd_context.get('validation_error_message', '검증 실패')
         
         # TC 번호 추출 시도
         step_case_id = None
@@ -358,7 +367,7 @@ def pytest_bdd_after_step(request, feature, scenario, step, step_func, step_func
         # 2. step_func_args에서 bdd_context를 통해 TC 번호 찾기
         if step_case_id is None and step_func_args:
             bdd_context = step_func_args.get('bdd_context')
-            if bdd_context and isinstance(bdd_context, dict):
+            if bdd_context and hasattr(bdd_context, 'get'):
                 step_case_id = bdd_context.get('testrail_tc_id')
         
         # TestRail 기록 (testrail_run_id가 설정되어 있고 TC 번호가 있을 때만)

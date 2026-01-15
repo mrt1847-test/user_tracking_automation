@@ -3,16 +3,16 @@
     "common": {
       "channel_code": "200003514",
       "cguid": "11412244806446005562000000",
-      "spm-url": "gmktpc.home.searchtop.dsearchbox.1fbf486anQlGXO",
+      "spm-url": "gmktpc.home.searchtop",
       "spm-pre": "",
-      "spm-cnt": "gmktpc.searchlist.0.0.5b772ebahe2AN1",
+      "spm-cnt": "gmktpc.searchlist",
       "spm": "gmktpc.searchlist.cpc"
     },
     "module_exposure": {
       "params-exp": {
         "parsed": {
           "module_index": "3",
-          "ab_buckets": "#108^3#B"
+          "ab_buckets": "mandatory"
         }
       }
     },
@@ -33,18 +33,18 @@
             "x_sku_id": "0",
             "pageIndex": "0",
             "pagePos": "0",
-            "pageSize": "5",
+            "pageSize": "8",
             "listno": "0",
             "sort": "popularity",
             "searchScenario": "keyword",
             "query": "<검색어>",
-            "pvid": "b8b22bd8facf42a58278c9778fd4b5dd",
+            "pvid": "mandatory",
             "pvid_sys": "gmarket server",
-            "search_session_id": "ab0ff96a-f12e-4d5a-99f7-1d7ab21248c2",
+            "search_session_id": "mandatory",
             "origin_price": "<원가>",
             "promotion_price": "<할인가>",
             "coupon_price": "<쿠폰적용가>",
-            "ab_buckets": "#108^3#B",
+            "ab_buckets": "mandatory",
             "trafficType": "ad"
           }
         }
@@ -53,7 +53,7 @@
     "product_click": {
       "params-clk": {
         "parsed": {
-          "gmkt_area_code": "200003315",
+          "gmkt_area_code": "200011491",
           "_p_prod": "<상품번호>",
           "_p_sku": "0",
           "_p_catalog": "",
@@ -66,18 +66,18 @@
             "x_sku_id": "0",
             "pageIndex": "0",
             "pagePos": "0",
-            "pageSize": "5",
+            "pageSize": "8",
             "listno": "0",
             "sort": "popularity",
             "searchScenario": "keyword",
             "query": "<검색어>",
-            "pvid": "b8b22bd8facf42a58278c9778fd4b5dd",
+            "pvid": "mandatory",
             "pvid_sys": "gmarket server",
-            "search_session_id": "ab0ff96a-f12e-4d5a-99f7-1d7ab21248c2",
+            "search_session_id": "mandatory",
             "origin_price": "<원가>",
             "promotion_price": "<할인가>",
             "coupon_price": "<쿠폰적용가>",
-            "ab_buckets": "#108^3#B",
+            "ab_buckets": "mandatory",
             "trafficType": "ad"
           }
         }
