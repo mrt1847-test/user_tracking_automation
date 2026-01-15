@@ -71,23 +71,6 @@ logger = logging.getLogger(__name__)
 STATE_PATH = "state.json"
 
 # ============================================
-# PlaywrightSharedState: Feature 단위 공유 상태 관리
-# ============================================
-class PlaywrightSharedState:
-    """
-    Feature 단위로 공유되는 상태 관리 클래스
-    같은 feature 파일 내의 시나리오들이 같은 page와 browser_session을 공유
-    """
-    feature_page = None
-    feature_browser_session = None
-    feature_context = None
-    bdd_context = None
-    current_feature_name = None
-    skip_current_feature = False
-    skip_feature_name = None
-
-
-# ============================================
 # BrowserSession: 브라우저 세션 관리 클래스
 # ============================================
 class BrowserSession:
@@ -187,17 +170,17 @@ def browser(pw):
     yield browser
     browser.close()
 # ------------------------
-# :셋: Context fixture (feature 단위로 공유)
+# :셋: Context fixture (각 시나리오마다 독립적으로 생성)
 # ------------------------
 @pytest.fixture(scope="function")
 def context(browser, ensure_login_state):
     """
     브라우저 컨텍스트 fixture
-    같은 feature 파일 내의 시나리오들이 같은 context를 공유
+    각 시나리오마다 독립적으로 생성되고 종료 시 정리됩니다.
     """
-    if not PlaywrightSharedState.feature_context:
-        PlaywrightSharedState.feature_context = browser.new_context(storage_state=ensure_login_state)
-    return PlaywrightSharedState.feature_context
+    ctx = browser.new_context(storage_state=ensure_login_state)
+    yield ctx
+    ctx.close()
 # ------------------------
 # :셋: 로그인 상태 검증
 # ------------------------
@@ -258,50 +241,43 @@ def ensure_login_state(pw):
         print("[INFO] 로그인 세션 유효 → 기존 state.json 사용")
     return STATE_PATH
 # ------------------------
-# :넷: page fixture (feature 단위로 공유)
+# :넷: page fixture (각 시나리오마다 독립적으로 생성)
 # ------------------------
 @pytest.fixture(scope="function")
 def page(context: BrowserContext):
     """
-    각 시나리오에서 사용할 page 객체입니다.
-    같은 feature 파일 내의 시나리오들이 같은 page를 공유합니다.
+    각 시나리오에서 사용할 page 객체
+    각 시나리오마다 독립적으로 생성되고 종료 시 정리됩니다.
     """
-    if not PlaywrightSharedState.feature_page:
-        # 혹시 모를 예외 처리: page가 없으면 생성
-        PlaywrightSharedState.feature_page = context.new_page()
-        PlaywrightSharedState.feature_page.set_default_timeout(10000)
-    return PlaywrightSharedState.feature_page
+    page = context.new_page()
+    page.set_default_timeout(10000)
+    yield page
+    page.close()
 
 
 # ------------------------
-# :다섯: BrowserSession fixture (feature 단위로 공유)
+# :다섯: BrowserSession fixture (각 시나리오마다 독립적으로 생성)
 # ------------------------
 @pytest.fixture(scope="function")
 def browser_session(page):
     """
     BrowserSession fixture - 현재 active page 참조 관리
-    같은 feature 파일 내의 시나리오들이 같은 browser_session을 공유합니다.
+    각 시나리오마다 독립적으로 생성됩니다.
     """
-    if not PlaywrightSharedState.feature_browser_session:
-        # 혹시 모를 예외 처리: browser_session이 없으면 생성
-        PlaywrightSharedState.feature_browser_session = BrowserSession(page)
-    return PlaywrightSharedState.feature_browser_session
+    return BrowserSession(page)
 
 
 # ------------------------
-# :여섯: BDD context fixture (feature 단위로 공유)
+# :여섯: BDD context fixture (각 시나리오마다 독립적으로 생성)
 # ------------------------
 @pytest.fixture(scope="function")
 def bdd_context():
     """
     시나리오 내 스텝 간 데이터 공유를 위한 전용 객체
-    같은 feature 파일 내의 모든 시나리오가 같은 context를 공유
+    각 시나리오마다 독립적으로 생성됩니다.
     이름 충돌이 없고, 시나리오 메타데이터와 비즈니스 데이터를 분리해서 관리
     
     하위 호환성: 딕셔너리처럼 사용 가능 (bdd_context['key']) + store 속성 사용 가능 (bdd_context.store['key'])
-    
-    주의: 여러 feature를 로드하므로 pytest_bdd_before_scenario hook에서 
-    feature 변경 시 store를 리셋해야 함
     """
     class Context:
         def __init__(self):
@@ -331,55 +307,13 @@ def bdd_context():
             """in 연산자 지원"""
             return key in self.store or key in self._dict
     
-    if not PlaywrightSharedState.bdd_context:
-        context = Context()
-        PlaywrightSharedState.bdd_context = context
-    return PlaywrightSharedState.bdd_context
+    return Context()
 
 
 # ============================================
-# pytest-bdd hooks: Feature 단위 상태 관리
+# pytest-bdd hooks (필요 시 추가)
 # ============================================
-@pytest.hookimpl(tryfirst=True)
-def pytest_bdd_before_scenario(request, feature, scenario):
-    """
-    각 시나리오 실행 전 호출
-    feature가 변경되면 PlaywrightSharedState 초기화
-    """
-    current_feature_name = feature.name if feature else None
-    
-    # feature가 변경되었으면 상태 초기화
-    if PlaywrightSharedState.current_feature_name != current_feature_name:
-        logger.info(f"Feature 변경 감지: {PlaywrightSharedState.current_feature_name} → {current_feature_name}")
-        
-        # 이전 feature의 context 닫기
-        if PlaywrightSharedState.feature_context:
-            try:
-                PlaywrightSharedState.feature_context.close()
-            except Exception as e:
-                logger.warning(f"이전 context 닫기 실패: {e}")
-        
-        # 상태 초기화
-        PlaywrightSharedState.feature_page = None
-        PlaywrightSharedState.feature_browser_session = None
-        PlaywrightSharedState.feature_context = None
-        PlaywrightSharedState.bdd_context = None
-        PlaywrightSharedState.skip_current_feature = False
-        PlaywrightSharedState.skip_feature_name = None
-        
-        # 현재 feature 이름 업데이트
-        PlaywrightSharedState.current_feature_name = current_feature_name
-
-
-@pytest.hookimpl(trylast=True)
-def pytest_bdd_after_scenario(request, feature, scenario):
-    """
-    각 시나리오 실행 후 호출
-    skip 플래그가 설정되어 있으면 다음 시나리오도 skip
-    """
-    if PlaywrightSharedState.skip_current_feature:
-        if PlaywrightSharedState.skip_feature_name == feature.name:
-            pytest.skip("이전 시나리오에서 모듈이 없어 skip되었습니다.")
+# 각 시나리오가 독립적으로 실행되므로 feature 단위 상태 관리 hook은 제거됨
 
 
 def pytest_report_teststatus(report, config):

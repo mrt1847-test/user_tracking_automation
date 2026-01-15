@@ -1229,6 +1229,13 @@ class NetworkTracker:
             # 값 검증
             if actual_value is None:
                 errors.append(f"키 '{key}'에 해당하는 값이 없습니다.")
+            elif isinstance(expected_value, list):
+                # expected_value가 리스트인 경우: actual_value가 리스트에 포함되어 있으면 통과
+                if actual_value not in expected_value:
+                    errors.append(
+                        f"키 '{key}'의 값이 일치하지 않습니다. "
+                        f"기대값 (리스트 중 하나): {expected_value}, 실제값: {actual_value}"
+                    )
             elif actual_value != expected_value:
                 errors.append(
                     f"키 '{key}'의 값이 일치하지 않습니다. "

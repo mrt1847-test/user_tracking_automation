@@ -60,9 +60,13 @@ def base_url() -> str:
     """기본 URL 반환"""
     return _get_base_url()
 
+def item_base_url() -> str:
+    """상품 페이지 기본 URL 반환"""
+    return _get_item_base_url()
+
 def cart_url() -> str:
     """장바구니 URL 반환"""
-    return f"{_get_base_url}/ko/pc/cart"
+    return f"{_get_base_url()}/ko/pc/cart"
 
 
 # 기본 URL 상수 (하위 호환성, 함수 호출)

@@ -6,26 +6,67 @@ import pytest
 from pytest_bdd import given, when, then, parsers
 from playwright.sync_api import expect
 from pages.search_page import SearchPage
+from pages.home_page import HomePage
 from pages.Etc import Etc
 
 logger = logging.getLogger(__name__)
 
 
+@given("G마켓 홈 페이지에 접속했음")
+def given_gmarket_home_page_accessed(browser_session):
+    """G마켓 홈 페이지에 접속"""
+    home_page = HomePage(browser_session.page)
+    home_page.navigate()
+    logger.info("G마켓 홈 페이지 접속 완료")
+
+
+@when(parsers.parse('사용자가 "{keyword}"을 검색한다'))
+def when_user_searches_keyword(browser_session, keyword, bdd_context):
+    """사용자가 특정 키워드로 검색"""
+    logger.info(f"검색 시작: keyword={keyword}")
+    home_page = HomePage(browser_session.page)
+    home_page.fill_search_input(keyword)
+    home_page.click_search_button()
+    home_page.wait_for_search_results()
+    bdd_context.store['keyword'] = keyword
+    logger.info(f"검색 완료: keyword={keyword}")
+
+
+@then("검색 결과 페이지가 표시된다")
+def then_search_results_page_is_displayed(browser_session):
+    """검색 결과 페이지가 표시되는지 확인"""
+    search_page = SearchPage(browser_session.page)
+    search_page.wait_for_search_results_load()
+    logger.info("검색 결과 페이지 표시 확인")
+
+
+@given(parsers.parse('사용자가 "{keyword}"을 검색했다'))
+def given_user_searched_keyword(browser_session, keyword, bdd_context):
+    """사용자가 이미 검색한 상태 (Given)"""
+    logger.info(f"검색 상태 확인: keyword={keyword}")
+    # 이미 검색 결과 페이지에 있는지 확인
+    current_url = browser_session.page.url
+    if 'search' not in current_url.lower():
+        # 검색 결과 페이지가 아니면 검색 수행
+        when_user_searches_keyword(browser_session, keyword, bdd_context)
+    else:
+        bdd_context.store['keyword'] = keyword
+        logger.info(f"이미 검색 결과 페이지에 있음: keyword={keyword}")
+
 
 @given(parsers.parse('검색 결과 페이지에 "{module_title}" 모듈이 있다'))
-def module_exists_in_search_results(browser_session, module_title, request):
+def module_exists_in_search_results(browser_session, module_title, request, bdd_context):
     """
     검색 결과 페이지에 특정 모듈이 존재하는지 확인하고 보장 (Given)
-    모듈이 없으면 skip (같은 feature 파일 내 다음 시나리오 모두 skip)
+    모듈이 없으면 현재 시나리오만 skip
     모듈이 있지만 보이지 않으면 fail
     
     Args:
         browser_session: BrowserSession 객체 (page 참조 관리)
         module_title: 모듈 타이틀
         request: pytest request 객체 (fixture 접근용)
+        bdd_context: BDD context (step 간 데이터 공유용)
     """
-    from conftest import PlaywrightSharedState
-    
     search_page = SearchPage(browser_session.page)
     
     # 모듈 찾기
@@ -34,13 +75,14 @@ def module_exists_in_search_results(browser_session, module_title, request):
     # 모듈이 존재하는지 확인 (count == 0이면 모듈이 없음)
     module_count = module.count()
     if module_count == 0:
-        # 모듈이 없으면 skip (현재 feature 파일의 나머지 시나리오도 skip하도록 플래그 설정)
-        PlaywrightSharedState.skip_current_feature = True
-        PlaywrightSharedState.skip_feature_name = PlaywrightSharedState.current_feature_name
-        pytest.skip(f"'{module_title}' 모듈이 검색 결과에 없습니다. 현재 feature의 나머지 시나리오를 skip합니다.")
+        # 모듈이 없으면 현재 시나리오만 skip
+        pytest.skip(f"'{module_title}' 모듈이 검색 결과에 없습니다.")
     
     # 모듈이 있으면 visibility 확인 (실패하면 fail)
     expect(module.first).to_be_visible()
+    
+    # bdd_context에 module_title 저장 (다음 step에서 사용)
+    bdd_context.store['module_title'] = module_title
     
     logger.info(f"{module_title} 모듈 존재 확인 완료")
 
@@ -72,13 +114,22 @@ def user_confirms_and_clicks_product_in_module(browser_session, module_title, bd
     # 상품 코드 가져오기
     goodscode = search_page.get_product_code(product)
     
+    # 🔥 상품 클릭 전에 가격 정보 수집 (중요: 플레이스홀더 대체를 위해 필요)
+    price_info = search_page.get_product_price_info(goodscode)
+    if price_info:
+        bdd_context.store['price_info'] = price_info
+        logger.info(f"가격 정보 수집 완료: {price_info}")
+    else:
+        logger.warning(f"가격 정보 수집 실패: goodscode={goodscode}")
+    
     # 상품 클릭
     new_page = search_page.click_product_and_wait_new_page(product)
     
     # 🔥 명시적 페이지 전환 (상태 관리자 패턴)
     browser_session.switch_to(new_page)
     
-    # bdd context에 저장 (goodscode, product_url 등 다른 데이터는 유지)
+    # bdd context에 저장 (module_title, goodscode, product_url 등)
+    bdd_context.store['module_title'] = module_title
     bdd_context.store['goodscode'] = goodscode
     bdd_context.store['product_url'] = new_page.url
     

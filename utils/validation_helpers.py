@@ -269,7 +269,11 @@ def _process_config_section(
         
         # 리프 노드: 필드명만 저장 (경로 생성 제거)
         # validate_payload에서 재귀 탐색으로 찾을 수 있도록 필드명만 키로 사용
-        processed_value = replace_placeholders(value, goodscode, frontend_data)
+        if isinstance(value, list):
+            # 리스트인 경우 각 요소에 대해 플레이스홀더 대체
+            processed_value = [replace_placeholders(item, goodscode, frontend_data) for item in value]
+        else:
+            processed_value = replace_placeholders(value, goodscode, frontend_data)
         expected[key] = processed_value
 
 
