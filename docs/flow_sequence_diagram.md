@@ -53,7 +53,7 @@ sequenceDiagram
 ### 3. Network Tracker (NT)
 - `aplus.gmarket.co.kr` 도메인의 POST 요청 실시간 추적
 - 요청 URL 및 페이로드 분석을 통한 로그 타입 분류
-  - PV, PDP PV, Module Exposure, Product Exposure, Product Click, Product A2C Click
+  - PV, PDP PV, Module Exposure, Product Exposure, Product Click, Product ATC Click
 - goodscode 및 SPM 기반 로그 필터링
 
 ### 4. Gmarket Web UI

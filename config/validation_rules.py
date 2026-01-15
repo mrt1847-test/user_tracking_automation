@@ -2,7 +2,7 @@
 동작별 검증 규칙 정의
 - 하드코딩 값: area_code 등 모듈별로 고정된 값
 - 동적 값: price 등 프론트에서 읽어서 비교하는 값은 None으로 표시
-- 이벤트 타입별로 구분: PV, Module Exposure, Product Exposure, Product Click, Product A2C Click
+- 이벤트 타입별로 구분: PV, Module Exposure, Product Exposure, Product Click, Product ATC Click
 """
 
 SRP_VALIDATION_RULES = {

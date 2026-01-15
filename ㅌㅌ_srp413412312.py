@@ -123,7 +123,7 @@ def test_01_srp_1(page):
             ('module_exposure', 'get_module_exposure_logs_by_spm', None),  # spm으로 필터링된 Module Exposure 로그
             ('product_exposure', 'get_product_exposure_logs_by_goodscode', None),
             ('product_click', 'get_product_click_logs_by_goodscode', None),
-            ('product_a2c_click', 'get_product_a2c_click_logs_by_goodscode', None),
+            ('product_atc_click', 'get_product_atc_click_logs_by_goodscode', None),
         ]
         
         for event_type, method_name, method_arg in event_configs:
@@ -202,7 +202,7 @@ def test_01_srp_1(page):
             all_logs.extend(tracker.get_product_exposure_logs_by_goodscode(goodscode))
         # Product Click은 goodscode로만 필터링
         all_logs.extend(tracker.get_product_click_logs_by_goodscode(goodscode))
-        all_logs.extend(tracker.get_product_a2c_click_logs_by_goodscode(goodscode))
+        all_logs.extend(tracker.get_product_atc_click_logs_by_goodscode(goodscode))
         
         if len(all_logs) > 0:
             all_filepath = Path(f'json/tracking_all_{goodscode}_{timestamp}.json')

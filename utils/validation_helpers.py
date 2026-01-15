@@ -14,7 +14,7 @@ EVENT_TYPE_METHODS = {
     'Module Exposure': 'get_module_exposure_logs_by_goodscode',
     'Product Exposure': 'get_product_exposure_logs_by_goodscode',
     'Product Click': 'get_product_click_logs_by_goodscode',
-    'Product A2C Click': 'get_product_a2c_click_logs_by_goodscode',
+    'Product ATC Click': 'get_product_atc_click_logs_by_goodscode',
 }
 
 # 최상위 필드 패턴 (gokey.params.* 경로에 직접 매핑되는 필드들)
@@ -25,7 +25,7 @@ EVENT_TYPE_PARAMS_MAP = {
     'Module Exposure': 'params-exp',
     'Product Exposure': 'params-exp',
     'Product Click': 'params-clk',
-    'Product A2C Click': 'params-clk',
+    'Product ATC Click': 'params-clk',
 }
 
 # 이벤트 타입별 module_config.json 키 매핑
@@ -33,7 +33,7 @@ EVENT_TYPE_CONFIG_KEY_MAP = {
     'Module Exposure': 'module_exposure',
     'Product Exposure': 'product_exposure',
     'Product Click': 'product_click',
-    'Product A2C Click': 'product_click',  # Product Click과 동일한 구조
+    'Product ATC Click': 'product_atc_click',  # 별도 섹션으로 분리
     'PDP PV': 'pdp_pv',
     'PV': 'pv',  # PV는 특별한 구조가 없을 수 있음
 }
@@ -380,8 +380,8 @@ def validate_event_type_logs(
             logs = tracker.get_product_exposure_logs_by_goodscode(goodscode)
     elif event_type == 'Product Click':
         logs = tracker.get_product_click_logs_by_goodscode(goodscode)
-    elif event_type == 'Product A2C Click':
-        logs = tracker.get_product_a2c_click_logs_by_goodscode(goodscode)
+    elif event_type == 'Product ATC Click':
+        logs = tracker.get_product_atc_click_logs_by_goodscode(goodscode)
     else:
         return True, []  # 알 수 없는 이벤트 타입
     

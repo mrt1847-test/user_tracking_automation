@@ -40,7 +40,7 @@ class NetworkTracker:
             payload: 파싱된 payload (goodscode 확인용)
             
         Returns:
-            'PV', 'PDP PV', 'Module Exposure', 'Product Exposure', 'Product Click', 'Product A2C Click', 또는 'Unknown'
+            'PV', 'PDP PV', 'Module Exposure', 'Product Exposure', 'Product Click', 'Product ATC Click', 또는 'Unknown'
         """
         url_lower = url.lower()
         
@@ -101,9 +101,9 @@ class NetworkTracker:
                     return 'PDP PV'
             return 'PV'
         
-        # Product A2C Click: ATC 관련 URL 패턴
+        # Product ATC Click: ATC 관련 URL 패턴
         if '/pdp.atc.click' in url_lower or '/product.atc.click' in url_lower:
-            return 'Product A2C Click'
+            return 'Product ATC Click'
         
         # Product Click: Product.Click.Event 패턴
         if '/product.click.event' in url_lower:
@@ -1068,17 +1068,17 @@ class NetworkTracker:
         """
         return self.get_logs_by_goodscode(goodscode, 'Product Click')
     
-    def get_product_a2c_click_logs_by_goodscode(self, goodscode: str) -> List[Dict[str, Any]]:
+    def get_product_atc_click_logs_by_goodscode(self, goodscode: str) -> List[Dict[str, Any]]:
         """
-        goodscode 기준으로 Product A2C Click 로그만 반환
+        goodscode 기준으로 Product ATC Click 로그만 반환
         
         Args:
             goodscode: 상품 번호
         
         Returns:
-            해당 goodscode의 Product A2C Click 로그 리스트
+            해당 goodscode의 Product ATC Click 로그 리스트
         """
-        return self.get_logs_by_goodscode(goodscode, 'Product A2C Click')
+        return self.get_logs_by_goodscode(goodscode, 'Product ATC Click')
     
     def get_decoded_gokey_params(self, log: Dict[str, Any], param_key: Optional[str] = None) -> Dict[str, Any]:
         """

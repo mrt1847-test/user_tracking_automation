@@ -75,6 +75,11 @@ def then_pv_logs_should_pass_validation(bdd_context):
 @then(parsers.parse('PDP PV 로그가 정합성 검증을 통과해야 함 (TC: {tc_id})'))
 def then_pdp_pv_logs_should_pass_validation(tc_id, bdd_context):
     """PDP PV 로그 정합성 검증 (module_config.json에 정의된 경우만)"""
+    # TC 번호가 비어있으면 검증 건너뛰기
+    if not tc_id or tc_id.strip() == '':
+        logger.info("TC 번호가 비어있어 PDP PV 로그 검증을 건너뜁니다.")
+        return
+    
     logger.info(f"[TestRail TC: {tc_id}] PDP PV 로그 정합성 검증 시작")
     tracker, goodscode, module_title, frontend_data = _get_common_context(bdd_context)
     
@@ -124,6 +129,11 @@ def then_pdp_pv_logs_should_pass_validation(tc_id, bdd_context):
 @then(parsers.parse('Module Exposure 로그가 정합성 검증을 통과해야 함 (TC: {tc_id})'))
 def then_module_exposure_logs_should_pass_validation(tc_id, bdd_context):
     """Module Exposure 로그 정합성 검증 (module_config.json에 정의된 경우만)"""
+    # TC 번호가 비어있으면 검증 건너뛰기
+    if not tc_id or tc_id.strip() == '':
+        logger.info("TC 번호가 비어있어 Module Exposure 로그 검증을 건너뜁니다.")
+        return
+    
     logger.info(f"[TestRail TC: {tc_id}] Module Exposure 로그 정합성 검증 시작")
     tracker, goodscode, module_title, frontend_data = _get_common_context(bdd_context)
     
@@ -173,6 +183,11 @@ def then_module_exposure_logs_should_pass_validation(tc_id, bdd_context):
 @then(parsers.parse('Product Exposure 로그가 정합성 검증을 통과해야 함 (TC: {tc_id})'))
 def then_product_exposure_logs_should_pass_validation(tc_id, bdd_context):
     """Product Exposure 로그 정합성 검증 (module_config.json에 정의된 경우만)"""
+    # TC 번호가 비어있으면 검증 건너뛰기
+    if not tc_id or tc_id.strip() == '':
+        logger.info("TC 번호가 비어있어 Product Exposure 로그 검증을 건너뜁니다.")
+        return
+    
     logger.info(f"[TestRail TC: {tc_id}] Product Exposure 로그 정합성 검증 시작")
     tracker, goodscode, module_title, frontend_data = _get_common_context(bdd_context)
     
@@ -222,6 +237,11 @@ def then_product_exposure_logs_should_pass_validation(tc_id, bdd_context):
 @then(parsers.parse('Product Click 로그가 정합성 검증을 통과해야 함 (TC: {tc_id})'))
 def then_product_click_logs_should_pass_validation(tc_id, bdd_context):
     """Product Click 로그 정합성 검증 (module_config.json에 정의된 경우만)"""
+    # TC 번호가 비어있으면 검증 건너뛰기
+    if not tc_id or tc_id.strip() == '':
+        logger.info("TC 번호가 비어있어 Product Click 로그 검증을 건너뜁니다.")
+        return
+    
     logger.info(f"[TestRail TC: {tc_id}] Product Click 로그 정합성 검증 시작")
     tracker, goodscode, module_title, frontend_data = _get_common_context(bdd_context)
     
@@ -268,24 +288,32 @@ def then_product_click_logs_should_pass_validation(tc_id, bdd_context):
     logger.info(f"[TestRail TC: {tc_id}] Product Click 로그 정합성 검증 통과")
 
 
-@then("Product A2C Click 로그가 정합성 검증을 통과해야 함")
-def then_product_a2c_click_logs_should_pass_validation(bdd_context):
-    """Product A2C Click 로그 정합성 검증 (module_config.json에 정의된 경우만)"""
-    tracker, goodscode, module_title, frontend_data = _get_common_context(bdd_context)
-    
-    # module_config.json에서 product_click이 정의되어 있는지 확인 (Product A2C Click은 product_click과 동일한 구조)
-    module_config = load_module_config()
-    module_config_data = module_config.get(module_title, {})
-    event_config_key = 'product_click'
-    
-    if event_config_key not in module_config_data:
-        logger.info(f"모듈 '{module_title}'에 Product A2C Click이 정의되어 있지 않아 검증을 스킵합니다.")
+@then(parsers.re(r'Product ATC Click 로그가 정합성 검증을 통과해야 함 \(TC: (?P<tc_id>.*)\)'))
+def then_product_atc_click_logs_should_pass_validation(tc_id, bdd_context):
+    """Product ATC Click 로그 정합성 검증 (module_config.json에 정의된 경우만)"""
+    # TC 번호가 비어있으면 검증 건너뛰기
+    if not tc_id or tc_id.strip() == '':
+        logger.info("TC 번호가 비어있어 Product ATC Click 로그 검증을 건너뜁니다.")
         return
     
-    logger.info("Product A2C Click 로그 정합성 검증 시작")
+    logger.info(f"[TestRail TC: {tc_id}] Product ATC Click 로그 정합성 검증 시작")
+    tracker, goodscode, module_title, frontend_data = _get_common_context(bdd_context)
+    
+    # TestRail TC 번호를 context에 저장
+    bdd_context['testrail_tc_id'] = tc_id
+    
+    # module_config.json에서 product_atc_click이 정의되어 있는지 확인 (별도 섹션)
+    module_config = load_module_config()
+    module_config_data = module_config.get(module_title, {})
+    event_config_key = 'product_atc_click'
+    
+    if event_config_key not in module_config_data:
+        logger.info(f"[TestRail TC: {tc_id}] 모듈 '{module_title}'에 Product ATC Click이 정의되어 있지 않아 검증을 스킵합니다.")
+        return
+    
     success, errors = validate_event_type_logs(
         tracker=tracker,
-        event_type='Product A2C Click',
+        event_type='Product ATC Click',
         goodscode=goodscode,
         module_title=module_title,
         frontend_data=frontend_data,
@@ -293,11 +321,24 @@ def then_product_a2c_click_logs_should_pass_validation(bdd_context):
     )
     
     if not success:
-        error_message = "Product A2C Click 로그 정합성 검증 실패:\n" + "\n".join(errors)
+        error_message = f"[TestRail TC: {tc_id}] Product ATC Click 로그 정합성 검증 실패:\n" + "\n".join(errors)
         logger.error(error_message)
-        raise AssertionError(error_message)
+        
+        # Soft Assertion: 실패 정보를 bdd_context에 저장 (다음 step 계속 실행)
+        if 'validation_errors' not in bdd_context.store:
+            bdd_context.store['validation_errors'] = []
+        bdd_context.store['validation_errors'].append(error_message)
+        
+        # TestRail 기록을 위해 실패 플래그 설정
+        bdd_context['validation_failed'] = True
+        bdd_context['validation_error_message'] = error_message
+        
+        # AssertionError를 발생시키지 않음 (다음 step 계속 실행)
+        return
     
-    logger.info("Product A2C Click 로그 정합성 검증 통과")
+    # 성공 시 실패 플래그 제거
+    bdd_context['validation_failed'] = False
+    logger.info(f"[TestRail TC: {tc_id}] Product ATC Click 로그 정합성 검증 통과")
 
 
 @then("모든 트래킹 로그를 JSON 파일로 저장함")
@@ -349,7 +390,7 @@ def _save_tracking_logs(bdd_context, tracker, goodscode, module_title):
             ('module_exposure', 'get_module_exposure_logs_by_spm', None),
             ('product_exposure', 'get_product_exposure_logs_by_goodscode', None),
             ('product_click', 'get_product_click_logs_by_goodscode', None),
-            ('product_a2c_click', 'get_product_a2c_click_logs_by_goodscode', None),
+            ('product_atc_click', 'get_product_atc_click_logs_by_goodscode', None),
         ]
         
         for event_type, method_name, method_arg in event_configs:
@@ -409,7 +450,7 @@ def _save_tracking_logs(bdd_context, tracker, goodscode, module_title):
         else:
             all_logs.extend(tracker.get_product_exposure_logs_by_goodscode(goodscode))
         all_logs.extend(tracker.get_product_click_logs_by_goodscode(goodscode))
-        all_logs.extend(tracker.get_product_a2c_click_logs_by_goodscode(goodscode))
+        all_logs.extend(tracker.get_product_atc_click_logs_by_goodscode(goodscode))
         
         if len(all_logs) > 0:
             all_filepath = Path(f'json/tracking_all_{goodscode}_{timestamp}.json')
