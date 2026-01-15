@@ -1,13 +1,14 @@
-from playwright.async_api import Page
+from playwright.sync_api import Page
 import requests
 import time
+from utils.urls import base_url, product_url
 
 class Etc():
     def __init__(self, page: Page):
         self.page = page
 
     def goto(self):
-        self.page.goto("https://www.gmarket.co.kr")
+        self.page.goto(base_url())
         time.sleep(2)
 
     def login(self, username: str, password: str):
@@ -73,8 +74,8 @@ class Etc():
 
         return state_data.get("result", {})
 
-    def goto_vip(self,goods_num):
-        self.page.goto(f"https://item.gmarket.co.kr/Item?goodscode={goods_num}")
+    def goto_vip(self, goods_num):
+        self.page.goto(product_url(goods_num))
 
     def goto_vip_starship(self):
-        self.page.goto("https://item.gmarket.co.kr/Item?goodscode=1784246790")
+        self.page.goto(product_url("1784246790"))

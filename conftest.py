@@ -7,6 +7,8 @@ pytest_plugins = [
     "steps.cart_steps",
     "steps.checkout_steps",
     "steps.order_steps",
+    "steps.tracking_steps",
+    "steps.tracking_validation_steps",
 ]
 
 
@@ -28,6 +30,8 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
+
+logger = logging.getLogger(__name__)
 
 
 # # 브라우저 fixture (세션 단위, 한 번만 실행)
@@ -65,7 +69,106 @@ logging.basicConfig(
 
 
 STATE_PATH = "state.json"
-GMARKET_URL = "https://www.gmarket.co.kr"  # 모바일 페이지 기준 셀렉터 안정성
+
+# ============================================
+# PlaywrightSharedState: Feature 단위 공유 상태 관리
+# ============================================
+class PlaywrightSharedState:
+    """
+    Feature 단위로 공유되는 상태 관리 클래스
+    같은 feature 파일 내의 시나리오들이 같은 page와 browser_session을 공유
+    """
+    feature_page = None
+    feature_browser_session = None
+    feature_context = None
+    bdd_context = None
+    current_feature_name = None
+    skip_current_feature = False
+    skip_feature_name = None
+
+
+# ============================================
+# BrowserSession: 브라우저 세션 관리 클래스
+# ============================================
+class BrowserSession:
+    """
+    브라우저 세션 관리 클래스 - 현재 active page 참조 관리
+    상태 관리자 역할: page stack을 통해 탭 전환 추적
+    """
+    def __init__(self, page):
+        """
+        BrowserSession 초기화
+        
+        Args:
+            page: fixture에서 생성한 기본 page (seed 역할)
+        """
+        self._page_stack = [page]  # page stack으로 전환 이력 관리
+    
+    @property
+    def page(self):
+        """
+        현재 active page 반환 (가장 최근에 전환된 page)
+        """
+        return self._page_stack[-1]
+    
+    def switch_to(self, page):
+        """
+        새 페이지로 전환 (명시적 전환)
+        
+        Args:
+            page: 전환할 Page 객체
+        
+        Returns:
+            bool: 전환 성공 여부
+        """
+        if not page:
+            logger.warning("BrowserSession: None 페이지로 전환 시도 실패")
+            return False
+        
+        try:
+            if page.is_closed():
+                logger.warning("BrowserSession: 이미 닫힌 페이지로 전환 시도 실패")
+                return False
+            
+            # 페이지 유효성 검증
+            current_url = page.url
+            if not current_url or current_url == "about:blank":
+                logger.warning(f"BrowserSession: 유효하지 않은 URL의 페이지: {current_url}")
+                # about:blank는 잠시 후 로드될 수 있으므로 경고만
+            
+            self._page_stack.append(page)
+            logger.info(f"BrowserSession: 새 페이지로 전환 - URL: {current_url} (stack depth: {len(self._page_stack)})")
+            return True
+        except Exception as e:
+            logger.error(f"BrowserSession: 페이지 전환 중 오류 발생: {e}")
+            return False
+    
+    def restore(self):
+        """
+        이전 페이지로 복귀 (page stack에서 pop)
+        
+        Returns:
+            bool: 복귀 성공 여부 (stack에 이전 페이지가 있는 경우)
+        """
+        if len(self._page_stack) > 1:
+            # 현재 페이지를 pop하여 이전 페이지로 복귀
+            self._page_stack.pop()
+            logger.info(f"BrowserSession: 이전 페이지로 복귀 - 현재 URL: {self.page.url} (stack depth: {len(self._page_stack)})")
+            return True
+        else:
+            logger.warning("BrowserSession: 복귀할 이전 페이지가 없음")
+            return False
+    
+    def get_page_stack(self):
+        """
+        디버깅용: 현재 page stack의 URL 리스트 반환
+        
+        Returns:
+            list: page stack의 URL 리스트
+        """
+        return [p.url for p in self._page_stack]
+
+
 # ------------------------
 # :일: Playwright 세션 단위 fixture
 # ------------------------
@@ -83,6 +186,18 @@ def browser(pw):
     browser = pw.chromium.launch(headless=False)
     yield browser
     browser.close()
+# ------------------------
+# :셋: Context fixture (feature 단위로 공유)
+# ------------------------
+@pytest.fixture(scope="function")
+def context(browser, ensure_login_state):
+    """
+    브라우저 컨텍스트 fixture
+    같은 feature 파일 내의 시나리오들이 같은 context를 공유
+    """
+    if not PlaywrightSharedState.feature_context:
+        PlaywrightSharedState.feature_context = browser.new_context(storage_state=ensure_login_state)
+    return PlaywrightSharedState.feature_context
 # ------------------------
 # :셋: 로그인 상태 검증
 # ------------------------
@@ -107,11 +222,12 @@ def is_state_valid(state_path: str) -> bool:
 # ------------------------
 def create_login_state(pw):
     """로그인 수행 후 state.json 저장"""
+    from utils.urls import base_url
     print("[INFO] 로그인 절차 시작")
     browser = pw.chromium.launch(headless=False)  # 화면 확인용
     context = browser.new_context()
     page = context.new_page()
-    page.goto(GMARKET_URL)
+    page.goto(base_url())
     # 로그인 페이지 이동 및 입력
     page.click("text=로그인")
     page.fill("#typeMemberInputId", "cease2504")
@@ -142,28 +258,128 @@ def ensure_login_state(pw):
         print("[INFO] 로그인 세션 유효 → 기존 state.json 사용")
     return STATE_PATH
 # ------------------------
-# :여섯: page fixture
+# :넷: page fixture (feature 단위로 공유)
 # ------------------------
 @pytest.fixture(scope="function")
-def page(browser, ensure_login_state):
+def page(context: BrowserContext):
     """
-    로그인 상태가 보장된 page fixture
-    각 테스트마다 격리된 context 제공
+    각 시나리오에서 사용할 page 객체입니다.
+    같은 feature 파일 내의 시나리오들이 같은 page를 공유합니다.
     """
-    context = browser.new_context(storage_state=ensure_login_state)
-    page = context.new_page()
-    yield page
-    context.close()
+    if not PlaywrightSharedState.feature_page:
+        # 혹시 모를 예외 처리: page가 없으면 생성
+        PlaywrightSharedState.feature_page = context.new_page()
+        PlaywrightSharedState.feature_page.set_default_timeout(10000)
+    return PlaywrightSharedState.feature_page
 
 
-# BDD를 위한 scenario context fixture
+# ------------------------
+# :다섯: BrowserSession fixture (feature 단위로 공유)
+# ------------------------
+@pytest.fixture(scope="function")
+def browser_session(page):
+    """
+    BrowserSession fixture - 현재 active page 참조 관리
+    같은 feature 파일 내의 시나리오들이 같은 browser_session을 공유합니다.
+    """
+    if not PlaywrightSharedState.feature_browser_session:
+        # 혹시 모를 예외 처리: browser_session이 없으면 생성
+        PlaywrightSharedState.feature_browser_session = BrowserSession(page)
+    return PlaywrightSharedState.feature_browser_session
+
+
+# ------------------------
+# :여섯: BDD context fixture (feature 단위로 공유)
+# ------------------------
 @pytest.fixture(scope="function")
 def bdd_context():
     """
-    BDD step definitions 간 데이터 공유를 위한 context dictionary
-    각 scenario마다 새로 초기화됨
+    시나리오 내 스텝 간 데이터 공유를 위한 전용 객체
+    같은 feature 파일 내의 모든 시나리오가 같은 context를 공유
+    이름 충돌이 없고, 시나리오 메타데이터와 비즈니스 데이터를 분리해서 관리
+    
+    하위 호환성: 딕셔너리처럼 사용 가능 (bdd_context['key']) + store 속성 사용 가능 (bdd_context.store['key'])
+    
+    주의: 여러 feature를 로드하므로 pytest_bdd_before_scenario hook에서 
+    feature 변경 시 store를 리셋해야 함
     """
-    return {}
+    class Context:
+        def __init__(self):
+            self.store = {}
+            self._dict = {}  # 하위 호환성을 위한 딕셔너리
+        
+        def __getitem__(self, key):
+            """딕셔너리처럼 접근 가능 (하위 호환성)"""
+            # store에 있으면 store에서, 없으면 _dict에서
+            if key in self.store:
+                return self.store[key]
+            return self._dict[key]
+        
+        def __setitem__(self, key, value):
+            """딕셔너리처럼 설정 가능 (하위 호환성)"""
+            # store와 _dict 모두에 저장 (양쪽에서 접근 가능)
+            self.store[key] = value
+            self._dict[key] = value
+        
+        def get(self, key, default=None):
+            """딕셔너리처럼 get 메서드 사용 가능 (하위 호환성)"""
+            if key in self.store:
+                return self.store[key]
+            return self._dict.get(key, default)
+        
+        def __contains__(self, key):
+            """in 연산자 지원"""
+            return key in self.store or key in self._dict
+    
+    if not PlaywrightSharedState.bdd_context:
+        context = Context()
+        PlaywrightSharedState.bdd_context = context
+    return PlaywrightSharedState.bdd_context
+
+
+# ============================================
+# pytest-bdd hooks: Feature 단위 상태 관리
+# ============================================
+@pytest.hookimpl(tryfirst=True)
+def pytest_bdd_before_scenario(request, feature, scenario):
+    """
+    각 시나리오 실행 전 호출
+    feature가 변경되면 PlaywrightSharedState 초기화
+    """
+    current_feature_name = feature.name if feature else None
+    
+    # feature가 변경되었으면 상태 초기화
+    if PlaywrightSharedState.current_feature_name != current_feature_name:
+        logger.info(f"Feature 변경 감지: {PlaywrightSharedState.current_feature_name} → {current_feature_name}")
+        
+        # 이전 feature의 context 닫기
+        if PlaywrightSharedState.feature_context:
+            try:
+                PlaywrightSharedState.feature_context.close()
+            except Exception as e:
+                logger.warning(f"이전 context 닫기 실패: {e}")
+        
+        # 상태 초기화
+        PlaywrightSharedState.feature_page = None
+        PlaywrightSharedState.feature_browser_session = None
+        PlaywrightSharedState.feature_context = None
+        PlaywrightSharedState.bdd_context = None
+        PlaywrightSharedState.skip_current_feature = False
+        PlaywrightSharedState.skip_feature_name = None
+        
+        # 현재 feature 이름 업데이트
+        PlaywrightSharedState.current_feature_name = current_feature_name
+
+
+@pytest.hookimpl(trylast=True)
+def pytest_bdd_after_scenario(request, feature, scenario):
+    """
+    각 시나리오 실행 후 호출
+    skip 플래그가 설정되어 있으면 다음 시나리오도 skip
+    """
+    if PlaywrightSharedState.skip_current_feature:
+        if PlaywrightSharedState.skip_feature_name == feature.name:
+            pytest.skip("이전 시나리오에서 모듈이 없어 skip되었습니다.")
 
 
 def pytest_report_teststatus(report, config):

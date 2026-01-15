@@ -1,18 +1,24 @@
 import time
 import logging
 import json
-import re
-from urllib.parse import unquote, parse_qs, urlparse
-
-from playwright.sync_api import Page, expect
+from pages.base_page import BasePage
+from playwright.sync_api import Page, Locator, expect
+from utils.urls import item_base_url
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
 
-class Srp():
-    def __init__(self, page):
-        self.page = page
-
+class SearchPage(BasePage):
+    def __init__(self, page: Page):
+        """
+        SearchPage 초기화
+        
+        Args:
+            page: Playwright Page 객체
+        """
+        super().__init__(page)
+    
     def search_product(self, keyword: str):
         """
         홈화면에서 특정 keyword로 검색
@@ -125,17 +131,16 @@ class Srp():
                 if product_url:
                     # 상대 경로인 경우 절대 경로로 변환
                     if product_url.startswith('/'):
-                        product_url = f"https://item.gmarket.co.kr{product_url}"
+                        product_url = f"{item_base_url()}{product_url}"
                     
-                    # URL 파싱
-                    parsed_url = urlparse(product_url)
-                    query_params = parse_qs(parsed_url.query)
+                    # URL 파싱 (BasePage의 헬퍼 메서드 사용)
+                    query_params = self.parse_query_params(product_url)
                     
                     # utparam-url 파라미터 추출
                     if 'utparam-url' in query_params:
                         utparam_url = query_params['utparam-url'][0]
-                        # URL 디코딩
-                        decoded_utparam = unquote(utparam_url)
+                        # URL 디코딩 (BasePage의 헬퍼 메서드 사용)
+                        decoded_utparam = self.decode_url(utparam_url)
                         
                         # JSON 파싱 시도
                         try:
@@ -265,3 +270,220 @@ class Srp():
             raise AssertionError('모듈 내 광고상품을 찾을 수 없습니다')
 
         return goodscode
+
+    def wait_for_search_results_load(self) -> None:
+        """검색 결과 페이지 로드 대기"""
+        logger.debug("검색 결과 페이지 로드 대기")
+        self.page.wait_for_load_state("networkidle")
+    
+    def click_first_product(self, timeout: int = 10000) -> Optional[Page]:
+        """
+        첫 번째 상품 클릭하고 새 탭 대기 (새 탭 열림)
+        
+        Args:
+            timeout: 타임아웃 (기본값: 10000ms)
+        
+        Returns:
+            새 탭의 Page 객체 (새 탭이 열리지 않으면 None)
+        """
+        logger.debug("첫 번째 상품 클릭 및 새 탭 대기")
+        
+        # 새 탭이 열리는지 확인
+        try:
+            with self.page.context.expect_page(timeout=timeout) as new_page_info:
+                self.click(self.FIRST_PRODUCT, timeout=timeout)
+            
+            new_page = new_page_info.value
+            if new_page:
+                logger.debug(f"새 탭 생성됨: {new_page.url}")
+                
+                # 새 탭을 포커스로 가져오기 (제어 가능하도록)
+                new_page.bring_to_front()
+                logger.debug("새 탭을 포커스로 가져옴")
+                
+                # 새 탭이 실제로 로드되고 제어 가능한 상태가 될 때까지 대기
+                try:
+                    new_page.wait_for_load_state("domcontentloaded", timeout=30000)
+                    logger.debug("새 탭 DOM 로드 완료")
+                except Exception as e:
+                    logger.warning(f"domcontentloaded 대기 실패: {e}")
+                    raise
+                
+                # URL이 실제로 변경되었는지 확인 (about:blank가 아닌지)
+                max_retries = 5
+                for i in range(max_retries):
+                    current_url = new_page.url
+                    if current_url and current_url != "about:blank":
+                        logger.debug(f"새 탭 URL 확인됨: {current_url}")
+                        break
+                    if i < max_retries - 1:
+                        new_page.wait_for_timeout(500)  # 0.5초 대기
+                    else:
+                        logger.warning(f"새 탭 URL이 about:blank 상태입니다: {current_url}")
+                
+                return new_page
+            else:
+                logger.debug("새 탭이 열리지 않음 (같은 페이지에서 이동)")
+                return None
+        except Exception as e:
+            logger.warning(f"새 탭 대기 중 오류 발생 (같은 페이지에서 이동했을 수 있음): {e}")
+            return None
+    
+    
+    # ============================================
+    # 모듈 및 상품 관련 메서드 (Atomic POM)
+    # ============================================
+    
+    def get_module_by_title(self, module_title: str) -> Locator:
+        """
+        모듈 타이틀로 모듈 요소 찾기
+        
+        Args:
+            module_title: 모듈 타이틀 텍스트
+            
+        Returns:
+            Locator 객체
+        """
+        logger.debug(f"모듈 찾기: {module_title}")
+        return self.page.get_by_text(module_title, exact=True)
+    
+    def scroll_module_into_view(self, module_locator: Locator) -> None:
+        """
+        모듈을 뷰포트로 스크롤
+        
+        Args:
+            module_locator: 모듈 Locator 객체
+        """
+        logger.debug("모듈 스크롤")
+        module_locator.scroll_into_view_if_needed()
+    
+    def get_module_parent(self, module_locator: Locator) -> Locator:
+        """
+        모듈의 부모 요소 찾기
+        
+        Args:
+            module_locator: 모듈 Locator 객체
+            
+        Returns:
+            부모 Locator 객체
+        """
+        logger.debug("모듈 부모 요소 찾기")
+        return module_locator.locator("xpath=../..")
+    
+    def get_product_in_module(self, parent_locator: Locator) -> Locator:
+        """
+        모듈 내 상품 요소 찾기
+        
+        Args:
+            parent_locator: 모듈 부모 Locator 객체
+            
+        Returns:
+            상품 Locator 객체
+        """
+        logger.debug("모듈 내 상품 요소 찾기")
+        return parent_locator.locator("div.box__item-container > div.box__image > a")
+    
+    def scroll_product_into_view(self, product_locator: Locator) -> None:
+        """
+        상품 요소를 뷰포트로 스크롤
+        
+        Args:
+            product_locator: 상품 Locator 객체
+        """
+        logger.debug("상품 요소 스크롤")
+        product_locator.scroll_into_view_if_needed()
+
+    
+    def get_product_code(self, product_locator: Locator) -> Optional[str]:
+        """
+        상품 코드 가져오기
+        
+        Args:
+            product_locator: 상품 Locator 객체
+            
+        Returns:
+            상품 코드 (data-montelena-goodscode 속성 값)
+        """
+        logger.debug("상품 코드 가져오기")
+        return product_locator.get_attribute("data-montelena-goodscode")
+    
+    def get_product_by_code(self, goodscode: str) -> Locator:
+        """
+        상품 번호로 상품 요소 찾기
+        
+        Args:
+            goodscode: 상품 번호
+            
+        Returns:
+            상품 Locator 객체
+        """
+        logger.debug(f"상품 번호로 상품 찾기: {goodscode}")
+        return self.page.locator(f'a[data-montelena-goodscode="{goodscode}"]').nth(0)
+    
+    def wait_for_new_page(self):
+        """
+        새 페이지가 열릴 때까지 대기하는 컨텍스트 매니저
+        
+        Returns:
+            새 페이지 정보를 담은 컨텍스트 매니저
+        """
+        logger.debug("새 페이지 대기")
+        return self.page.context.expect_page()
+    
+    def click_product_and_wait_new_page(self, product_locator: Locator) -> Page:
+        """
+        상품 클릭하고 새 탭 대기 (새 탭 열림)
+        
+        Args:
+            product_locator: 상품 Locator 객체
+            
+        Returns:
+            새 탭의 Page 객체
+        """
+        logger.debug("상품 클릭 및 새 탭 대기")
+        
+        # 새 탭이 생성될 때까지 대기
+        with self.page.context.expect_page() as new_page_info:
+            product_locator.click()
+        
+        new_page = new_page_info.value
+        logger.debug(f"새 탭 생성됨: {new_page.url}")
+        
+        # 새 탭을 포커스로 가져오기 (제어 가능하도록)
+        new_page.bring_to_front()
+        logger.debug("새 탭을 포커스로 가져옴")
+        
+        # 새 탭이 실제로 로드되고 제어 가능한 상태가 될 때까지 대기
+        # 1. domcontentloaded: DOM이 로드되면 완료 (가장 빠름)
+        try:
+            new_page.wait_for_load_state("domcontentloaded", timeout=30000)
+            logger.debug("새 탭 DOM 로드 완료")
+        except Exception as e:
+            logger.warning(f"domcontentloaded 대기 실패: {e}")
+            raise
+        
+        # 2. URL이 실제로 변경되었는지 확인 (about:blank가 아닌지)
+        max_retries = 5
+        for i in range(max_retries):
+            current_url = new_page.url
+            if current_url and current_url != "about:blank":
+                logger.debug(f"새 탭 URL 확인됨: {current_url}")
+                break
+            if i < max_retries - 1:
+                new_page.wait_for_timeout(500)  # 0.5초 대기
+            else:
+                logger.warning(f"새 탭 URL이 about:blank 상태입니다: {current_url}")
+        
+        return new_page
+    
+    def verify_product_code_in_url(self, url: str, goodscode: str) -> None:
+        """
+        URL에 상품 번호가 포함되어 있는지 확인 (Assert)
+        
+        Args:
+            url: 확인할 URL
+            goodscode: 상품 번호
+        """
+        logger.debug(f"URL에 상품 번호 포함 확인: {goodscode}")
+        assert goodscode in url, f"상품 번호 {goodscode}가 URL에 포함되어야 합니다"
+

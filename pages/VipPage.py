@@ -1,8 +1,6 @@
 import time
 import logging
-
 from playwright.sync_api import expect
-from playwright.sync_api import sync_playwright
 
 logger = logging.getLogger(__name__)
 
