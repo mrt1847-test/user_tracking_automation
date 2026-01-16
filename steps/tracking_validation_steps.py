@@ -7,7 +7,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 from pytest_bdd import then, parsers
-from utils.validation_helpers import validate_event_type_logs, load_module_config
+from utils.validation_helpers import validate_event_type_logs, load_module_config, _find_spm_recursive
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +28,10 @@ def _get_common_context(bdd_context):
     if not module_title:
         raise ValueError("bdd_context에 'module_title'가 없습니다.")
     
+    area = bdd_context.get('area')
+    if not area:
+        raise ValueError("bdd_context에 'area'가 없습니다. Feature 파일 경로에서 영역을 추론하지 못했습니다.")
+    
     keyword = bdd_context.get('keyword', '')
     
     # 🔥 PDP PV 로그에서 가격 정보 추출 (프론트엔드 대신)
@@ -37,17 +41,17 @@ def _get_common_context(bdd_context):
     if keyword:
         frontend_data['keyword'] = keyword
     
-    return tracker, goodscode, module_title, frontend_data if frontend_data else None
+    return tracker, goodscode, module_title, frontend_data if frontend_data else None, area
 
 
 @then("PV 로그가 정합성 검증을 통과해야 함")
 def then_pv_logs_should_pass_validation(bdd_context):
     """PV 로그 정합성 검증 (module_config.json에 정의된 경우만)"""
-    tracker, goodscode, module_title, frontend_data = _get_common_context(bdd_context)
+    tracker, goodscode, module_title, frontend_data, area = _get_common_context(bdd_context)
     
     # module_config.json에서 PV가 정의되어 있는지 확인
-    module_config = load_module_config()
-    module_config_data = module_config.get(module_title, {})
+    module_config = load_module_config(area=area, module_title=module_title)
+    module_config_data = module_config if isinstance(module_config, dict) else {}
     event_config_key = 'pv'
     
     if event_config_key not in module_config_data:
@@ -81,14 +85,14 @@ def then_pdp_pv_logs_should_pass_validation(tc_id, bdd_context):
         return
     
     logger.info(f"[TestRail TC: {tc_id}] PDP PV 로그 정합성 검증 시작")
-    tracker, goodscode, module_title, frontend_data = _get_common_context(bdd_context)
+    tracker, goodscode, module_title, frontend_data, area = _get_common_context(bdd_context)
     
     # TestRail TC 번호를 context에 저장
     bdd_context['testrail_tc_id'] = tc_id
     
     # module_config.json에서 pdp_pv가 정의되어 있는지 확인
-    module_config = load_module_config()
-    module_config_data = module_config.get(module_title, {})
+    module_config = load_module_config(area=area, module_title=module_title)
+    module_config_data = module_config if isinstance(module_config, dict) else {}
     event_config_key = 'pdp_pv'
     
     if event_config_key not in module_config_data:
@@ -135,14 +139,14 @@ def then_module_exposure_logs_should_pass_validation(tc_id, bdd_context):
         return
     
     logger.info(f"[TestRail TC: {tc_id}] Module Exposure 로그 정합성 검증 시작")
-    tracker, goodscode, module_title, frontend_data = _get_common_context(bdd_context)
+    tracker, goodscode, module_title, frontend_data, area = _get_common_context(bdd_context)
     
     # TestRail TC 번호를 context에 저장
     bdd_context['testrail_tc_id'] = tc_id
     
     # module_config.json에서 module_exposure가 정의되어 있는지 확인
-    module_config = load_module_config()
-    module_config_data = module_config.get(module_title, {})
+    module_config = load_module_config(area=area, module_title=module_title)
+    module_config_data = module_config if isinstance(module_config, dict) else {}
     event_config_key = 'module_exposure'
     
     if event_config_key not in module_config_data:
@@ -189,14 +193,14 @@ def then_product_exposure_logs_should_pass_validation(tc_id, bdd_context):
         return
     
     logger.info(f"[TestRail TC: {tc_id}] Product Exposure 로그 정합성 검증 시작")
-    tracker, goodscode, module_title, frontend_data = _get_common_context(bdd_context)
+    tracker, goodscode, module_title, frontend_data, area = _get_common_context(bdd_context)
     
     # TestRail TC 번호를 context에 저장
     bdd_context['testrail_tc_id'] = tc_id
     
     # module_config.json에서 product_exposure가 정의되어 있는지 확인
-    module_config = load_module_config()
-    module_config_data = module_config.get(module_title, {})
+    module_config = load_module_config(area=area, module_title=module_title)
+    module_config_data = module_config if isinstance(module_config, dict) else {}
     event_config_key = 'product_exposure'
     
     if event_config_key not in module_config_data:
@@ -243,14 +247,14 @@ def then_product_click_logs_should_pass_validation(tc_id, bdd_context):
         return
     
     logger.info(f"[TestRail TC: {tc_id}] Product Click 로그 정합성 검증 시작")
-    tracker, goodscode, module_title, frontend_data = _get_common_context(bdd_context)
+    tracker, goodscode, module_title, frontend_data, area = _get_common_context(bdd_context)
     
     # TestRail TC 번호를 context에 저장
     bdd_context['testrail_tc_id'] = tc_id
     
     # module_config.json에서 product_click이 정의되어 있는지 확인
-    module_config = load_module_config()
-    module_config_data = module_config.get(module_title, {})
+    module_config = load_module_config(area=area, module_title=module_title)
+    module_config_data = module_config if isinstance(module_config, dict) else {}
     event_config_key = 'product_click'
     
     if event_config_key not in module_config_data:
@@ -297,14 +301,14 @@ def then_product_atc_click_logs_should_pass_validation(tc_id, bdd_context):
         return
     
     logger.info(f"[TestRail TC: {tc_id}] Product ATC Click 로그 정합성 검증 시작")
-    tracker, goodscode, module_title, frontend_data = _get_common_context(bdd_context)
+    tracker, goodscode, module_title, frontend_data, area = _get_common_context(bdd_context)
     
     # TestRail TC 번호를 context에 저장
     bdd_context['testrail_tc_id'] = tc_id
     
     # module_config.json에서 product_atc_click이 정의되어 있는지 확인 (별도 섹션)
-    module_config = load_module_config()
-    module_config_data = module_config.get(module_title, {})
+    module_config = load_module_config(area=area, module_title=module_title)
+    module_config_data = module_config if isinstance(module_config, dict) else {}
     event_config_key = 'product_atc_click'
     
     if event_config_key not in module_config_data:
@@ -374,14 +378,18 @@ def _save_tracking_logs(bdd_context, tracker, goodscode, module_title):
     """트래킹 로그를 JSON 파일로 저장"""
     try:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        module_config = load_module_config()
+        area = bdd_context.get('area')
+        if not area:
+            raise ValueError("bdd_context에 'area'가 없습니다. Feature 파일 경로에서 영역을 추론하지 못했습니다.")
+        module_config = load_module_config(area=area, module_title=module_title)
         
-        # 모듈별 설정에서 SPM 가져오기
+        # 모듈별 설정에서 SPM 가져오기 (이벤트 타입별 섹션에서, 재귀적으로 탐색)
         module_spm = None
-        if module_title in module_config:
-            common_config = module_config[module_title].get('common', {})
-            if common_config:
-                module_spm = common_config.get('spm')
+        if isinstance(module_config, dict):
+            # module_exposure 섹션에서 spm 가져오기 (재귀적으로 탐색)
+            module_exposure = module_config.get('module_exposure', {})
+            if module_exposure:
+                module_spm = _find_spm_recursive(module_exposure)
         
         # 각 이벤트 타입별 로그 저장
         event_configs = [

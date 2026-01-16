@@ -3,6 +3,7 @@ BDD Step Definitions for SRP Tracking Tests
 """
 import logging
 import pytest
+from pathlib import Path
 from pytest_bdd import given, when, then, parsers
 from playwright.sync_api import expect
 from pages.search_page import SearchPage
@@ -10,14 +11,6 @@ from pages.home_page import HomePage
 from pages.Etc import Etc
 
 logger = logging.getLogger(__name__)
-
-
-@given("G마켓 홈 페이지에 접속했음")
-def given_gmarket_home_page_accessed(browser_session):
-    """G마켓 홈 페이지에 접속"""
-    home_page = HomePage(browser_session.page)
-    home_page.navigate()
-    logger.info("G마켓 홈 페이지 접속 완료")
 
 
 @when(parsers.parse('사용자가 "{keyword}"을 검색한다'))

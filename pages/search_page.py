@@ -345,7 +345,27 @@ class SearchPage(BasePage):
             Locator 객체
         """
         logger.debug(f"모듈 찾기: {module_title}")
+        if module_title == "오늘의 슈퍼딜":
+            return self.page.get_by_text("오늘의", exact=True)
         return self.page.get_by_text(module_title, exact=True)
+
+    def get_module_by_title_type2(self, module_title: str) -> Locator:
+        """
+        모듈 타이틀로 모듈 요소 찾기
+        
+        Args:
+            module_title: 모듈 타이틀 텍스트
+            
+        Returns:
+            Locator 객체
+        """
+        logger.debug(f"모듈 찾기: {module_title}")
+        if module_title == "4.5 이상":
+            return self.page.locator(".text__title", has_text="이상 만족도 높은 상품이에요")
+        elif module_title == "백화점 브랜드":
+            return self.page.locator(".text__title", has_text="의 비슷한 인기브랜드에요")
+        elif module_title == "브랜드 인기상품":
+            return self.page.locator(".text__title", has_text="인기상품")
     
     def scroll_module_into_view(self, module_locator: Locator) -> None:
         """
@@ -357,7 +377,7 @@ class SearchPage(BasePage):
         logger.debug("모듈 스크롤")
         module_locator.scroll_into_view_if_needed()
     
-    def get_module_parent(self, module_locator: Locator) -> Locator:
+    def get_module_parent(self, module_locator: Locator, n) -> Locator:
         """
         모듈의 부모 요소 찾기
         
@@ -368,7 +388,16 @@ class SearchPage(BasePage):
             부모 Locator 객체
         """
         logger.debug("모듈 부모 요소 찾기")
-        return module_locator.locator("xpath=../..")
+        if n == 1:
+            return module_locator.locator("xpath=..")
+        elif n == 2:
+            return module_locator.locator("xpath=../..")
+        elif n == 3:
+            return module_locator.locator("xpath=../../..")
+        elif n == 4:
+            return module_locator.locator("xpath=../../../..")
+        elif n == 5:
+            return module_locator.locator("xpath=../../../../..")
     
     def get_product_in_module(self, parent_locator: Locator) -> Locator:
         """
@@ -381,7 +410,20 @@ class SearchPage(BasePage):
             상품 Locator 객체
         """
         logger.debug("모듈 내 상품 요소 찾기")
-        return parent_locator.locator("div.box__item-container > div.box__image > a")
+        return parent_locator.locator("div.box__item-container > div.box__image > a").first
+    
+    def get_product_in_module_type2(self, parent_locator: Locator) -> Locator:
+        """
+        모듈 내 상품 요소 찾기
+        
+        Args:
+            parent_locator: 모듈 부모 Locator 객체
+            
+        Returns:
+            상품 Locator 객체
+        """
+        logger.debug("모듈 내 상품 요소 찾기")
+        return parent_locator.locator(".box__itemcard-img > a").first
     
     def scroll_product_into_view(self, product_locator: Locator) -> None:
         """
