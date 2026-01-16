@@ -154,6 +154,106 @@
       }
     }
   },
+  "product_atc_click": {
+    "payload": {
+      "gmkey": "CLK",
+      "ts": "1768527144312",
+      "rd": "1274983316",
+      "gokey": "uidaplus%3D11758850530814005372000000%26spm-url%3Dgmktpc.home.searchtop.dsearchbox.1fbf486aADDRIn%26spm-pre%3D%26spm-cnt%3Dgmktpc.searchlist.0.0.13ee2eba8ocY6q%26_f_t%3Dfalse%26pid%3Dwww_gmarket_co_kr%26cguid%3D11758850530814005372000000%26pguid%3D21768460859073005282010000%26sguid%3D31768460859073005282200000%26channel_code%3D200003514%26st_page_id%3Dpydvirnaxmkcaxcp19bc46ea45ce1e5331c177606f%26server_env%3Dprod%26params-clk%3Dgmkt_page_id%253D%2526gmkt_area_code%253D200011491%2526section_index%253D%2526module_index%253D3%2526is_ad%253DY%2526ab_buckets%253D%252523108%25255E4%252523B%2526is_airticket%253DN%2526utLogMap%253D%25257B%252522scene%252522%25253A%252522search%252522%25252C%252522sub_scene%252522%25253A%252522main_srp%252522%25252C%252522x_object_id%252522%25253A%2525224448231882%252522%25252C%252522x_object_type%252522%25253A%252522item%252522%25252C%252522x_sku_id%252522%25253A%2525220%252522%25252C%252522pageIndex%252522%25253A%2525220%252522%25252C%252522pagePos%252522%25253A%2525220%252522%25252C%252522pageSize%252522%25253A%2525228%252522%25252C%252522listno%252522%25253A%2525220%252522%25252C%252522sort%252522%25253A%252522popularity%252522%25252C%252522searchScenario%252522%25253A%252522keyword%252522%25252C%252522query%252522%25253A%252522%2525EB%2525AC%2525BC%2525ED%25258B%2525B0%2525EC%25258A%252588%252522%25252C%252522pvid%252522%25253A%252522d844b4240ea84cadbc5213d746c58176%252522%25252C%252522pvid_sys%252522%25253A%252522gmarket%252520server%252522%25252C%252522search_session_id%252522%25253A%252522560a1566-42e6-4fdf-bba4-48490b0be2c7%252522%25252C%252522origin_price%252522%25253A%25252227900%252522%25252C%252522promotion_price%252522%25253A%25252227900%252522%25252C%252522coupon_price%252522%25253A%25252223720%252522%25252C%252522ab_buckets%252522%25253A%252522%252523108%25255E4%252523B%252522%25252C%252522trafficType%252522%25253A%252522ad%252522%25252C%252522adProduct%252522%25253A%252522N%252522%25252C%252522adSubProduct%252522%25253A%252522A%252522%25257D%2526_p_prod%253D4448231882%2526_p_sku%253D0%2526_p_catalog%253D%2526_p_group%253D%26_is_auto_clk%3D1%26spm%3Dgmktpc.searchlist.cpc.d0_0%26scm%3D%26cache%3Db13b94f%26jsver%3Daplus.js%26lver%3D1.13.26-1%26customSdkId%3D%26platformType%3Dpc%26device_model%3DWindows%26os%3DWindows%26os_version%3Dwin10%26language%3Dko-KR%26o%3Dwin10%26w%3Dwebkit%26s%3D1280x720%26scr%3D1280x720%26m%3D360ee%26ism%3Dpc%26p%3D1%26b%3Dchrome139%26tag%3D1%26stag%3D-1%26lstag%3D-1%26_g_encode%3Dutf-8",
+      "cna": "PYDvIRNaXmkCAXCpQAoA/xE0",
+      "spm-cnt": "gmktpc.searchlist.0.0.13ee2eba8ocY6q",
+      "spm-url": "gmktpc.home.searchtop.dsearchbox.1fbf486aADDRIn",
+      "_gr_uid_": "11758850530814005372000000",
+      "uidaplus": "11758850530814005372000000",
+      "logtype": "2",
+      "scr": "1280x720",
+      "_p_url": "https%3A%2F%2Fwww.gmarket.co.kr%2Fn%2Fsearch%3Fspm%3Dgmktpc.home.searchtop.dsearchbox.1fbf486aADDRIn%26keyword%3D%25EB%25AC%25BC%25ED%258B%25B0%25EC%258A%2588",
+      "decoded_gokey": {
+        "decoded_gokey": "uidaplus=11758850530814005372000000&spm-url=gmktpc.home.searchtop.dsearchbox.1fbf486aADDRIn&spm-pre=&spm-cnt=gmktpc.searchlist.0.0.13ee2eba8ocY6q&_f_t=false&pid=www_gmarket_co_kr&cguid=11758850530814005372000000&pguid=21768460859073005282010000&sguid=31768460859073005282200000&channel_code=200003514&st_page_id=pydvirnaxmkcaxcp19bc46ea45ce1e5331c177606f&server_env=prod&params-clk=gmkt_page_id%3D%26gmkt_area_code%3D200011491%26section_index%3D%26module_index%3D3%26is_ad%3DY%26ab_buckets%3D%2523108%255E4%2523B%26is_airticket%3DN%26utLogMap%3D%257B%2522scene%2522%253A%2522search%2522%252C%2522sub_scene%2522%253A%2522main_srp%2522%252C%2522x_object_id%2522%253A%25224448231882%2522%252C%2522x_object_type%2522%253A%2522item%2522%252C%2522x_sku_id%2522%253A%25220%2522%252C%2522pageIndex%2522%253A%25220%2522%252C%2522pagePos%2522%253A%25220%2522%252C%2522pageSize%2522%253A%25228%2522%252C%2522listno%2522%253A%25220%2522%252C%2522sort%2522%253A%2522popularity%2522%252C%2522searchScenario%2522%253A%2522keyword%2522%252C%2522query%2522%253A%2522%25EB%25AC%25BC%25ED%258B%25B0%25EC%258A%2588%2522%252C%2522pvid%2522%253A%2522d844b4240ea84cadbc5213d746c58176%2522%252C%2522pvid_sys%2522%253A%2522gmarket%2520server%2522%252C%2522search_session_id%2522%253A%2522560a1566-42e6-4fdf-bba4-48490b0be2c7%2522%252C%2522origin_price%2522%253A%252227900%2522%252C%2522promotion_price%2522%253A%252227900%2522%252C%2522coupon_price%2522%253A%252223720%2522%252C%2522ab_buckets%2522%253A%2522%2523108%255E4%2523B%2522%252C%2522trafficType%2522%253A%2522ad%2522%252C%2522adProduct%2522%253A%2522N%2522%252C%2522adSubProduct%2522%253A%2522A%2522%257D%26_p_prod%3D4448231882%26_p_sku%3D0%26_p_catalog%3D%26_p_group%3D&_is_auto_clk=1&spm=gmktpc.searchlist.cpc.d0_0&scm=&cache=b13b94f&jsver=aplus.js&lver=1.13.26-1&customSdkId=&platformType=pc&device_model=Windows&os=Windows&os_version=win10&language=ko-KR&o=win10&w=webkit&s=1280x720&scr=1280x720&m=360ee&ism=pc&p=1&b=chrome139&tag=1&stag=-1&lstag=-1&_g_encode=utf-8",
+        "params": {
+          "uidaplus": "11758850530814005372000000",
+          "spm-url": "gmktpc.home.searchtop.dsearchbox.1fbf486aADDRIn",
+          "spm-pre": "",
+          "spm-cnt": "gmktpc.searchlist.0.0.13ee2eba8ocY6q",
+          "_f_t": "false",
+          "pid": "www_gmarket_co_kr",
+          "cguid": "11758850530814005372000000",
+          "pguid": "21768460859073005282010000",
+          "sguid": "31768460859073005282200000",
+          "channel_code": "200003514",
+          "st_page_id": "pydvirnaxmkcaxcp19bc46ea45ce1e5331c177606f",
+          "server_env": "prod",
+          "params-clk": {
+            "raw": "gmkt_page_id=&gmkt_area_code=200011491&section_index=&module_index=3&is_ad=Y&ab_buckets=%23108%5E4%23B&is_airticket=N&utLogMap=%7B%22scene%22%3A%22search%22%2C%22sub_scene%22%3A%22main_srp%22%2C%22x_object_id%22%3A%224448231882%22%2C%22x_object_type%22%3A%22item%22%2C%22x_sku_id%22%3A%220%22%2C%22pageIndex%22%3A%220%22%2C%22pagePos%22%3A%220%22%2C%22pageSize%22%3A%228%22%2C%22listno%22%3A%220%22%2C%22sort%22%3A%22popularity%22%2C%22searchScenario%22%3A%22keyword%22%2C%22query%22%3A%22%EB%AC%BC%ED%8B%B0%EC%8A%88%22%2C%22pvid%22%3A%22d844b4240ea84cadbc5213d746c58176%22%2C%22pvid_sys%22%3A%22gmarket%20server%22%2C%22search_session_id%22%3A%22560a1566-42e6-4fdf-bba4-48490b0be2c7%22%2C%22origin_price%22%3A%2227900%22%2C%22promotion_price%22%3A%2227900%22%2C%22coupon_price%22%3A%2223720%22%2C%22ab_buckets%22%3A%22%23108%5E4%23B%22%2C%22trafficType%22%3A%22ad%22%2C%22adProduct%22%3A%22N%22%2C%22adSubProduct%22%3A%22A%22%7D&_p_prod=4448231882&_p_sku=0&_p_catalog=&_p_group=",
+            "parsed": {
+              "gmkt_page_id": "",
+              "gmkt_area_code": "200011491",
+              "section_index": "",
+              "module_index": "3",
+              "is_ad": "Y",
+              "ab_buckets": "#108^4#B",
+              "is_airticket": "N",
+              "utLogMap": {
+                "raw": "{\"scene\":\"search\",\"sub_scene\":\"main_srp\",\"x_object_id\":\"4448231882\",\"x_object_type\":\"item\",\"x_sku_id\":\"0\",\"pageIndex\":\"0\",\"pagePos\":\"0\",\"pageSize\":\"8\",\"listno\":\"0\",\"sort\":\"popularity\",\"searchScenario\":\"keyword\",\"query\":\"물티슈\",\"pvid\":\"d844b4240ea84cadbc5213d746c58176\",\"pvid_sys\":\"gmarket server\",\"search_session_id\":\"560a1566-42e6-4fdf-bba4-48490b0be2c7\",\"origin_price\":\"27900\",\"promotion_price\":\"27900\",\"coupon_price\":\"23720\",\"ab_buckets\":\"#108^4#B\",\"trafficType\":\"ad\",\"adProduct\":\"N\",\"adSubProduct\":\"A\"}",
+                "parsed": {
+                  "scene": "search",
+                  "sub_scene": "main_srp",
+                  "x_object_id": "<상품번호>",
+                  "x_object_type": "item",
+                  "x_sku_id": "0",
+                  "pageIndex": "0",
+                  "pagePos": "0",
+                  "pageSize": "8",
+                  "listno": "0",
+                  "sort": "popularity",
+                  "searchScenario": "keyword",
+                  "query": "<검색어>",
+                  "pvid": "d844b4240ea84cadbc5213d746c58176",
+                  "pvid_sys": "gmarket server",
+                  "search_session_id": "560a1566-42e6-4fdf-bba4-48490b0be2c7",
+                  "origin_price": "<원가>",
+                  "promotion_price": "<할인가>",
+                  "coupon_price": "<쿠폰적용가>",
+                  "ab_buckets": ["#108^4#B", "#108^3#B"],
+                  "trafficType": "ad",
+                  "adProduct": "N",
+                  "adSubProduct": "A"
+                }
+              },
+              "_p_prod": "<상품번호>",
+              "_p_sku": "0",
+              "_p_catalog": "",
+              "_p_group": ""
+            }
+          },
+          "_is_auto_clk": "1",
+          "spm": "gmktpc.searchlist.cpc.d0_0",
+          "scm": "",
+          "cache": "b13b94f",
+          "jsver": "aplus.js",
+          "lver": "1.13.26-1",
+          "customSdkId": "",
+          "platformType": "pc",
+          "device_model": "Windows",
+          "os": "Windows",
+          "os_version": "win10",
+          "language": "ko-KR",
+          "o": "win10",
+          "w": "webkit",
+          "s": "1280x720",
+          "scr": "1280x720",
+          "m": "360ee",
+          "ism": "pc",
+          "p": "1",
+          "b": "chrome139",
+          "tag": "1",
+          "stag": "-1",
+          "lstag": "-1",
+          "_g_encode": "utf-8"
+        }
+      }
+    }
+  },
   "pdp_pv":  {
     "payload": {
       "logtype": "1",
