@@ -7,6 +7,7 @@ from pytest_bdd import given, when, then, parsers
 from pages.home_page import HomePage
 from utils.validation_helpers import detect_area_from_feature_path
 import logging
+import pytest
 
 logger = logging.getLogger(__name__)
 
@@ -25,20 +26,56 @@ def user_navigates_to_homepage(browser_session):
 
 
 @given("G마켓 홈 페이지에 접속했음")
-def given_gmarket_home_page_accessed(browser_session, feature, bdd_context):
+def given_gmarket_home_page_accessed(browser_session, request, bdd_context):
     """G마켓 홈 페이지에 접속 및 영역 추론"""
-    # Feature 파일 경로에서 영역 추론
+    # Feature 파일 경로 또는 테스트 파일 경로에서 영역 추론
     try:
-        # pytest-bdd의 feature fixture에서 파일 경로 가져오기
-        if feature and hasattr(feature, 'filename'):
-            feature_path = feature.filename
-            area = detect_area_from_feature_path(feature_path)
-            bdd_context.store['area'] = area
-            logger.info(f"영역 자동 감지: {area} (Feature: {feature_path})")
-        else:
-            # 기본값
+        area = None
+        
+        # 방법 1: feature fixture에서 feature 파일 경로 가져오기
+        if hasattr(request, 'getfixturevalue'):
+            try:
+                feature = request.getfixturevalue('feature')
+                if feature and hasattr(feature, 'filename'):
+                    feature_path = str(feature.filename)
+                    area = detect_area_from_feature_path(feature_path)
+                    if area:
+                        bdd_context.store['area'] = area
+                        logger.info(f"영역 자동 감지: {area} (Feature: {feature_path})")
+            except (pytest.FixtureLookupError, AttributeError):
+                pass
+        
+        # 방법 2: request.node에서 테스트 파일 경로 가져오기 (test_*.py)
+        if not area and hasattr(request, 'node'):
+            try:
+                # request.node.path 또는 request.node.fspath 사용
+                test_file_path = None
+                if hasattr(request.node, 'path'):
+                    test_file_path = request.node.path
+                elif hasattr(request.node, 'fspath'):
+                    test_file_path = request.node.fspath
+                
+                if test_file_path:
+                    test_file_path = Path(test_file_path)
+                    test_file_name = test_file_path.stem  # 파일명에서 확장자 제거
+                    
+                    # test_*.py 패턴에서 영역 추론 (예: test_srp.py -> SRP)
+                    if test_file_name.startswith('test_'):
+                        area_name = test_file_name.replace('test_', '').upper()
+                        # 영역명이 유효한지 확인 (SRP, PDP, HOME, CART 등)
+                        valid_areas = ['SRP', 'PDP', 'HOME', 'CART']
+                        if area_name in valid_areas:
+                            area = area_name
+                            bdd_context.store['area'] = area
+                            logger.info(f"영역 자동 감지: {area} (Test 파일: {test_file_path})")
+            except (AttributeError, Exception) as e:
+                logger.debug(f"테스트 파일 경로에서 영역 추론 실패: {e}")
+        
+        # 방법 3: 기본값 사용
+        if not area:
             bdd_context.store['area'] = 'SRP'
-            logger.info("영역 기본값 사용: SRP")
+            logger.warning("영역 기본값 사용: SRP (feature 파일 및 test 파일 경로에서 추론 실패)")
+            
     except Exception as e:
         # 오류 발생 시 기본값 사용
         bdd_context.store['area'] = 'SRP'

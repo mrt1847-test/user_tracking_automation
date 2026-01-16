@@ -423,7 +423,20 @@ class SearchPage(BasePage):
             상품 Locator 객체
         """
         logger.debug("모듈 내 상품 요소 찾기")
-        return parent_locator.locator(".box__itemcard-img > a").first
+        return parent_locator.locator("div.box__itemcard-image > a").first
+    
+    def get_product_in_module_type3(self, parent_locator: Locator) -> Locator:
+        """
+        모듈 내 상품 요소 찾기
+        
+        Args:
+            parent_locator: 모듈 부모 Locator 객체
+            
+        Returns:
+            상품 Locator 객체
+        """
+        logger.debug("모듈 내 상품 요소 찾기")
+        return parent_locator.locator("span.box__itemcard-img > a").first
     
     def scroll_product_into_view(self, product_locator: Locator) -> None:
         """
@@ -484,12 +497,26 @@ class SearchPage(BasePage):
         """
         logger.debug("상품 클릭 및 새 탭 대기")
         
-        # 새 탭이 생성될 때까지 대기
-        with self.page.context.expect_page() as new_page_info:
-            product_locator.click()
+        # href 속성을 먼저 읽어서 백업 URL 확보
+        href = product_locator.get_attribute("href")
+        logger.debug(f"상품 링크 href: {href}")
         
-        new_page = new_page_info.value
-        logger.debug(f"새 탭 생성됨: {new_page.url}")
+        # force 클릭만 시도
+        try:
+            with self.page.context.expect_page(timeout=10000) as new_page_info:
+                product_locator.click(force=True, timeout=3000)
+            
+            new_page = new_page_info.value
+            logger.debug(f"새 탭 생성됨: {new_page.url}")
+        except Exception as e:
+            logger.warning(f"force 클릭 실패, href로 직접 이동: {e}")
+            # 새 탭이 열리지 않으면 href로 직접 이동
+            if href:
+                new_page = self.page.context.new_page()
+                new_page.goto(href, wait_until="domcontentloaded", timeout=30000)
+                logger.debug(f"href로 직접 이동: {href}")
+            else:
+                raise Exception(f"클릭 실패 및 href 없음: {e}")
         
         # 새 탭을 포커스로 가져오기 (제어 가능하도록)
         new_page.bring_to_front()
