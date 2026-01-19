@@ -1227,6 +1227,9 @@ class NetworkTracker:
             # 값 검증
             if actual_value is None:
                 errors.append(f"키 '{key}'에 해당하는 값이 없습니다.")
+            elif isinstance(expected_value, str) and expected_value == "__SKIP__":
+                # skip 필드: 어떤 값이든 통과 (검증 스킵)
+                continue  # 검증 스킵, 다음 필드로
             elif isinstance(expected_value, str) and expected_value == "__MANDATORY__":
                 # mandatory 필드: 빈 값만 아니면 통과
                 # 빈 값 체크: None, 빈 문자열, 공백만 있는 문자열

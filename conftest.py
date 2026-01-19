@@ -213,8 +213,8 @@ def create_login_state(pw):
     page.goto(base_url())
     # 로그인 페이지 이동 및 입력
     page.click("text=로그인")
-    page.fill("#typeMemberInputId", "cease2504")
-    page.fill("#typeMemberInputPassword", "asdf12!@")
+    page.fill("#typeMemberInputId", "t4adbuy01")
+    page.fill("#typeMemberInputPassword", "Gmkt1004!!")
     page.click("#btn_memberLogin")
     # 로그인 완료 대기
     page.wait_for_selector("text=로그아웃", timeout=15000)

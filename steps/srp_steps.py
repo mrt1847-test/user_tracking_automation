@@ -3,6 +3,7 @@ BDD Step Definitions for SRP Tracking Tests
 """
 import logging
 import pytest
+from pathlib import Path
 from pytest_bdd import given, when, then, parsers
 from playwright.sync_api import expect
 from pages.search_page import SearchPage
@@ -10,14 +11,6 @@ from pages.home_page import HomePage
 from pages.Etc import Etc
 
 logger = logging.getLogger(__name__)
-
-
-@given("G마켓 홈 페이지에 접속했음")
-def given_gmarket_home_page_accessed(browser_session):
-    """G마켓 홈 페이지에 접속"""
-    home_page = HomePage(browser_session.page)
-    home_page.navigate()
-    logger.info("G마켓 홈 페이지 접속 완료")
 
 
 @when(parsers.parse('사용자가 "{keyword}"을 검색한다'))
@@ -86,6 +79,39 @@ def module_exists_in_search_results(browser_session, module_title, request, bdd_
     
     logger.info(f"{module_title} 모듈 존재 확인 완료")
 
+@given(parsers.parse('검색 결과 페이지에 "{module_title}" 모듈이 있다 (type2)'))
+def module_exists_in_search_results_type2(browser_session, module_title, request, bdd_context):
+    """
+    검색 결과 페이지에 특정 모듈이 존재하는지 확인하고 보장 (Given)
+    모듈이 없으면 현재 시나리오만 skip
+    모듈이 있지만 보이지 않으면 fail
+    
+    Args:
+        browser_session: BrowserSession 객체 (page 참조 관리)
+        module_title: 모듈 타이틀
+        request: pytest request 객체 (fixture 접근용)
+        bdd_context: BDD context (step 간 데이터 공유용)
+    """
+    search_page = SearchPage(browser_session.page)
+    
+    # 모듈 찾기
+    module = search_page.get_module_by_title_type2(module_title)
+    
+    # 모듈이 존재하는지 확인 (count == 0이면 모듈이 없음)
+    module_count = module.count()
+    if module_count == 0:
+        # 모듈이 없으면 현재 시나리오만 skip
+        pytest.skip(f"'{module_title}' 모듈이 검색 결과에 없습니다.")
+    
+    # 모듈이 있으면 visibility 확인 (실패하면 fail)
+    expect(module.first).to_be_visible()
+    
+    # bdd_context에 module_title 저장 (다음 step에서 사용)
+    bdd_context.store['module_title'] = module_title
+    
+    logger.info(f"{module_title} 모듈 존재 확인 완료")
+
+
 
 @when(parsers.parse('사용자가 "{module_title}" 모듈 내 상품을 확인하고 클릭한다'))
 def user_confirms_and_clicks_product_in_module(browser_session, module_title, bdd_context):
@@ -104,8 +130,58 @@ def user_confirms_and_clicks_product_in_module(browser_session, module_title, bd
     search_page.scroll_module_into_view(module)
     
     # 모듈 내 상품 찾기
-    parent = search_page.get_module_parent(module)
+    parent = search_page.get_module_parent(module, 2)
     product = search_page.get_product_in_module(parent)
+    search_page.scroll_product_into_view(product)
+    
+    # 상품 노출 확인
+    expect(product.first).to_be_visible()
+    
+    # 상품 코드 가져오기
+    goodscode = search_page.get_product_code(product)
+    
+    # 장바구니 담기 버튼 존재할 경우 클릭
+    if parent.is_add_to_cart_button_visible(goodscode):
+        parent.click_add_to_cart_button(goodscode)
+        logger.info(f"장바구니 담기 버튼 클릭 완료: {goodscode}")
+    else:
+        logger.info(f"장바구니 담기 버튼이 존재하지 않습니다: {goodscode}")
+    
+    # 상품 클릭
+    new_page = search_page.click_product_and_wait_new_page(product)
+    
+    # 🔥 명시적 페이지 전환 (상태 관리자 패턴)
+    browser_session.switch_to(new_page)
+    
+    # bdd context에 저장 (module_title, goodscode, product_url 등)
+    bdd_context.store['module_title'] = module_title
+    bdd_context.store['goodscode'] = goodscode
+    bdd_context.store['product_url'] = new_page.url
+    
+    logger.info(f"{module_title} 모듈 내 상품 확인 및 클릭 완료: {goodscode}")
+
+@when(parsers.parse('사용자가 "{module_title}" 모듈 내 상품을 확인하고 클릭한다 (type2)'))
+def user_confirms_and_clicks_product_in_module_type2(browser_session, module_title, bdd_context):
+    """
+    모듈 내 상품 노출 확인하고 클릭 (Atomic POM 조합)
+    
+    Args:
+        browser_session: BrowserSession 객체 (page 참조 관리)
+        module_title: 모듈 타이틀
+        bdd_context: BDD context (step 간 데이터 공유용)
+    """
+    search_page = SearchPage(browser_session.page)
+    
+    # 모듈로 이동
+    module = search_page.get_module_by_title_type2(module_title)
+    search_page.scroll_module_into_view(module)
+    
+    # 모듈 내 상품 찾기
+    parent = search_page.get_module_parent(module, 3)
+    if module_title == "4.5 이상":
+        product = search_page.get_product_in_module_type3(parent)
+    else:
+        product = search_page.get_product_in_module_type2(parent)
     search_page.scroll_product_into_view(product)
     
     # 상품 노출 확인

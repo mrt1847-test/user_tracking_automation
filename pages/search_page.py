@@ -345,7 +345,27 @@ class SearchPage(BasePage):
             Locator 객체
         """
         logger.debug(f"모듈 찾기: {module_title}")
+        if module_title == "오늘의 슈퍼딜":
+            return self.page.get_by_text("오늘의", exact=True)
         return self.page.get_by_text(module_title, exact=True)
+
+    def get_module_by_title_type2(self, module_title: str) -> Locator:
+        """
+        모듈 타이틀로 모듈 요소 찾기
+        
+        Args:
+            module_title: 모듈 타이틀 텍스트
+            
+        Returns:
+            Locator 객체
+        """
+        logger.debug(f"모듈 찾기: {module_title}")
+        if module_title == "4.5 이상":
+            return self.page.locator(".text__title", has_text="이상 만족도 높은 상품이에요")
+        elif module_title == "백화점 브랜드":
+            return self.page.locator(".text__title", has_text="의 비슷한 인기브랜드에요")
+        elif module_title == "브랜드 인기상품":
+            return self.page.locator(".text__title", has_text="인기상품")
     
     def scroll_module_into_view(self, module_locator: Locator) -> None:
         """
@@ -357,18 +377,24 @@ class SearchPage(BasePage):
         logger.debug("모듈 스크롤")
         module_locator.scroll_into_view_if_needed()
     
-    def get_module_parent(self, module_locator: Locator) -> Locator:
+    def get_module_parent(self, module_locator: Locator, n: int) -> Locator:
         """
-        모듈의 부모 요소 찾기
-        
+        모듈의 n번째 부모 요소 찾기
+
         Args:
             module_locator: 모듈 Locator 객체
-            
+            n: 올라갈 부모 단계 수 (1 이상)
+
         Returns:
             부모 Locator 객체
         """
-        logger.debug("모듈 부모 요소 찾기")
-        return module_locator.locator("xpath=../..")
+        if n < 1:
+            raise ValueError("n은 1 이상의 정수여야 합니다.")
+
+        logger.debug(f"모듈 부모 요소 {n}단계 찾기")
+
+        xpath = "xpath=" + "/".join([".."] * n)
+        return module_locator.locator(xpath)
     
     def get_product_in_module(self, parent_locator: Locator) -> Locator:
         """
@@ -381,7 +407,33 @@ class SearchPage(BasePage):
             상품 Locator 객체
         """
         logger.debug("모듈 내 상품 요소 찾기")
-        return parent_locator.locator("div.box__item-container > div.box__image > a")
+        return parent_locator.locator("div.box__item-container > div.box__image > a").first
+    
+    def get_product_in_module_type2(self, parent_locator: Locator) -> Locator:
+        """
+        모듈 내 상품 요소 찾기
+        
+        Args:
+            parent_locator: 모듈 부모 Locator 객체
+            
+        Returns:
+            상품 Locator 객체
+        """
+        logger.debug("모듈 내 상품 요소 찾기")
+        return parent_locator.locator("div.box__itemcard-image > a").first
+    
+    def get_product_in_module_type3(self, parent_locator: Locator) -> Locator:
+        """
+        모듈 내 상품 요소 찾기
+        
+        Args:
+            parent_locator: 모듈 부모 Locator 객체
+            
+        Returns:
+            상품 Locator 객체
+        """
+        logger.debug("모듈 내 상품 요소 찾기")
+        return parent_locator.locator("span.box__itemcard-img > a").first
     
     def scroll_product_into_view(self, product_locator: Locator) -> None:
         """
@@ -429,6 +481,42 @@ class SearchPage(BasePage):
         """
         logger.debug("새 페이지 대기")
         return self.page.context.expect_page()
+
+    def click_add_to_cart_button(self, goodscode: str):
+        """
+        상품 번호로 장바구니 담기 클릭
+        
+        Args:
+            goodscode: 상품 번호
+        """
+        logger.debug(f"상품 번호로 상품 찾기: {goodscode}")
+        self.page.locator(f'.button__cart[data-montelena-goodscode="{goodscode}"]').nth(0).click()
+        logger.debug(f"장바구니 담기 클릭 완료: {goodscode}")
+
+    def is_add_to_cart_button_visible(self, goodscode: str) -> bool:
+        """
+        상품 번호로 장바구니 담기 버튼 클릭 가능 여부 확인
+        
+        Args:
+            goodscode: 상품 번호
+            
+        Returns:
+            장바구니 담기 버튼이 존재하고 클릭 가능하면 True
+        """
+        logger.debug(f"장바구니 담기 버튼 클릭 가능 여부 확인: {goodscode}")
+        button = self.page.locator(f'.button__cart[data-montelena-goodscode="{goodscode}"]')
+        if button.count() == 0:
+            logger.debug(f"장바구니 담기 버튼 없음: {goodscode}")
+            return False
+        try:
+            target = button.first
+            if not target.is_visible():
+                target.scroll_into_view_if_needed()
+            return target.is_visible() and target.is_enabled()
+        except Exception as e:
+            logger.debug(f"장바구니 담기 버튼 클릭 가능 여부 확인 실패: {goodscode}, {e}")
+            return False
+    
     
     def click_product_and_wait_new_page(self, product_locator: Locator) -> Page:
         """
@@ -442,12 +530,26 @@ class SearchPage(BasePage):
         """
         logger.debug("상품 클릭 및 새 탭 대기")
         
-        # 새 탭이 생성될 때까지 대기
-        with self.page.context.expect_page() as new_page_info:
-            product_locator.click()
+        # href 속성을 먼저 읽어서 백업 URL 확보
+        href = product_locator.get_attribute("href")
+        logger.debug(f"상품 링크 href: {href}")
         
-        new_page = new_page_info.value
-        logger.debug(f"새 탭 생성됨: {new_page.url}")
+        # force 클릭만 시도
+        try:
+            with self.page.context.expect_page(timeout=10000) as new_page_info:
+                product_locator.click(force=True, timeout=3000)
+            
+            new_page = new_page_info.value
+            logger.debug(f"새 탭 생성됨: {new_page.url}")
+        except Exception as e:
+            logger.warning(f"force 클릭 실패, href로 직접 이동: {e}")
+            # 새 탭이 열리지 않으면 href로 직접 이동
+            if href:
+                new_page = self.page.context.new_page()
+                new_page.goto(href, wait_until="domcontentloaded", timeout=30000)
+                logger.debug(f"href로 직접 이동: {href}")
+            else:
+                raise Exception(f"클릭 실패 및 href 없음: {e}")
         
         # 새 탭을 포커스로 가져오기 (제어 가능하도록)
         new_page.bring_to_front()
