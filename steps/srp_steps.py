@@ -140,8 +140,12 @@ def user_confirms_and_clicks_product_in_module(browser_session, module_title, bd
     # 상품 코드 가져오기
     goodscode = search_page.get_product_code(product)
     
-    # 🔥 가격 정보는 이제 PDP PV 로그에서 추출하므로 프론트엔드에서 수집하지 않음
-    # (PDP PV 로그는 상품 페이지 이동 후 수집됨)
+    # 장바구니 담기 버튼 존재할 경우 클릭
+    if parent.is_add_to_cart_button_visible(goodscode):
+        parent.click_add_to_cart_button(goodscode)
+        logger.info(f"장바구니 담기 버튼 클릭 완료: {goodscode}")
+    else:
+        logger.info(f"장바구니 담기 버튼이 존재하지 않습니다: {goodscode}")
     
     # 상품 클릭
     new_page = search_page.click_product_and_wait_new_page(product)

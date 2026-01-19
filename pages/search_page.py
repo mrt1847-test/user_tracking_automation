@@ -484,6 +484,42 @@ class SearchPage(BasePage):
         """
         logger.debug("새 페이지 대기")
         return self.page.context.expect_page()
+
+    def click_add_to_cart_button(self, goodscode: str):
+        """
+        상품 번호로 장바구니 담기 클릭
+        
+        Args:
+            goodscode: 상품 번호
+        """
+        logger.debug(f"상품 번호로 상품 찾기: {goodscode}")
+        self.page.locator(f'.button__cart[data-montelena-goodscode="{goodscode}"]').nth(0).click()
+        logger.debug(f"장바구니 담기 클릭 완료: {goodscode}")
+
+    def is_add_to_cart_button_visible(self, goodscode: str) -> bool:
+        """
+        상품 번호로 장바구니 담기 버튼 클릭 가능 여부 확인
+        
+        Args:
+            goodscode: 상품 번호
+            
+        Returns:
+            장바구니 담기 버튼이 존재하고 클릭 가능하면 True
+        """
+        logger.debug(f"장바구니 담기 버튼 클릭 가능 여부 확인: {goodscode}")
+        button = self.page.locator(f'.button__cart[data-montelena-goodscode="{goodscode}"]')
+        if button.count() == 0:
+            logger.debug(f"장바구니 담기 버튼 없음: {goodscode}")
+            return False
+        try:
+            target = button.first
+            if not target.is_visible():
+                target.scroll_into_view_if_needed()
+            return target.is_visible() and target.is_enabled()
+        except Exception as e:
+            logger.debug(f"장바구니 담기 버튼 클릭 가능 여부 확인 실패: {goodscode}, {e}")
+            return False
+    
     
     def click_product_and_wait_new_page(self, product_locator: Locator) -> Page:
         """
