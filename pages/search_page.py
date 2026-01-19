@@ -443,9 +443,13 @@ class SearchPage(BasePage):
             product_locator: 상품 Locator 객체
         """
         logger.debug("상품 요소 스크롤")
-        product_locator.scroll_into_view_if_needed()
+        try:
+            product_locator.scroll_into_view_if_needed()
+        except Exception as e:
+            logger.warning(f"scroll_into_view_if_needed 실패, 강제 스크롤 시도: {e}")
+            # 강제 스크롤
+            product_locator.evaluate("el => el.scrollIntoView({behavior: 'smooth', block: 'center'})")
 
-    
     def get_product_code(self, product_locator: Locator) -> Optional[str]:
         """
         상품 코드 가져오기
