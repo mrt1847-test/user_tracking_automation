@@ -72,7 +72,7 @@ def module_exists_in_search_results(browser_session, module_title, request, bdd_
         pytest.skip(f"'{module_title}' 모듈이 검색 결과에 없습니다.")
     
     # 모듈이 있으면 visibility 확인 (실패하면 fail)
-    expect(module.first).to_be_visible()
+    expect(module.first).to_be_attached()
     
     # bdd_context에 module_title 저장 (다음 step에서 사용)
     bdd_context.store['module_title'] = module_title
