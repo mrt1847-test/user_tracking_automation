@@ -347,7 +347,7 @@ class SearchPage(BasePage):
         logger.debug(f"모듈 찾기: {module_title}")
         if module_title == "오늘의 슈퍼딜":
             return self.page.get_by_text("오늘의", exact=True)
-        return self.page.get_by_text(module_title, exact=True)
+        return self.page.locator(".text__title", has_text=module_title)
 
     def get_module_by_title_type2(self, module_title: str) -> Locator:
         """
@@ -482,7 +482,7 @@ class SearchPage(BasePage):
         logger.debug("새 페이지 대기")
         return self.page.context.expect_page()
 
-    def click_add_to_cart_button(self, goodscode: str):
+    def click_add_to_cart_button(self, module_locator: Locator, goodscode: str):
         """
         상품 번호로 장바구니 담기 클릭
         
@@ -490,10 +490,10 @@ class SearchPage(BasePage):
             goodscode: 상품 번호
         """
         logger.debug(f"상품 번호로 상품 찾기: {goodscode}")
-        self.page.locator(f'.button__cart[data-montelena-goodscode="{goodscode}"]').nth(0).click()
+        module_locator.locator(f'.button__cart[data-montelena-goodscode="{goodscode}"]').nth(0).click()
         logger.debug(f"장바구니 담기 클릭 완료: {goodscode}")
 
-    def is_add_to_cart_button_visible(self, goodscode: str) -> bool:
+    def is_add_to_cart_button_visible(self, module_locator: Locator, goodscode: str) -> bool:
         """
         상품 번호로 장바구니 담기 버튼 클릭 가능 여부 확인
         
@@ -504,7 +504,7 @@ class SearchPage(BasePage):
             장바구니 담기 버튼이 존재하고 클릭 가능하면 True
         """
         logger.debug(f"장바구니 담기 버튼 클릭 가능 여부 확인: {goodscode}")
-        button = self.page.locator(f'.button__cart[data-montelena-goodscode="{goodscode}"]')
+        button = module_locator.locator(f'.button__cart[data-montelena-goodscode="{goodscode}"]')
         if button.count() == 0:
             logger.debug(f"장바구니 담기 버튼 없음: {goodscode}")
             return False

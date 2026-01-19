@@ -141,8 +141,8 @@ def user_confirms_and_clicks_product_in_module(browser_session, module_title, bd
     goodscode = search_page.get_product_code(product)
     
     # 장바구니 담기 버튼 존재할 경우 클릭
-    if parent.is_add_to_cart_button_visible(goodscode):
-        parent.click_add_to_cart_button(goodscode)
+    if search_page.is_add_to_cart_button_visible(module, goodscode):
+        search_page.click_add_to_cart_button(module, goodscode)
         logger.info(f"장바구니 담기 버튼 클릭 완료: {goodscode}")
     else:
         logger.info(f"장바구니 담기 버튼이 존재하지 않습니다: {goodscode}")
