@@ -31,7 +31,7 @@ class BasePage:
             url: 이동할 URL
         """
         logger.info(f"페이지 이동: {url}")
-        self.page.goto(url, wait_until="networkidle")
+        self.page.goto(url, wait_until="networkidle", timeout=10000)
     
     def click(self, selector: str, timeout: Optional[int] = None) -> None:
         """

@@ -3,14 +3,34 @@
 상품 선택 / 상세
 """
 from pytest_bdd import given, when, then, parsers
+from playwright.sync_api import expect
 from pages.product_page import ProductPage
 from pages.search_page import SearchPage
 from pages.home_page import HomePage
 from utils.urls import product_url
 import logging
+import pytest
 
 logger = logging.getLogger(__name__)
 
+@given(parsers.parse('상품 "{goodscode}"의 상세페이지로 접속했음'))
+def go_to_product_page(browser_session, goodscode):
+    """
+    특정 상품 페이지 접속
+    
+    Args:
+        browser_session: BrowserSession 객체 (page 참조 관리)
+        goodscode: 상품번호
+    """
+    product_page = ProductPage(browser_session.page)
+    # browser_session.page.goto(f"https://item.gmarket.co.kr/Item?goodscode={goodscode}")
+    product_page.go_to_product_page(goodscode)
+    # product_page.wait_for_page_load()
+    logger.info("상품 페이지로 이동")
+    
+    # 이동 후 확인
+    assert product_page.is_product_detail_displayed(), "상품 상세 페이지 생성 실패"
+    logger.info("상품 상세 페이지 상태 보장 완료")
 
 @then("상품 상세 페이지가 표시된다")
 def product_detail_page_is_displayed(browser_session):
@@ -154,3 +174,48 @@ def user_clicks_buy_now_button(browser_session):
         pass
     product_page.click_buy_now_button()
     logger.info("구매하기 클릭 완료")
+
+
+@when(parsers.parse('사용자가 PDP에서 "{module_title}" 모듈 내 상품을 확인하고 클릭한다'))
+def user_confirms_and_clicks_product_in_pdp_module(browser_session, module_title, bdd_context):
+    """
+    모듈 내 상품 노출 확인하고 클릭 (Atomic POM 조합)
+    
+    Args:
+        browser_session: BrowserSession 객체 (page 참조 관리)
+        module_title: 모듈 타이틀
+        bdd_context: BDD context (step 간 데이터 공유용)
+    """
+    product_page = ProductPage(browser_session.page)
+    
+    # 모듈로 이동
+    module = product_page.get_module_by_title(module_title)
+    product_page.scroll_module_into_view(module)
+    
+    # 모듈 내 상품 찾기
+    parent = product_page.get_module_parent(module)
+    product = product_page.get_product_in_module(parent)
+    product_page.scroll_product_into_view(product)
+    
+    # 상품 노출 확인
+    expect(product.first).to_be_visible()
+    
+    # 상품 코드 가져오기
+    goodscode = product_page.get_product_code(product)
+    
+    # 🔥 가격 정보는 이제 PDP PV 로그에서 추출하므로 프론트엔드에서 수집하지 않음
+    # (PDP PV 로그는 상품 페이지 이동 후 수집됨)
+    
+    # 상품 클릭
+    new_page = product_page.click_product_and_wait_new_page(product)
+    
+    # 🔥 명시적 페이지 전환 (상태 관리자 패턴)
+    browser_session.switch_to(new_page)
+    
+    # bdd context에 저장 (module_title, goodscode, product_url 등)
+    bdd_context.store['module_title'] = module_title
+    bdd_context.store['goodscode'] = goodscode
+    bdd_context.store['product_url'] = new_page.url
+    
+    logger.info(f"{module_title} 모듈 내 상품 확인 및 클릭 완료: {goodscode}")
+
