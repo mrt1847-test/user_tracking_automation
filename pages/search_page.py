@@ -377,27 +377,24 @@ class SearchPage(BasePage):
         logger.debug("모듈 스크롤")
         module_locator.scroll_into_view_if_needed()
     
-    def get_module_parent(self, module_locator: Locator, n) -> Locator:
+    def get_module_parent(self, module_locator: Locator, n: int) -> Locator:
         """
-        모듈의 부모 요소 찾기
-        
+        모듈의 n번째 부모 요소 찾기
+
         Args:
             module_locator: 모듈 Locator 객체
-            
+            n: 올라갈 부모 단계 수 (1 이상)
+
         Returns:
             부모 Locator 객체
         """
-        logger.debug("모듈 부모 요소 찾기")
-        if n == 1:
-            return module_locator.locator("xpath=..")
-        elif n == 2:
-            return module_locator.locator("xpath=../..")
-        elif n == 3:
-            return module_locator.locator("xpath=../../..")
-        elif n == 4:
-            return module_locator.locator("xpath=../../../..")
-        elif n == 5:
-            return module_locator.locator("xpath=../../../../..")
+        if n < 1:
+            raise ValueError("n은 1 이상의 정수여야 합니다.")
+
+        logger.debug(f"모듈 부모 요소 {n}단계 찾기")
+
+        xpath = "xpath=" + "/".join([".."] * n)
+        return module_locator.locator(xpath)
     
     def get_product_in_module(self, parent_locator: Locator) -> Locator:
         """
