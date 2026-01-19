@@ -375,7 +375,13 @@ class SearchPage(BasePage):
             module_locator: 모듈 Locator 객체
         """
         logger.debug("모듈 스크롤")
-        module_locator.scroll_into_view_if_needed()
+        try:
+            module_locator.scroll_into_view_if_needed()
+        except Exception as e:
+            logger.warning(f"scroll_into_view_if_needed 실패, 강제 스크롤 시도: {e}")
+            # 강제 스크롤
+            module_locator.evaluate("el => el.scrollIntoView({behavior: 'smooth', block: 'center'})")
+
     
     def get_module_parent(self, module_locator: Locator, n: int) -> Locator:
         """
