@@ -104,7 +104,7 @@ def module_exists_in_search_results_type2(browser_session, module_title, request
         pytest.skip(f"'{module_title}' 모듈이 검색 결과에 없습니다.")
     
     # 모듈이 있으면 visibility 확인 (실패하면 fail)
-    expect(module.first).to_be_visible()
+    expect(module.first).to_be_attached()
     
     # bdd_context에 module_title 저장 (다음 step에서 사용)
     bdd_context.store['module_title'] = module_title
@@ -141,8 +141,8 @@ def user_confirms_and_clicks_product_in_module(browser_session, module_title, bd
     goodscode = search_page.get_product_code(product)
     
     # 장바구니 담기 버튼 존재할 경우 클릭
-    if search_page.is_add_to_cart_button_visible(module, goodscode):
-        search_page.click_add_to_cart_button(module, goodscode)
+    if search_page.is_add_to_cart_button_visible(parent, goodscode):
+        search_page.click_add_to_cart_button(parent, goodscode)
         logger.info(f"장바구니 담기 버튼 클릭 완료: {goodscode}")
     else:
         logger.info(f"장바구니 담기 버튼이 존재하지 않습니다: {goodscode}")

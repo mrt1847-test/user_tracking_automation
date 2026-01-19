@@ -489,9 +489,10 @@ class SearchPage(BasePage):
         Args:
             goodscode: 상품 번호
         """
-        logger.debug(f"상품 번호로 상품 찾기: {goodscode}")
         module_locator.locator(f'.button__cart[data-montelena-goodscode="{goodscode}"]').nth(0).click()
-        logger.debug(f"장바구니 담기 클릭 완료: {goodscode}")
+        logger.debug(f"장바구니 담기 클릭: {goodscode}")
+        self.page.locator('strong.text__button:has-text("계속 쇼핑")').click()
+        logger.debug(f"계속 쇼핑 클릭 완료: {goodscode}")
 
     def is_add_to_cart_button_visible(self, module_locator: Locator, goodscode: str) -> bool:
         """
