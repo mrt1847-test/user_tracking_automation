@@ -111,6 +111,16 @@ def module_exists_in_search_results_type2(browser_session, module_title, request
     
     logger.info(f"{module_title} 모듈 존재 확인 완료")
 
+@when(parsers.parse('사용자가"{keyword}" 최상단 클릭아이템 모듈 패이지로 이동한다'))
+def user_goes_to_top_search_module_page(browser_session, keyword, bdd_context):
+    """
+    최상단 클릭아이템 모듈 페이지로 이동
+    """
+    search_page = SearchPage(browser_session.page)
+    search_page.go_to_top_search_module_page(keyword)
+    logger.info("최상단 클릭아이템 모듈 페이지로 이동 완료")
+    bdd_context.store['module_title'] = "최상단 클릭아이템"
+    bdd_context.store['keyword'] = keyword
 
 
 @when(parsers.parse('사용자가 "{module_title}" 모듈 내 상품을 확인하고 클릭한다'))
@@ -173,7 +183,7 @@ def user_confirms_and_clicks_product_in_module_type2(browser_session, module_tit
     search_page = SearchPage(browser_session.page)
     
     # 모듈로 이동
-    module = search_page.get_module_by_title_type2(module_title)
+    module = search_page.get_module_by_title(module_title)
     search_page.scroll_module_into_view(module)
     
     # 모듈 내 상품 찾기

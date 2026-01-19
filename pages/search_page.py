@@ -3,7 +3,7 @@ import logging
 import json
 from pages.base_page import BasePage
 from playwright.sync_api import Page, Locator, expect
-from utils.urls import item_base_url
+from utils.urls import item_base_url, search_url
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -347,25 +347,17 @@ class SearchPage(BasePage):
         logger.debug(f"모듈 찾기: {module_title}")
         if module_title == "오늘의 슈퍼딜":
             return self.page.get_by_text("오늘의", exact=True)
-        return self.page.locator(".text__title", has_text=module_title)
-
-    def get_module_by_title_type2(self, module_title: str) -> Locator:
-        """
-        모듈 타이틀로 모듈 요소 찾기
-        
-        Args:
-            module_title: 모듈 타이틀 텍스트
-            
-        Returns:
-            Locator 객체
-        """
-        logger.debug(f"모듈 찾기: {module_title}")
-        if module_title == "4.5 이상":
+        elif module_title == "최상단 클릭아이템":
+            return self.page.get_by_text("보고 오셨어요?").locator("xpath=..")
+        elif module_title == "스타배송":
+            return self.page.locator(".image__title[alt='스타배송']").locator("xpath=..")
+        elif module_title == "4.5 이상":
             return self.page.locator(".text__title", has_text="이상 만족도 높은 상품이에요")
         elif module_title == "백화점 브랜드":
             return self.page.locator(".text__title", has_text="의 비슷한 인기브랜드에요")
         elif module_title == "브랜드 인기상품":
             return self.page.locator(".text__title", has_text="인기상품")
+        return self.page.locator(".text__title", has_text=module_title)
     
     def scroll_module_into_view(self, module_locator: Locator) -> None:
         """
@@ -600,3 +592,12 @@ class SearchPage(BasePage):
         logger.debug(f"URL에 상품 번호 포함 확인: {goodscode}")
         assert goodscode in url, f"상품 번호 {goodscode}가 URL에 포함되어야 합니다"
 
+    def go_to_top_search_module_page(self, keyword: str):
+        """
+        최상단 클릭아이템 모듈 페이지로 이동동
+        
+        Args:
+            keyword: 검색어
+        """
+        top_search_module_url = search_url(keyword)+ "&jaehuid=200018252&itemno=3386025906"
+        self.page.goto(top_search_module_url, wait_until="domcontentloaded", timeout=30000)
