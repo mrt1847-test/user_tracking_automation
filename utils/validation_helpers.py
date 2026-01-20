@@ -280,22 +280,51 @@ def replace_placeholders(value: Any, goodscode: str, frontend_data: Optional[Dic
     Args:
         value: 치환할 값
         goodscode: 상품 번호
-        frontend_data: 프론트에서 읽은 데이터
+        frontend_data: 프론트에서 읽은 데이터 (keyword, origin_price, promotion_price, coupon_price 등)
     
     Returns:
         치환된 값
     """
     if isinstance(value, str):
-        # {goodscode} placeholder 치환
-        value = value.replace('{goodscode}', goodscode)
+        # mandatory 값 처리: "mandatory" → "__MANDATORY__"
+        if value.strip() == "mandatory":
+            return "__MANDATORY__"
+        
+        # skip 값 처리: "skip" → "__SKIP__"
+        if value.strip() == "skip":
+            return "__SKIP__"
+        
+        # <상품번호> placeholder 치환
+        if '<상품번호>' in value:
+            value = value.replace('<상품번호>', goodscode)
+        
+        # {goodscode} placeholder 치환 (기존 형식 유지)
+        if '{goodscode}' in value:
+            value = value.replace('{goodscode}', goodscode)
         
         # frontend_data에서 값 가져오기
         if frontend_data:
-            # {price} placeholder 치환
+            # <검색어> placeholder 치환
+            if '<검색어>' in value and 'keyword' in frontend_data:
+                value = value.replace('<검색어>', str(frontend_data['keyword']))
+            
+            # <원가> placeholder 치환
+            if '<원가>' in value and 'origin_price' in frontend_data:
+                value = value.replace('<원가>', str(frontend_data['origin_price']))
+            
+            # <할인가> placeholder 치환
+            if '<할인가>' in value and 'promotion_price' in frontend_data:
+                value = value.replace('<할인가>', str(frontend_data['promotion_price']))
+            
+            # <쿠폰적용가> placeholder 치환
+            if '<쿠폰적용가>' in value and 'coupon_price' in frontend_data:
+                value = value.replace('<쿠폰적용가>', str(frontend_data['coupon_price']))
+            
+            # {price} placeholder 치환 (기존 형식 유지)
             if '{price}' in value and 'price' in frontend_data:
                 value = value.replace('{price}', str(frontend_data['price']))
             
-            # {coupon_price} placeholder 치환
+            # {coupon_price} placeholder 치환 (기존 형식 유지)
             if '{coupon_price}' in value and 'coupon_price' in frontend_data:
                 value = value.replace('{coupon_price}', str(frontend_data['coupon_price']))
     
