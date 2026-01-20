@@ -780,7 +780,7 @@ def testrail_post(endpoint, payload=None, files=None):
 
 from collections import defaultdict
 
-def get_all_subsection_ids_optimized(parent_section_id, all_sections):
+def get_all_subsection_ids(parent_section_id, all_sections):
     """
     사전 인덱싱(Indexing)을 통해 성능을 비약적으로 향상시킨 버전
     """
