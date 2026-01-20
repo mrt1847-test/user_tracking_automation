@@ -471,6 +471,16 @@ def _attach_screenshot_to_testrail(result_id, screenshot_path):
 
 
 @pytest.hookimpl(hookwrapper=True)
+def pytest_bdd_before_step(request, feature, scenario, step, step_func, step_func_args):
+    """
+    각 스텝 실행 전 로그 핸들러 초기화
+    스텝별로 로그가 누적되지 않도록 각 스텝 시작 전에 초기화
+    """
+    test_log_handler.clear()
+    outcome = yield
+
+
+@pytest.hookimpl(hookwrapper=True)
 def pytest_bdd_after_step(request, feature, scenario, step, step_func, step_func_args):
     """
     각 스텝 실행 후 TestRail에 기록
@@ -612,6 +622,8 @@ def pytest_bdd_after_step(request, feature, scenario, step, step_func, step_func
             log_content = _collect_step_logs()
             if log_content:
                 comment += f"\n\n--- 실행 로그 ---\n{log_content}"
+            # 로그 수집 후 초기화 (다음 스텝과 로그 섞임 방지)
+            test_log_handler.clear()
             
             # 스크린샷 경로 확인 (프론트 실패 시점에 찍은 스크린샷 우선 사용)
             screenshot_path = None

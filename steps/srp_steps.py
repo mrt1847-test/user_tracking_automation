@@ -386,12 +386,12 @@ def product_page_is_opened(browser_session, bdd_context):
             record_frontend_failure(browser_session, bdd_context, f"상품 페이지 이동 확인 실패: {str(e)}", "상품 페이지로 이동되었다")
             # 계속 진행 (PDP PV 로그 수집은 시도)
         
-        # 🔥 PDP PV 로그 수집을 위해 networkidle 상태까지 대기
+        # 🔥 PDP PV 로그 수집을 위해 domcontentloaded 상태까지 대기
         try:
-            browser_session.page.wait_for_load_state("networkidle", timeout=10000)
-            logger.debug("networkidle 상태 대기 완료 (PDP PV 로그 수집 대기)")
+            browser_session.page.wait_for_load_state("domcontentloaded", timeout=10000)
+            logger.debug("domcontentloaded 상태 대기 완료 (PDP PV 로그 수집 대기)")
         except Exception as e:
-            logger.warning(f"networkidle 대기 실패, load 상태로 대기: {e}")
+            logger.warning(f"domcontentloaded 대기 실패, load 상태로 대기: {e}")
             try:
                 browser_session.page.wait_for_load_state("load", timeout=30000)
                 logger.debug("load 상태 대기 완료")
