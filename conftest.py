@@ -516,19 +516,27 @@ def pytest_bdd_after_step(request, feature, scenario, step, step_func, step_func
         # 디버깅: step_func_args 내용 확인
         if step_func_args:
             print(f"[DEBUG] step_func_args 키: {list(step_func_args.keys())}")
-            # TC 번호 후보 값들 확인
+            # TC 번호 후보 값들 확인 (모든 값 출력)
             for arg_name, arg_value in step_func_args.items():
-                if isinstance(arg_value, str) and ('C' in arg_value or 'tc' in arg_name.lower()):
+                if arg_name != 'bdd_context':  # bdd_context는 너무 클 수 있으므로 제외
                     print(f"[DEBUG] step_func_args[{arg_name}] = {arg_value} (타입: {type(arg_value).__name__})")
         
-        # 1. step_func_args에서 TC 번호 파라미터 찾기 (tc_id, tc_module_exposure 등)
+        # 1. step_func_args에서 TC 번호 파라미터 찾기 (tc_id, tc_module_exposure, tc_product_exposure 등)
         if step_func_args:
             for arg_name, arg_value in step_func_args.items():
                 # TC 번호 형식 확인 (C로 시작하는 문자열)
-                if isinstance(arg_value, str) and arg_value.startswith("C") and len(arg_value) > 1 and arg_value[1:].isdigit():
-                    step_case_id = arg_value
-                    print(f"[DEBUG] step_func_args에서 TC 번호 발견: {arg_name}={step_case_id}")
-                    break
+                if isinstance(arg_value, str):
+                    arg_value_stripped = arg_value.strip()
+                    # C로 시작하고 뒤에 숫자가 오는 경우
+                    if arg_value_stripped.startswith("C") and len(arg_value_stripped) > 1:
+                        try:
+                            # C 뒤의 부분이 숫자인지 확인
+                            if arg_value_stripped[1:].isdigit():
+                                step_case_id = arg_value_stripped
+                                print(f"[DEBUG] step_func_args에서 TC 번호 발견: {arg_name}={step_case_id}")
+                                break
+                        except (ValueError, IndexError):
+                            pass
         
         # 2. step_func_args에서 bdd_context를 통해 TC 번호 찾기
         if step_case_id is None and step_func_args:
@@ -538,11 +546,22 @@ def pytest_bdd_after_step(request, feature, scenario, step, step_func, step_func
                 if hasattr(bdd_context, 'get'):
                     step_case_id = bdd_context.get('testrail_tc_id')
                     if step_case_id:
-                        print(f"[DEBUG] bdd_context에서 TC 번호 발견: {step_case_id}")
+                        print(f"[DEBUG] bdd_context.get('testrail_tc_id')에서 TC 번호 발견: {step_case_id}")
                 elif hasattr(bdd_context, 'store'):
                     step_case_id = bdd_context.store.get('testrail_tc_id')
                     if step_case_id:
-                        print(f"[DEBUG] bdd_context.store에서 TC 번호 발견: {step_case_id}")
+                        print(f"[DEBUG] bdd_context.store.get('testrail_tc_id')에서 TC 번호 발견: {step_case_id}")
+                
+                # 디버깅: bdd_context에 저장된 모든 testrail 관련 키 확인
+                if hasattr(bdd_context, 'get'):
+                    testrail_keys = [k for k in dir(bdd_context) if 'testrail' in k.lower() or 'tc' in k.lower()]
+                    if testrail_keys:
+                        print(f"[DEBUG] bdd_context의 testrail 관련 키: {testrail_keys}")
+                        for key in ['testrail_tc_id', 'tc_id']:
+                            if hasattr(bdd_context, 'get'):
+                                value = bdd_context.get(key)
+                                if value:
+                                    print(f"[DEBUG] bdd_context.get('{key}') = {value}")
         
         print(f"[DEBUG] 추출된 TC 번호: {step_case_id}, testrail_run_id: {testrail_run_id}, step_status: {step_status}")
         
