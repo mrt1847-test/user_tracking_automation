@@ -439,10 +439,11 @@ def validate_event_type_logs(
             errors.append(f"로그에서 payload를 추출할 수 없습니다: {log.get('url', 'unknown')}")
             continue
         
-        # expected 값 검증
-        validation_errors = tracker.validate_payload(payload, expected, goodscode, event_type)
-        if validation_errors:
-            errors.extend(validation_errors)
+        # expected 값 검증 (AssertionError를 잡아서 에러 리스트에 추가)
+        try:
+            tracker.validate_payload(payload, expected, goodscode, event_type)
+        except AssertionError as e:
+            errors.append(str(e))
     
     # 에러가 있으면 실패
     if errors:

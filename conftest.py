@@ -490,6 +490,7 @@ def pytest_bdd_after_step(request, feature, scenario, step, step_func, step_func
         if outcome.excinfo is not None:
             step_status = "failed"
             error_msg = str(outcome.excinfo[1]) if outcome.excinfo[1] else "Unknown error"
+            logger.debug(f"스텝 실행 중 예외 발생: {error_msg}")
         else:
             # Soft Assertion 지원: bdd_context에서 실패 여부 확인
             step_status = "passed"
@@ -503,9 +504,14 @@ def pytest_bdd_after_step(request, feature, scenario, step, step_func, step_func
                     
                     if is_validation_step:
                         # 검증 스텝: validation_failed만 확인 (프론트 실패 정보는 이미 error_message에 포함됨)
-                        if bdd_context.get('validation_failed'):
+                        validation_failed = bdd_context.get('validation_failed', False)
+                        if validation_failed:
                             step_status = "failed"
-                            error_msg = bdd_context.get('validation_error_message', '검증 실패')
+                            validation_error = bdd_context.get('validation_error_message', '검증 실패')
+                            # outcome.excinfo가 있으면 그것을 우선, 없으면 validation_error 사용
+                            if error_msg is None or not error_msg:
+                                error_msg = validation_error
+                            logger.debug(f"검증 스텝 실패 감지: validation_failed={validation_failed}, error_msg={error_msg}")
                     else:
                         # 프론트 동작 스텝: frontend_action_failed 확인
                         if bdd_context.get('frontend_action_failed'):
