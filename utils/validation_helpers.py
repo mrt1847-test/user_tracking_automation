@@ -4,7 +4,6 @@
 """
 import json
 import os
-import urllib.parse
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
 from utils.NetworkTracker import NetworkTracker
@@ -119,66 +118,35 @@ def load_module_config(
 
 def extract_price_info_from_pdp_pv(tracker: NetworkTracker, goodscode: str) -> Optional[Dict[str, Any]]:
     """
-    PDP PV 로그에서 가격 정보를 추출
+    PDP PV 로그에서 가격 정보 추출
     
     Args:
         tracker: NetworkTracker 인스턴스
         goodscode: 상품 번호
     
     Returns:
-        가격 정보 딕셔너리 (origin_price, promotion_price, coupon_price 등) 또는 None
+        가격 정보 딕셔너리 (origin_price, promotion_price, coupon_price) 또는 None
     """
-    try:
-        pdp_pv_logs = tracker.get_pdp_pv_logs_by_goodscode(goodscode)
-        
-        if not pdp_pv_logs:
-            return None
-        
-        # 첫 번째 PDP PV 로그에서 가격 정보 추출
-        log = pdp_pv_logs[0]
-        payload = log.get('payload', {})
-        decoded_gokey = payload.get('decoded_gokey', {})
-        
-        price_info = {}
-        
-        # 1. utparam-url에서 가격 정보 추출 (URL 인코딩된 JSON)
-        if 'utparam-url' in payload:
-            try:
-                utparam_url = payload['utparam-url']
-                # URL 디코딩
-                decoded_url = urllib.parse.unquote(utparam_url)
-                # JSON 파싱
-                if decoded_url.startswith('{'):
-                    utparam_data = json.loads(decoded_url)
-                    if 'origin_price' in utparam_data:
-                        price_info['origin_price'] = str(utparam_data['origin_price'])
-                    if 'promotion_price' in utparam_data:
-                        price_info['promotion_price'] = str(utparam_data['promotion_price'])
-                    if 'coupon_price' in utparam_data:
-                        price_info['coupon_price'] = str(utparam_data['coupon_price'])
-            except (json.JSONDecodeError, KeyError, ValueError) as e:
-                # utparam-url 파싱 실패는 무시하고 계속 진행
-                pass
-        
-        # 2. payment_price 필드 확인
-        if 'payment_price' in payload:
-            payment_price = payload['payment_price']
-            if payment_price and payment_price != 'mandatory':
-                price_info['price'] = str(payment_price)
-        
-        # 3. decoded_gokey.params에서 가격 정보 확인
-        if decoded_gokey:
-            params = decoded_gokey.get('params', {})
-            if 'payment_price' in params:
-                payment_price = params['payment_price']
-                if payment_price and payment_price != 'mandatory':
-                    price_info['price'] = str(payment_price)
-        
-        return price_info if price_info else None
+    pdp_pv_logs = tracker.get_pdp_pv_logs_by_goodscode(goodscode)
     
-    except Exception as e:
-        # 오류 발생 시 None 반환
+    if not pdp_pv_logs or len(pdp_pv_logs) == 0:
         return None
+    
+    # 첫 번째 PDP PV 로그에서 가격 정보 추출
+    first_log = pdp_pv_logs[0]
+    payload = first_log.get('payload', {})
+    
+    price_info = {}
+    
+    # payload 최상위에서 직접 가격 정보 추출
+    if 'origin_price' in payload:
+        price_info['origin_price'] = str(payload['origin_price'])
+    if 'promotion_price' in payload:
+        price_info['promotion_price'] = str(payload['promotion_price'])
+    if 'coupon_price' in payload:
+        price_info['coupon_price'] = str(payload['coupon_price'])
+    
+    return price_info if price_info else None
 
 
 def get_event_logs(tracker: NetworkTracker, event_type: str, goodscode: str, module_config_data: Dict[str, Any]) -> List[Dict[str, Any]]:
