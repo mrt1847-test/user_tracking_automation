@@ -14,7 +14,6 @@ Feature: G마켓 SRP 트래킹 로그 정합성 검증
     And Product Exposure 로그가 정합성 검증을 통과해야 함 (TC: C1166808)
     And Product Click 로그가 정합성 검증을 통과해야 함 (TC: C1166810)
     And Product ATC Click 로그가 정합성 검증을 통과해야 함 (TC: C1166811)
-    Then 모든 로그 검증이 완료되었음
 
   Scenario: 검색 결과 페이지에서 모듈별 상품 클릭 시 트래킹 로그 검증
     Given G마켓 홈 페이지에 접속했음
@@ -30,7 +29,6 @@ Feature: G마켓 SRP 트래킹 로그 정합성 검증
     And Product Exposure 로그가 정합성 검증을 통과해야 함 (TC: <tc_product_exposure>)
     And Product Click 로그가 정합성 검증을 통과해야 함 (TC: <tc_product_click>)
     And Product ATC Click 로그가 정합성 검증을 통과해야 함 (TC: <tc_atc_click>)
-    Then 모든 로그 검증이 완료되었음
 
     Examples:
       | keyword | module_title      | tc_module_exposure | tc_product_exposure | tc_product_click | tc_atc_click |
@@ -55,7 +53,6 @@ Feature: G마켓 SRP 트래킹 로그 정합성 검증
     Then Module Exposure 로그가 정합성 검증을 통과해야 함 (TC: <tc_module_exposure>)
     And Product Exposure 로그가 정합성 검증을 통과해야 함 (TC: <tc_product_exposure>)
     And Product Click 로그가 정합성 검증을 통과해야 함 (TC: <tc_product_click>)
-    Then 모든 로그 검증이 완료되었음
 
     Examples:
       | keyword | module_title      | tc_module_exposure | tc_product_exposure | tc_product_click | 
