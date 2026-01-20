@@ -433,15 +433,10 @@ def validate_event_type_logs(
     
     # 각 로그에 대해 검증
     for log in logs:
-        # payload 가져오기
-        payload = tracker.get_decoded_gokey_params(log)
-        if not payload:
-            errors.append(f"로그에서 payload를 추출할 수 없습니다: {log.get('url', 'unknown')}")
-            continue
-        
         # expected 값 검증 (AssertionError를 잡아서 에러 리스트에 추가)
+        # validate_payload는 전체 로그 객체를 받아 내부에서 log.get('payload')로 추출함
         try:
-            tracker.validate_payload(payload, expected, goodscode, event_type)
+            tracker.validate_payload(log, expected, goodscode, event_type)
         except AssertionError as e:
             errors.append(str(e))
     
