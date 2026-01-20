@@ -618,6 +618,20 @@ def pytest_bdd_after_step(request, feature, scenario, step, step_func, step_func
             if error_msg:
                 comment += f"오류: {error_msg}"
             
+            # 검증 스텝인 경우 통과한 필드 목록 추가
+            is_validation_step = "정합성 검증" in step.name
+            if step_func_args and is_validation_step:
+                bdd_context = step_func_args.get('bdd_context')
+                if bdd_context:
+                    passed_fields = None
+                    if hasattr(bdd_context, 'get'):
+                        passed_fields = bdd_context.get('validation_passed_fields')
+                    elif hasattr(bdd_context, 'store'):
+                        passed_fields = bdd_context.store.get('validation_passed_fields')
+                    
+                    if passed_fields and len(passed_fields) > 0:
+                        comment += f"\n\n[통과한 필드]\n" + ", ".join(passed_fields)
+            
             # 로그 수집
             log_content = _collect_step_logs()
             if log_content:

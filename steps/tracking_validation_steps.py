@@ -79,7 +79,7 @@ def _check_and_validate_event_logs(
     
     # 4. 로그가 있으면 정합성 검증 수행 (프론트 실패 여부와 관계없이 검증 진행)
     logger.info(f"[TestRail TC: {tc_id}] {event_type} 로그 정합성 검증 시작")
-    success, errors = validate_event_type_logs(
+    success, errors, passed_fields = validate_event_type_logs(
         tracker=tracker,
         event_type=event_type,
         goodscode=goodscode,
@@ -88,9 +88,15 @@ def _check_and_validate_event_logs(
         module_config=module_config
     )
     
+    # 통과한 필드 목록을 bdd_context에 저장 (TestRail 로그에 표시하기 위해)
+    bdd_context['validation_passed_fields'] = passed_fields
+    
     if not success:
         # 검증 실패 시 실패 처리 (프론트 실패 여부와 관계없이)
         error_message = f"[TestRail TC: {tc_id}] {event_type} 로그 정합성 검증 실패:\n[필드값 정합성 오류]\n" + "\n".join(errors)
+        # 통과한 필드가 있으면 표시
+        if passed_fields:
+            error_message += f"\n\n[통과한 필드]\n" + ", ".join(passed_fields)
         logger.error(error_message)
         
         # TestRail 기록을 위해 실패 플래그 설정
@@ -155,7 +161,7 @@ def then_pv_logs_should_pass_validation(bdd_context):
             return
         
         logger.info("PV 로그 정합성 검증 시작")
-        success, errors = validate_event_type_logs(
+        success, errors, passed_fields = validate_event_type_logs(
             tracker=tracker,
             event_type='PV',
             goodscode=goodscode,
@@ -164,8 +170,14 @@ def then_pv_logs_should_pass_validation(bdd_context):
             module_config=module_config
         )
         
+        # 통과한 필드 목록을 bdd_context에 저장
+        bdd_context['validation_passed_fields'] = passed_fields
+        
         if not success:
             error_message = "PV 로그 정합성 검증 실패:\n" + "\n".join(errors)
+            # 통과한 필드가 있으면 표시
+            if passed_fields:
+                error_message += f"\n\n[통과한 필드]\n" + ", ".join(passed_fields)
             logger.error(error_message)
             # TestRail 기록을 위해 실패 플래그 설정 (TC 번호는 없지만)
             bdd_context['validation_failed'] = True

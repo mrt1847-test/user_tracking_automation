@@ -3,7 +3,7 @@ import json
 import time
 import logging
 from urllib.parse import unquote
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Tuple
 from playwright.sync_api import Page, Request, BrowserContext
 
 # 로거 설정
@@ -1104,7 +1104,7 @@ class NetworkTracker:
         
         return params
     
-    def validate_payload(self, log: Dict[str, Any], expected_data: Dict[str, Any], goodscode: Optional[str] = None, event_type: Optional[str] = None) -> bool:
+    def validate_payload(self, log: Dict[str, Any], expected_data: Dict[str, Any], goodscode: Optional[str] = None, event_type: Optional[str] = None) -> Tuple[bool, List[str]]:
         """
         로그의 payload 정합성 검증 (재귀적 탐색 방식)
         
@@ -1117,7 +1117,9 @@ class NetworkTracker:
             event_type: 이벤트 타입 ('Product Exposure', 'Product Click' 등)
         
         Returns:
-            검증 성공 시 True, 실패 시 AssertionError 발생
+            (검증 성공 여부, 통과한 필드 목록) 튜플
+            - 검증 성공 시: (True, 통과한 필드 목록)
+            - 검증 실패 시: AssertionError 발생
         
         Raises:
             AssertionError: 검증 실패 시
@@ -1211,6 +1213,7 @@ class NetworkTracker:
         
         # 기대 데이터 검증 (재귀적 탐색 사용)
         errors = []
+        passed_fields = []  # 통과한 필드 목록
         for key, expected_value in expected_data.items():
             actual_value = None
             
@@ -1225,17 +1228,20 @@ class NetworkTracker:
                 actual_value = find_value_recursive(payload, key)
             
             # 값 검증
+            field_passed = False
             if actual_value is None:
                 errors.append(f"키 '{key}'에 해당하는 값이 없습니다.")
             elif isinstance(expected_value, str) and expected_value == "__SKIP__":
                 # skip 필드: 어떤 값이든 통과 (검증 스킵)
+                passed_fields.append(key)  # skip 필드도 통과한 것으로 간주
                 continue  # 검증 스킵, 다음 필드로
             elif isinstance(expected_value, str) and expected_value == "__MANDATORY__":
                 # mandatory 필드: 빈 값만 아니면 통과
                 # 빈 값 체크: None, 빈 문자열, 공백만 있는 문자열
                 if actual_value is None or (isinstance(actual_value, str) and actual_value.strip() == ""):
                     errors.append(f"키 '{key}'는 mandatory 필드이지만 값이 비어있습니다.")
-                # 빈 값이 아니면 통과 (다음 필드로)
+                else:
+                    field_passed = True  # 빈 값이 아니면 통과
             elif isinstance(expected_value, list):
                 # expected_value가 리스트인 경우: actual_value가 리스트에 포함되어 있으면 통과
                 if actual_value not in expected_value:
@@ -1243,6 +1249,8 @@ class NetworkTracker:
                         f"키 '{key}'의 값이 일치하지 않습니다. "
                         f"기대값 (리스트 중 하나): {expected_value}, 실제값: {actual_value}"
                     )
+                else:
+                    field_passed = True
             else:
                 # 포함 여부 매칭이 필요한 필드들 (spm, spm-url, spm-pre, spm-cnt)
                 contains_match_fields = {'spm', 'spm-url', 'spm-pre', 'spm-cnt'}
@@ -1252,6 +1260,7 @@ class NetworkTracker:
                     # 예: expected="gmktpc.home.searchtop", actual="gmktpc.home.searchtop.dsearchbox.1fbf486arWCtiZ" → 통과
                     # 예: expected="gmktpc.searchlist", actual="gmktpc.searchlist.0.0.28e22ebayJdnYA" → 통과
                     if expected_value in actual_value:
+                        field_passed = True
                         continue  # 포함 매칭 성공, 다음 필드로
                     else:
                         errors.append(
@@ -1263,6 +1272,12 @@ class NetworkTracker:
                         f"키 '{key}'의 값이 일치하지 않습니다. "
                         f"기대값: {expected_value}, 실제값: {actual_value}"
                     )
+                else:
+                    field_passed = True
+            
+            # 필드가 통과했으면 목록에 추가
+            if field_passed:
+                passed_fields.append(key)
         
         if errors:
             error_msg = "\n".join(errors)
@@ -1273,7 +1288,7 @@ class NetworkTracker:
                 f"디코딩된 gokey 파라미터: {json.dumps(decoded_info.get('params', {}), ensure_ascii=False, indent=2)}"
             )
         
-        return True
+        return True, passed_fields
     
     def clear_logs(self):
         """
