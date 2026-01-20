@@ -471,7 +471,7 @@ def _attach_screenshot_to_testrail(result_id, screenshot_path):
 
 
 @pytest.hookimpl(hookwrapper=True)
-def pytest_bdd_before_step(request, feature, scenario, step, step_func, step_func_args):
+def pytest_bdd_before_step(request, feature, scenario, step, step_func):
     """
     각 스텝 실행 전 로그 핸들러 초기화
     스텝별로 로그가 누적되지 않도록 각 스텝 시작 전에 초기화
