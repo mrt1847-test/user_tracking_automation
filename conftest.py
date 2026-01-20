@@ -228,15 +228,15 @@ def create_login_state(pw):
         state = json.load(f)
         cookies_count = len(state.get('cookies', []))
         origins_count = len(state.get('origins', []))
-        print(f"[DEBUG] 저장된 쿠키 수: {cookies_count}")
-        print(f"[DEBUG] 저장된 origins 수: {origins_count}")
+        logger.debug(f"저장된 쿠키 수: {cookies_count}")
+        logger.debug(f"저장된 origins 수: {origins_count}")
         
         if origins_count > 0:
             for origin in state.get('origins', []):
                 origin_url = origin.get('origin', 'N/A')
                 localStorage_count = len(origin.get('localStorage', []))
                 sessionStorage_count = len(origin.get('sessionStorage', []))
-                print(f"[DEBUG] Origin: {origin_url}")
+                logger.debug(f"Origin: {origin_url}")
                 print(f"  - localStorage: {localStorage_count}개 항목")
                 print(f"  - sessionStorage: {sessionStorage_count}개 항목")
         else:
@@ -422,7 +422,7 @@ def _capture_screenshot(case_id_num, request=None, step_func_args=None):
             print(f"[TestRail] 스크린샷 저장 완료: {screenshot_path}")
             return screenshot_path
     except Exception as e:
-        print(f"[WARNING] 스크린샷 저장 실패: {e}")
+        logger.warning(f"스크린샷 저장 실패: {e}")
     
     return None
 
@@ -443,7 +443,7 @@ def _collect_step_logs():
         if logs and logs.strip():
             return logs
     except Exception as e:
-        print(f"[WARNING] 로그 수집 실패: {e}")
+        logger.warning(f"로그 수집 실패: {e}")
     
     return None
 
@@ -467,7 +467,7 @@ def _attach_screenshot_to_testrail(result_id, screenshot_path):
             )
         print(f"[TestRail] 스크린샷 첨부 완료: {screenshot_path}")
     except Exception as e:
-        print(f"[WARNING] TestRail 스크린샷 업로드 실패: {e}")
+        logger.warning(f"TestRail 스크린샷 업로드 실패: {e}")
 
 
 @pytest.hookimpl(hookwrapper=True)
@@ -479,9 +479,12 @@ def pytest_bdd_after_step(request, feature, scenario, step, step_func, step_func
     """
     outcome = yield
     
+    # 훅 시작 로그 (예외 발생 전에도 출력되도록 try 밖에)
+    logger.debug(f"===== pytest_bdd_after_step 시작: 스텝='{step.name}' =====")
+    
     try:
         # 디버깅: testrail_run_id 확인
-        print(f"[DEBUG] pytest_bdd_after_step 실행: 스텝='{step.name}', testrail_run_id={testrail_run_id}")
+        logger.debug(f"pytest_bdd_after_step 실행: 스텝='{step.name}', testrail_run_id={testrail_run_id}")
         
         # 스텝 실행 결과 확인
         if outcome.excinfo is not None:
@@ -515,11 +518,11 @@ def pytest_bdd_after_step(request, feature, scenario, step, step_func, step_func
         
         # 디버깅: step_func_args 내용 확인
         if step_func_args:
-            print(f"[DEBUG] step_func_args 키: {list(step_func_args.keys())}")
+            logger.debug(f"step_func_args 키: {list(step_func_args.keys())}")
             # TC 번호 후보 값들 확인 (모든 값 출력)
             for arg_name, arg_value in step_func_args.items():
                 if arg_name != 'bdd_context':  # bdd_context는 너무 클 수 있으므로 제외
-                    print(f"[DEBUG] step_func_args[{arg_name}] = {arg_value} (타입: {type(arg_value).__name__})")
+                    logger.debug(f"step_func_args[{arg_name}] = {arg_value} (타입: {type(arg_value).__name__})")
         
         # 1. step_func_args에서 TC 번호 파라미터 찾기 (tc_id, tc_module_exposure, tc_product_exposure 등)
         if step_func_args:
@@ -533,41 +536,44 @@ def pytest_bdd_after_step(request, feature, scenario, step, step_func, step_func
                             # C 뒤의 부분이 숫자인지 확인
                             if arg_value_stripped[1:].isdigit():
                                 step_case_id = arg_value_stripped
-                                print(f"[DEBUG] step_func_args에서 TC 번호 발견: {arg_name}={step_case_id}")
+                                logger.debug(f"step_func_args에서 TC 번호 발견: {arg_name}={step_case_id} (스텝: {step.name})")
                                 break
                         except (ValueError, IndexError):
                             pass
+                    # 디버깅: 검증 스텝인데 TC 번호가 없는 경우
+                    elif "정합성 검증" in step.name and arg_name == "tc_id":
+                        logger.warning(f"검증 스텝 '{step.name}'에서 tc_id 파라미터 값이 TC 번호 형식이 아닙니다: '{arg_value_stripped}'")
         
         # 2. step_func_args에서 bdd_context를 통해 TC 번호 찾기
         if step_case_id is None and step_func_args:
             bdd_context = step_func_args.get('bdd_context')
             if bdd_context:
-                print(f"[DEBUG] bdd_context 타입: {type(bdd_context).__name__}, hasattr('get'): {hasattr(bdd_context, 'get')}")
+                logger.debug(f"bdd_context 타입: {type(bdd_context).__name__}, hasattr('get'): {hasattr(bdd_context, 'get')}")
                 if hasattr(bdd_context, 'get'):
                     step_case_id = bdd_context.get('testrail_tc_id')
                     if step_case_id:
-                        print(f"[DEBUG] bdd_context.get('testrail_tc_id')에서 TC 번호 발견: {step_case_id}")
+                        logger.debug(f"bdd_context.get('testrail_tc_id')에서 TC 번호 발견: {step_case_id}")
                 elif hasattr(bdd_context, 'store'):
                     step_case_id = bdd_context.store.get('testrail_tc_id')
                     if step_case_id:
-                        print(f"[DEBUG] bdd_context.store.get('testrail_tc_id')에서 TC 번호 발견: {step_case_id}")
+                        logger.debug(f"bdd_context.store.get('testrail_tc_id')에서 TC 번호 발견: {step_case_id}")
                 
                 # 디버깅: bdd_context에 저장된 모든 testrail 관련 키 확인
                 if hasattr(bdd_context, 'get'):
                     testrail_keys = [k for k in dir(bdd_context) if 'testrail' in k.lower() or 'tc' in k.lower()]
                     if testrail_keys:
-                        print(f"[DEBUG] bdd_context의 testrail 관련 키: {testrail_keys}")
+                        logger.debug(f"bdd_context의 testrail 관련 키: {testrail_keys}")
                         for key in ['testrail_tc_id', 'tc_id']:
                             if hasattr(bdd_context, 'get'):
                                 value = bdd_context.get(key)
                                 if value:
-                                    print(f"[DEBUG] bdd_context.get('{key}') = {value}")
+                                    logger.debug(f"bdd_context.get('{key}') = {value}")
         
-        print(f"[DEBUG] 추출된 TC 번호: {step_case_id}, testrail_run_id: {testrail_run_id}, step_status: {step_status}")
+        logger.debug(f"추출된 TC 번호: {step_case_id}, testrail_run_id: {testrail_run_id}, step_status: {step_status}")
         
         # TestRail 기록 (testrail_run_id가 설정되어 있고 TC 번호가 있을 때만)
         if step_case_id and testrail_run_id:
-            print(f"[DEBUG] TestRail 기록 시작: case_id={step_case_id}, status={step_status}")
+            logger.debug(f"TestRail 기록 시작: case_id={step_case_id}, status={step_status}")
             # Cxxxx → 숫자만 추출
             case_id_num = int(step_case_id[1:]) if step_case_id.startswith("C") else int(step_case_id)
             
@@ -644,7 +650,7 @@ def pytest_bdd_after_step(request, feature, scenario, step, step_func, step_func
             
             result_id = None
             try:
-                print(f"[DEBUG] TestRail API 호출: add_result_for_case/{testrail_run_id}/{case_id_num}")
+                logger.debug(f"TestRail API 호출: add_result_for_case/{testrail_run_id}/{case_id_num}")
                 result_obj = testrail_post(
                     f"add_result_for_case/{testrail_run_id}/{case_id_num}", 
                     payload
@@ -652,20 +658,20 @@ def pytest_bdd_after_step(request, feature, scenario, step, step_func, step_func
                 result_id = result_obj.get("id")
                 print(f"[TestRail] 스텝 '{step.name}' 결과 기록 완료 (case_id: {step_case_id}, status: {step_status}, result_id: {result_id})")
             except Exception as e:
-                print(f"[WARNING] 스텝 TestRail 기록 실패: {e}")
+                logger.warning(f"스텝 TestRail 기록 실패: {e}")
                 import traceback
-                print(f"[DEBUG] TestRail 기록 실패 상세:\n{traceback.format_exc()}")
+                logger.debug(f"TestRail 기록 실패 상세:\n{traceback.format_exc()}")
             
             # 스크린샷 첨부
             _attach_screenshot_to_testrail(result_id, screenshot_path)
             
         elif step_case_id:
             # TC 번호는 있지만 testrail_run_id가 없는 경우 (TestRail 연동 미활성화)
-            print(f"[DEBUG] TC 번호는 있지만 testrail_run_id가 None입니다. step_case_id={step_case_id}, testrail_run_id={testrail_run_id}")
+            logger.debug(f"TC 번호는 있지만 testrail_run_id가 None입니다. step_case_id={step_case_id}, testrail_run_id={testrail_run_id}")
             print(f"[TestRail] 스텝 '{step.name}' TC 번호 발견: {step_case_id} (TestRail 연동 미활성화)")
         elif not step_case_id:
             # TC 번호가 없는 경우
-            print(f"[DEBUG] TC 번호를 찾을 수 없습니다. step_func_args={step_func_args is not None}, step_status={step_status}")
+            logger.debug(f"TC 번호를 찾을 수 없습니다. step_func_args={step_func_args is not None}, step_status={step_status}")
         
         # TC 번호가 없지만 실패한 프론트 동작 스텝인 경우 - 스크린샷만 저장 (참고용)
         if step_status == "failed" and not step_case_id:
@@ -687,9 +693,14 @@ def pytest_bdd_after_step(request, feature, scenario, step, step_func, step_func
             
             if screenshot_path:
                 logger.info(f"프론트 동작 실패 스크린샷 저장: {screenshot_path}")
+        
+        logger.debug(f"===== pytest_bdd_after_step 종료 (정상) =====")
     
     except Exception as e:
-        print(f"[ERROR] pytest_bdd_after_step 처리 중 예외 발생: {e}")
+        import traceback
+        logger.error(f"pytest_bdd_after_step 처리 중 예외 발생: {e}")
+        logger.error(f"예외 상세:\n{traceback.format_exc()}")
+        logger.debug(f"===== pytest_bdd_after_step 종료 (예외 발생) =====")
 
 
 # JSON 파일이 들어 있는 폴더 지정
@@ -771,7 +782,7 @@ def get_all_subsection_ids(parent_section_id, all_sections, visited=None):
         try:
             parent_section_id = int(parent_section_id)
         except ValueError:
-            print(f"[WARNING] parent_section_id를 정수로 변환 실패: {parent_section_id}")
+            logger.warning(f"parent_section_id를 정수로 변환 실패: {parent_section_id}")
             return [parent_section_id] if parent_section_id not in visited else []
     
     # 이미 방문한 섹션이면 빈 리스트 반환 (순환 참조 및 중복 방지)
@@ -825,15 +836,15 @@ def pytest_sessionstart(session):
     """
     global testrail_run_id, case_id_map
     
-    print(f"[DEBUG] pytest_sessionstart 실행 시작")
-    print(f"[DEBUG] 현재 testrail_run_id 값: {testrail_run_id}")
+    logger.debug(f"pytest_sessionstart 실행 시작")
+    logger.debug(f"현재 testrail_run_id 값: {testrail_run_id}")
     
     if testrail_run_id is not None:
         print(f"[TestRail] 이미 Run(ID={testrail_run_id})이 존재합니다. 새 Run 생성 생략")
         return
     
     if not TESTRAIL_SECTION_ID:
-        print(f"[ERROR] TESTRAIL_SECTION_ID가 정의되지 않았습니다.")
+        logger.error(f"TESTRAIL_SECTION_ID가 정의되지 않았습니다.")
         raise RuntimeError("[TestRail] TESTRAIL_SECTION_ID가 정의되지 않았습니다.")
     
     # TESTRAIL_SECTION_ID를 정수로 변환
@@ -855,8 +866,8 @@ def pytest_sessionstart(session):
     # 지정된 섹션이 존재하는지 확인
     section_exists = any(s.get("id") == section_id_int for s in all_sections)
     if not section_exists:
-        print(f"[WARNING] 섹션 ID {section_id_int}가 존재하지 않습니다.")
-        print(f"[DEBUG] 사용 가능한 섹션 ID 샘플 (최대 10개):")
+        logger.warning(f"섹션 ID {section_id_int}가 존재하지 않습니다.")
+        logger.debug(f"사용 가능한 섹션 ID 샘플 (최대 10개):")
         for s in all_sections[:10]:
             print(f"  - ID: {s.get('id')}, Name: {s.get('name')}, Parent ID: {s.get('parent_id')}")
     
@@ -885,7 +896,7 @@ def pytest_sessionstart(session):
             if section_case_ids:
                 print(f"[TestRail] 섹션 {section_id}: {len(section_case_ids)}개 케이스 발견")
         except Exception as e:
-            print(f"[WARNING] 섹션 {section_id}의 케이스 가져오기 실패: {e}")
+            logger.warning(f"섹션 {section_id}의 케이스 가져오기 실패: {e}")
     
     # 중복 제거 (같은 케이스가 여러 섹션에 있을 수 있음)
     all_case_ids = list(set(all_case_ids))
@@ -905,15 +916,15 @@ def pytest_sessionstart(session):
         "milestone_id": TESTRAIL_MILESTONE_ID
     }
     try:
-        print(f"[DEBUG] TestRail Run 생성 시도: project_id={TESTRAIL_PROJECT_ID}, case_ids 개수={len(all_case_ids)}")
+        logger.debug(f"TestRail Run 생성 시도: project_id={TESTRAIL_PROJECT_ID}, case_ids 개수={len(all_case_ids)}")
         run = testrail_post(f"add_run/{TESTRAIL_PROJECT_ID}", payload)
         testrail_run_id = run["id"]
         print(f"[TestRail] section_id '{section_id_int}' (하위 섹션 포함) Run 생성 완료 (ID={testrail_run_id})")
-        print(f"[DEBUG] pytest_sessionstart 완료: testrail_run_id={testrail_run_id}")
+        logger.debug(f"pytest_sessionstart 완료: testrail_run_id={testrail_run_id}")
     except Exception as e:
-        print(f"[ERROR] TestRail Run 생성 실패: {e}")
+        logger.error(f"TestRail Run 생성 실패: {e}")
         import traceback
-        print(f"[DEBUG] Run 생성 실패 상세:\n{traceback.format_exc()}")
+        logger.debug(f"Run 생성 실패 상세:\n{traceback.format_exc()}")
         raise
 
 
@@ -988,12 +999,12 @@ def pytest_runtest_logreport(report):
                 test_logs[nodeid] = logs
                 # 로그 라인 수 확인
                 log_lines = logs.split(chr(10))
-                print(f"[DEBUG] 테스트 {nodeid} 로그 수집 완료: {len(log_lines)}줄 (outcome: {report.outcome})")
+                logger.debug(f"테스트 {nodeid} 로그 수집 완료: {len(log_lines)}줄 (outcome: {report.outcome})")
                 # 로그를 test_logs에 저장했으므로 즉시 초기화 (다음 테스트와 로그 섞임 방지)
                 # pytest_runtest_makereport에서 사용할 때까지는 test_logs에 보관됨
                 test_log_handler.clear()
             else:
-                print(f"[DEBUG] 테스트 {nodeid} 로그 없음 (빈 로그 또는 수집 실패, outcome: {report.outcome})")
+                logger.debug(f"테스트 {nodeid} 로그 없음 (빈 로그 또는 수집 실패, outcome: {report.outcome})")
                 # 로그가 없어도 초기화 (이전 로그 제거)
                 test_log_handler.clear()
 

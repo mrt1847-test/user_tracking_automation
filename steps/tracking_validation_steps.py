@@ -197,6 +197,7 @@ def then_pdp_pv_logs_should_pass_validation(tc_id, bdd_context):
 @then(parsers.parse('Module Exposure 로그가 정합성 검증을 통과해야 함 (TC: {tc_id})'))
 def then_module_exposure_logs_should_pass_validation(tc_id, bdd_context):
     """Module Exposure 로그 정합성 검증 (module_config.json에 정의된 경우만)"""
+    logger.debug(f"then_module_exposure_logs_should_pass_validation 실행: tc_id={tc_id}")
     # TC 번호가 비어있으면 검증 건너뛰기
     if not tc_id or tc_id.strip() == '':
         logger.info("TC 번호가 비어있어 Module Exposure 로그 검증을 건너뜁니다.")
@@ -205,6 +206,7 @@ def then_module_exposure_logs_should_pass_validation(tc_id, bdd_context):
     tracker, goodscode, module_title, frontend_data, area = _get_common_context(bdd_context)
     
     # TestRail TC 번호를 context에 저장
+    logger.debug(f"bdd_context['testrail_tc_id']에 {tc_id} 저장")
     bdd_context['testrail_tc_id'] = tc_id
     
     # 단순화된 검증 로직 사용
@@ -224,6 +226,7 @@ def then_module_exposure_logs_should_pass_validation(tc_id, bdd_context):
 @then(parsers.parse('Product Exposure 로그가 정합성 검증을 통과해야 함 (TC: {tc_id})'))
 def then_product_exposure_logs_should_pass_validation(tc_id, bdd_context):
     """Product Exposure 로그 정합성 검증 (module_config.json에 정의된 경우만)"""
+    logger.debug(f"then_product_exposure_logs_should_pass_validation 실행: tc_id={tc_id}")
     # TC 번호가 비어있으면 검증 건너뛰기
     if not tc_id or tc_id.strip() == '':
         logger.info("TC 번호가 비어있어 Product Exposure 로그 검증을 건너뜁니다.")
@@ -232,6 +235,7 @@ def then_product_exposure_logs_should_pass_validation(tc_id, bdd_context):
     tracker, goodscode, module_title, frontend_data, area = _get_common_context(bdd_context)
     
     # TestRail TC 번호를 context에 저장
+    logger.debug(f"bdd_context['testrail_tc_id']에 {tc_id} 저장")
     bdd_context['testrail_tc_id'] = tc_id
     
     # 단순화된 검증 로직 사용
@@ -251,6 +255,7 @@ def then_product_exposure_logs_should_pass_validation(tc_id, bdd_context):
 @then(parsers.parse('Product Click 로그가 정합성 검증을 통과해야 함 (TC: {tc_id})'))
 def then_product_click_logs_should_pass_validation(tc_id, bdd_context):
     """Product Click 로그 정합성 검증 (module_config.json에 정의된 경우만)"""
+    logger.debug(f"then_product_click_logs_should_pass_validation 실행: tc_id={tc_id}")
     # TC 번호가 비어있으면 검증 건너뛰기
     if not tc_id or tc_id.strip() == '':
         logger.info("TC 번호가 비어있어 Product Click 로그 검증을 건너뜁니다.")
@@ -259,6 +264,7 @@ def then_product_click_logs_should_pass_validation(tc_id, bdd_context):
     tracker, goodscode, module_title, frontend_data, area = _get_common_context(bdd_context)
     
     # TestRail TC 번호를 context에 저장
+    logger.debug(f"bdd_context['testrail_tc_id']에 {tc_id} 저장")
     bdd_context['testrail_tc_id'] = tc_id
     
     # 단순화된 검증 로직 사용
