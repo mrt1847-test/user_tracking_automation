@@ -592,12 +592,12 @@ class SearchPage(BasePage):
         logger.debug(f"URL에 상품 번호 포함 확인: {goodscode}")
         assert goodscode in url, f"상품 번호 {goodscode}가 URL에 포함되어야 합니다"
 
-    def go_to_top_search_module_page(self, keyword: str):
+    def go_to_top_search_module_page(self, keyword: str, goodscode: str):
         """
         최상단 클릭아이템 모듈 페이지로 이동동
         
         Args:
             keyword: 검색어
         """
-        top_search_module_url = search_url(keyword)+ "&jaehuid=200018252&itemno=3386025906"
+        top_search_module_url = search_url(keyword)+ f"&jaehuid=200018252&itemno={goodscode}"
         self.page.goto(top_search_module_url, wait_until="domcontentloaded", timeout=30000)

@@ -140,7 +140,7 @@ def module_exists_in_search_results_type2(browser_session, module_title, request
         search_page = SearchPage(browser_session.page)
         
         # 모듈 찾기
-        module = search_page.get_module_by_title_type2(module_title)
+        module = search_page.get_module_by_title(module_title)
         
         # 모듈이 존재하는지 확인 (count == 0이면 모듈이 없음)
         module_count = module.count()
