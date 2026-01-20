@@ -1104,7 +1104,7 @@ class NetworkTracker:
         
         return params
     
-    def validate_payload(self, log: Dict[str, Any], expected_data: Dict[str, Any], goodscode: Optional[str] = None, event_type: Optional[str] = None) -> Tuple[bool, List[str]]:
+    def validate_payload(self, log: Dict[str, Any], expected_data: Dict[str, Any], goodscode: Optional[str] = None, event_type: Optional[str] = None) -> Tuple[bool, Dict[str, Any]]:
         """
         로그의 payload 정합성 검증 (재귀적 탐색 방식)
         
@@ -1117,8 +1117,8 @@ class NetworkTracker:
             event_type: 이벤트 타입 ('Product Exposure', 'Product Click' 등)
         
         Returns:
-            (검증 성공 여부, 통과한 필드 목록) 튜플
-            - 검증 성공 시: (True, 통과한 필드 목록)
+            (검증 성공 여부, 통과한 필드와 값 딕셔너리) 튜플
+            - 검증 성공 시: (True, {필드명: 실제값} 딕셔너리)
             - 검증 실패 시: AssertionError 발생
         
         Raises:
@@ -1213,7 +1213,7 @@ class NetworkTracker:
         
         # 기대 데이터 검증 (재귀적 탐색 사용)
         errors = []
-        passed_fields = []  # 통과한 필드 목록
+        passed_fields = {}  # 통과한 필드와 실제 값 딕셔너리 {필드명: 실제값}
         for key, expected_value in expected_data.items():
             actual_value = None
             
@@ -1233,7 +1233,7 @@ class NetworkTracker:
                 errors.append(f"키 '{key}'에 해당하는 값이 없습니다.")
             elif isinstance(expected_value, str) and expected_value == "__SKIP__":
                 # skip 필드: 어떤 값이든 통과 (검증 스킵)
-                passed_fields.append(key)  # skip 필드도 통과한 것으로 간주
+                passed_fields[key] = actual_value  # skip 필드도 통과한 것으로 간주 (실제값 저장)
                 continue  # 검증 스킵, 다음 필드로
             elif isinstance(expected_value, str) and expected_value == "__MANDATORY__":
                 # mandatory 필드: 빈 값만 아니면 통과
@@ -1261,7 +1261,7 @@ class NetworkTracker:
                     # 예: expected="gmktpc.searchlist", actual="gmktpc.searchlist.0.0.28e22ebayJdnYA" → 통과
                     if expected_value in actual_value:
                         field_passed = True
-                        continue  # 포함 매칭 성공, 다음 필드로
+                        # 포함 매칭 성공, 다음 필드로 (값 저장은 아래에서)
                     else:
                         errors.append(
                             f"키 '{key}'의 값이 일치하지 않습니다. "
@@ -1275,9 +1275,9 @@ class NetworkTracker:
                 else:
                     field_passed = True
             
-            # 필드가 통과했으면 목록에 추가
+            # 필드가 통과했으면 딕셔너리에 추가 (필드명: 실제값)
             if field_passed:
-                passed_fields.append(key)
+                passed_fields[key] = actual_value
         
         if errors:
             error_msg = "\n".join(errors)

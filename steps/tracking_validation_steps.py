@@ -95,8 +95,10 @@ def _check_and_validate_event_logs(
         # 검증 실패 시 실패 처리 (프론트 실패 여부와 관계없이)
         error_message = f"[TestRail TC: {tc_id}] {event_type} 로그 정합성 검증 실패:\n[필드값 정합성 오류]\n" + "\n".join(errors)
         # 통과한 필드가 있으면 표시
-        if passed_fields:
-            error_message += f"\n\n[통과한 필드]\n" + ", ".join(passed_fields)
+        if passed_fields and isinstance(passed_fields, dict):
+            error_message += f"\n\n[통과한 필드]\n"
+            for field, value in passed_fields.items():
+                error_message += f"{field}: {value}\n"
         logger.error(error_message)
         
         # TestRail 기록을 위해 실패 플래그 설정
@@ -176,8 +178,10 @@ def then_pv_logs_should_pass_validation(bdd_context):
         if not success:
             error_message = "PV 로그 정합성 검증 실패:\n" + "\n".join(errors)
             # 통과한 필드가 있으면 표시
-            if passed_fields:
-                error_message += f"\n\n[통과한 필드]\n" + ", ".join(passed_fields)
+            if passed_fields and isinstance(passed_fields, dict):
+                error_message += f"\n\n[통과한 필드]\n"
+                for field, value in passed_fields.items():
+                    error_message += f"{field}: {value}\n"
             logger.error(error_message)
             # TestRail 기록을 위해 실패 플래그 설정 (TC 번호는 없지만)
             bdd_context['validation_failed'] = True

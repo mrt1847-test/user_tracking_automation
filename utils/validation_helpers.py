@@ -420,7 +420,7 @@ def validate_event_type_logs(
     frontend_data: Optional[Dict[str, Any]] = None,
     module_config: Optional[Dict[str, Any]] = None,
     exclude_fields: Optional[List[str]] = None
-) -> Tuple[bool, List[str], List[str]]:
+) -> Tuple[bool, List[str], Dict[str, Any]]:
     """
     특정 이벤트 타입의 트래킹 로그 정합성 검증 (module_config.json만 사용)
     
@@ -434,10 +434,10 @@ def validate_event_type_logs(
         exclude_fields: 검증에서 제외할 필드 목록
     
     Returns:
-        (성공 여부, 에러 메시지 리스트, 통과한 필드 목록)
+        (성공 여부, 에러 메시지 리스트, 통과한 필드와 값 딕셔너리)
     """
     errors = []
-    all_passed_fields = []  # 모든 로그에서 통과한 필드 목록 (중복 제거)
+    all_passed_fields = {}  # 모든 로그에서 통과한 필드와 값 딕셔너리
     
     # 모듈 설정 로드
     if module_config is None:
@@ -456,18 +456,18 @@ def validate_event_type_logs(
     if not event_config_key:
         # PV는 특별한 구조가 없을 수 있음
         if event_type != 'PV':
-            return True, [], []  # 알 수 없는 이벤트 타입은 스킵
+            return True, [], {}  # 알 수 없는 이벤트 타입은 스킵
     
     # module_config.json에 이벤트 타입별 섹션이 없으면 검증 스킵
     if event_config_key and event_config_key not in module_config_data:
-        return True, [], []  # config에 정의되지 않은 이벤트는 검증하지 않음
+        return True, [], {}  # config에 정의되지 않은 이벤트는 검증하지 않음
     
     # 로그 가져오기
     logs = get_event_logs(tracker, event_type, goodscode, module_config_data)
     
     # 로그가 없고 config에도 정의되지 않은 경우는 스킵 (정상)
     if len(logs) == 0:
-        return True, [], []
+        return True, [], {}
     
     # module_config.json에서 expected 값 생성
     expected = build_expected_from_module_config(
@@ -484,13 +484,12 @@ def validate_event_type_logs(
         # validate_payload는 전체 로그 객체를 받아 내부에서 log.get('payload')로 추출함
         try:
             result = tracker.validate_payload(log, expected, goodscode, event_type)
-            # result가 튜플인 경우 (성공 여부, 통과한 필드 목록)
+            # result가 튜플인 경우 (성공 여부, 통과한 필드와 값 딕셔너리)
             if isinstance(result, tuple) and len(result) == 2:
-                _, passed_fields = result
-                # 통과한 필드 목록에 추가 (중복 제거)
-                for field in passed_fields:
-                    if field not in all_passed_fields:
-                        all_passed_fields.append(field)
+                _, passed_fields_dict = result
+                # 통과한 필드와 값 딕셔너리에 병합 (나중 로그의 값이 우선)
+                if isinstance(passed_fields_dict, dict):
+                    all_passed_fields.update(passed_fields_dict)
         except AssertionError as e:
             errors.append(str(e))
     
