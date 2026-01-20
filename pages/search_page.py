@@ -545,14 +545,17 @@ class SearchPage(BasePage):
             new_page = new_page_info.value
             logger.debug(f"새 탭 생성됨: {new_page.url}")
         except Exception as e:
-            logger.warning(f"force 클릭 실패, href로 직접 이동: {e}")
-            # 새 탭이 열리지 않으면 href로 직접 이동
-            if href:
-                new_page = self.page.context.new_page()
-                new_page.goto(href, wait_until="domcontentloaded", timeout=30000)
-                logger.debug(f"href로 직접 이동: {href}")
-            else:
-                raise Exception(f"클릭 실패 및 href 없음: {e}")
+            logger.warning(f"force 클릭 실패, dispatch_event로 클릭 시도: {e}")
+            # 새 탭이 열리지 않으면 dispatch_event로 클릭 이벤트 발생
+            try:
+                with self.page.context.expect_page(timeout=10000) as new_page_info:
+                    product_locator.dispatch_event("click")
+                
+                new_page = new_page_info.value
+                logger.debug(f"dispatch_event로 새 탭 생성됨: {new_page.url}")
+            except Exception as e2:
+                logger.error(f"dispatch_event 클릭도 실패: {e2}")
+                raise Exception(f"클릭 실패 (force 클릭: {e}, dispatch_event: {e2})")
         
         # 새 탭을 포커스로 가져오기 (제어 가능하도록)
         new_page.bring_to_front()
