@@ -766,71 +766,48 @@ def testrail_post(endpoint, payload=None, files=None):
     return r.json()
 
 
+from collections import defaultdict
 
+def get_all_subsection_ids_optimized(parent_section_id, all_sections):
+    """
+    사전 인덱싱(Indexing)을 통해 성능을 비약적으로 향상시킨 버전
+    """
+    # 1. 데이터를 정수형으로 미리 가공하고, 부모-자식 관계 맵을 생성 (O(N))
+    children_map = defaultdict(list)
+    
+    # 입력 받은 parent_section_id도 미리 정수로 변환
+    try:
+        root_id = int(parent_section_id)
+    except (ValueError, TypeError):
+        return [parent_section_id]
 
-def get_all_subsection_ids(parent_section_id, all_sections, visited=None):
-    """
-    지정된 섹션 ID와 모든 하위 섹션 ID를 재귀적으로 찾기
-    
-    Args:
-        parent_section_id: 부모 섹션 ID (int 또는 str)
-        all_sections: 모든 섹션 리스트 (TestRail API에서 가져온 전체 섹션)
-        visited: 이미 방문한 섹션 ID 집합 (순환 참조 방지)
-    
-    Returns:
-        list: 부모 섹션 ID와 모든 하위 섹션 ID 리스트 (중복 제거됨)
-    """
-    if visited is None:
-        visited = set()
-    
-    # 타입 통일 (정수로 변환)
-    if isinstance(parent_section_id, str):
-        try:
-            parent_section_id = int(parent_section_id)
-        except ValueError:
-            logger.warning(f"parent_section_id를 정수로 변환 실패: {parent_section_id}")
-            return [parent_section_id] if parent_section_id not in visited else []
-    
-    # 이미 방문한 섹션이면 빈 리스트 반환 (순환 참조 및 중복 방지)
-    if parent_section_id in visited:
-        return []
-    
-    visited.add(parent_section_id)
-    section_ids = [parent_section_id]
-    
-    # parent_id가 parent_section_id인 모든 하위 섹션 찾기
     for section in all_sections:
-        section_parent_id = section.get("parent_id")
-        
-        # parent_id가 None이면 최상위 섹션이므로 스킵
-        if section_parent_id is None:
+        try:
+            s_id = int(section["id"])
+            p_id = section.get("parent_id")
+            # 부모가 있는 경우에만 맵에 추가
+            if p_id is not None:
+                p_id = int(p_id)
+                children_map[p_id].append(s_id)
+        except (ValueError, TypeError):
             continue
+
+    # 2. 재귀적으로 ID를 수집 (O(M), M은 하위 섹션의 개수)
+    result_ids = []
+    visited = set()
+
+    def collect(current_id):
+        if current_id in visited:
+            return
+        visited.add(current_id)
+        result_ids.append(current_id)
         
-        # 타입 통일 (정수로 변환)
-        if isinstance(section_parent_id, str):
-            try:
-                section_parent_id = int(section_parent_id)
-            except ValueError:
-                continue
-        
-        # parent_id가 일치하는 경우
-        if section_parent_id == parent_section_id:
-            child_section_id = section["id"]
-            # 타입 통일
-            if isinstance(child_section_id, str):
-                try:
-                    child_section_id = int(child_section_id)
-                except ValueError:
-                    continue
-            
-            # 아직 방문하지 않은 자식 섹션만 추가
-            if child_section_id not in visited:
-                section_ids.append(child_section_id)
-                # 재귀적으로 하위 섹션의 하위 섹션도 찾기
-                child_subsection_ids = get_all_subsection_ids(child_section_id, all_sections, visited)
-                section_ids.extend(child_subsection_ids)
-    
-    return section_ids
+        # 맵에서 자식들을 바로 찾아 순회 (전체 리스트를 훑지 않음)
+        for child_id in children_map.get(current_id, []):
+            collect(child_id)
+
+    collect(root_id)
+    return result_ids
 
 
 @pytest.hookimpl(tryfirst=True)
