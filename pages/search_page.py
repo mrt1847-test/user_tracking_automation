@@ -533,30 +533,33 @@ class SearchPage(BasePage):
         """
         logger.debug("상품 클릭 및 새 탭 대기")
         
-        # href 속성을 먼저 읽어서 백업 URL 확보
-        href = product_locator.get_attribute("href")
-        logger.debug(f"상품 링크 href: {href}")
-        
-        # force 클릭만 시도
+        # 일반 클릭 시도
         try:
             with self.page.context.expect_page(timeout=10000) as new_page_info:
-                product_locator.click(force=True, timeout=3000)
+                product_locator.click(timeout=3000)
             
             new_page = new_page_info.value
             logger.debug(f"새 탭 생성됨: {new_page.url}")
         except Exception as e:
-            logger.warning(f"force 클릭 실패, dispatch_event로 클릭 시도: {e}")
-            # 새 탭이 열리지 않으면 dispatch_event로 클릭 이벤트 발생
+            logger.warning(f"일반 클릭 실패, 팝업 닫기 후 재시도: {e}")
+            # 팝업이 있을 수 있으므로 닫기 버튼 클릭 후 다시 시도
             try:
+                popup_close_button = self.page.locator(".button__popup-close")
+                if popup_close_button.count() > 0:
+                    popup_close_button.first.click(timeout=2000)
+                    logger.debug("팝업 닫기 버튼 클릭 완료")
+                    # 잠시 대기 (팝업이 닫히는 시간)
+                    self.page.wait_for_timeout(500)
+                
+                # 다시 일반 클릭 시도
                 with self.page.context.expect_page(timeout=10000) as new_page_info:
-                    product_locator.dispatch_event("click")
+                    product_locator.click(timeout=3000)
                 
                 new_page = new_page_info.value
-                logger.debug(f"dispatch_event로 새 탭 생성됨: {new_page.url}")
+                logger.debug(f"팝업 닫기 후 새 탭 생성됨: {new_page.url}")
             except Exception as e2:
-                logger.error(f"dispatch_event 클릭도 실패: {e2}")
-                raise Exception(f"클릭 실패 (force 클릭: {e}, dispatch_event: {e2})")
-        
+                logger.error(f"팝업 닫기 후 클릭도 실패: {e2}")
+                raise Exception(f"클릭 실패 (일반 클릭: {e}, 팝업 닫기 후 재시도: {e2})")
         # 새 탭을 포커스로 가져오기 (제어 가능하도록)
         new_page.bring_to_front()
         logger.debug("새 탭을 포커스로 가져옴")
