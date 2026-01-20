@@ -14,6 +14,7 @@ pytest_plugins = [
 
 import shutil
 import re
+from src.gtas_python_core.gtas_python_core_vault import Vault
 from playwright.sync_api import sync_playwright, Browser, BrowserContext, Page
 import os
 import pytest
@@ -24,11 +25,7 @@ import json
 import time
 import logging
 
-# Vault import (선택적)
-try:
-    from src.gtas_python_core.gtas_python_core_vault import Vault
-except ImportError:
-    Vault = None
+
 
 # 로깅 설정
 logging.basicConfig(
@@ -403,7 +400,7 @@ def _capture_screenshot(case_id_num, request=None, step_func_args=None):
     스크린샷 캡처 및 저장
     
     Args:
-        case_id_num: TestRail 케이스 ID 번호
+        case_id_num: TestRail 케이스 ID 번호 또는 파일명 식별자
         request: pytest request 객체
         step_func_args: 스텝 함수 인자 딕셔너리
     
@@ -415,7 +412,11 @@ def _capture_screenshot(case_id_num, request=None, step_func_args=None):
         
         if page and not page.is_closed():
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            screenshot_path = f"screenshots/{case_id_num}_{timestamp}.png"
+            # case_id_num이 숫자면 TestRail 케이스 ID, 아니면 일반 파일명
+            if isinstance(case_id_num, (int, str)) and str(case_id_num).isdigit():
+                screenshot_path = f"screenshots/{case_id_num}_{timestamp}.png"
+            else:
+                screenshot_path = f"screenshots/{case_id_num}_{timestamp}.png"
             os.makedirs(os.path.dirname(screenshot_path), exist_ok=True)
             page.screenshot(path=screenshot_path, timeout=2000)
             print(f"[TestRail] 스크린샷 저장 완료: {screenshot_path}")
@@ -424,6 +425,10 @@ def _capture_screenshot(case_id_num, request=None, step_func_args=None):
         print(f"[WARNING] 스크린샷 저장 실패: {e}")
     
     return None
+
+
+# 프론트 실패 처리 헬퍼 함수는 utils.frontend_helpers에서 import
+from utils.frontend_helpers import capture_frontend_failure_screenshot
 
 
 def _collect_step_logs():
@@ -487,17 +492,20 @@ def pytest_bdd_after_step(request, feature, scenario, step, step_func, step_func
             if step_func_args:
                 bdd_context = step_func_args.get('bdd_context')
                 if bdd_context and hasattr(bdd_context, 'get'):
-                    # 프론트 동작 실패 확인
-                    if bdd_context.get('frontend_action_failed'):
-                        step_status = "failed"
-                        if error_msg is None:
-                            error_msg = bdd_context.get('frontend_error_message', '프론트 동작 실패')
+                    # 검증 스텝인지 확인 (스텝 이름에 "정합성 검증" 포함)
+                    is_validation_step = "정합성 검증" in step.name
                     
-                    # validation_failed 플래그 확인
-                    if bdd_context.get('validation_failed'):
-                        step_status = "failed"
-                        if error_msg is None:
+                    if is_validation_step:
+                        # 검증 스텝: validation_failed만 확인 (프론트 실패 정보는 이미 error_message에 포함됨)
+                        if bdd_context.get('validation_failed'):
+                            step_status = "failed"
                             error_msg = bdd_context.get('validation_error_message', '검증 실패')
+                    else:
+                        # 프론트 동작 스텝: frontend_action_failed 확인
+                        if bdd_context.get('frontend_action_failed'):
+                            step_status = "failed"
+                            if error_msg is None:
+                                error_msg = bdd_context.get('frontend_error_message', '프론트 동작 실패')
         
         # TC 번호 추출 시도
         step_case_id = None
@@ -521,8 +529,28 @@ def pytest_bdd_after_step(request, feature, scenario, step, step_func, step_func
             # Cxxxx → 숫자만 추출
             case_id_num = int(step_case_id[1:]) if step_case_id.startswith("C") else int(step_case_id)
             
-            status_id = 5 if step_status == "failed" else 1
+            # skip_reason 확인
+            skip_reason = None
+            if step_func_args:
+                bdd_context = step_func_args.get('bdd_context')
+                if bdd_context:
+                    if hasattr(bdd_context, 'get'):
+                        skip_reason = bdd_context.get('skip_reason')
+                    elif hasattr(bdd_context, 'store'):
+                        skip_reason = bdd_context.store.get('skip_reason')
+            
+            # 상태 결정: skip_reason이 있으면 skip (4), 실패면 failed (5), 아니면 passed (1)
+            if skip_reason:
+                status_id = 4  # TestRail skip/retest 상태
+                step_status = "skipped"
+            elif step_status == "failed":
+                status_id = 5
+            else:
+                status_id = 1
+            
             comment = f"스텝: {step.name}\n"
+            if skip_reason:
+                comment += f"Skip: {skip_reason}\n"
             if error_msg:
                 comment += f"오류: {error_msg}"
             
@@ -531,10 +559,41 @@ def pytest_bdd_after_step(request, feature, scenario, step, step_func, step_func
             if log_content:
                 comment += f"\n\n--- 실행 로그 ---\n{log_content}"
             
-            # 스크린샷 저장 (실패 시에만)
+            # 스크린샷 경로 확인 (프론트 실패 시점에 찍은 스크린샷 우선 사용)
             screenshot_path = None
             if step_status == "failed":
-                screenshot_path = _capture_screenshot(case_id_num, request, step_func_args)
+                # 검증 스텝인지 확인
+                is_validation_step = "정합성 검증" in step.name
+                
+                if is_validation_step:
+                    # 검증 스텝: 프론트 실패로 인한 로그 수집 실패인 경우 프론트 실패 스크린샷 사용
+                    if step_func_args:
+                        bdd_context = step_func_args.get('bdd_context')
+                        if bdd_context:
+                            # 프론트 실패가 있고 error_message에 "프론트 실패 사유"가 포함되어 있으면 스크린샷 사용
+                            if hasattr(bdd_context, 'get'):
+                                if bdd_context.get('frontend_action_failed') and error_msg and "[프론트 실패 사유]" in error_msg:
+                                    screenshot_path = bdd_context.get('frontend_failure_screenshot')
+                            elif hasattr(bdd_context, 'store'):
+                                if bdd_context.store.get('frontend_action_failed') and error_msg and "[프론트 실패 사유]" in error_msg:
+                                    screenshot_path = bdd_context.store.get('frontend_failure_screenshot')
+                    
+                    # 스크린샷이 없으면 검증 실패 스크린샷 찍기
+                    if not screenshot_path:
+                        screenshot_path = _capture_screenshot(case_id_num, request, step_func_args)
+                else:
+                    # 프론트 동작 스텝: 프론트 실패 스크린샷 확인
+                    if step_func_args:
+                        bdd_context = step_func_args.get('bdd_context')
+                        if bdd_context:
+                            if hasattr(bdd_context, 'get'):
+                                screenshot_path = bdd_context.get('frontend_failure_screenshot')
+                            elif hasattr(bdd_context, 'store'):
+                                screenshot_path = bdd_context.store.get('frontend_failure_screenshot')
+                    
+                    # 저장된 스크린샷이 없으면 새로 찍기
+                    if not screenshot_path:
+                        screenshot_path = _capture_screenshot(case_id_num, request, step_func_args)
             
             payload = {
                 "status_id": status_id,
@@ -560,20 +619,23 @@ def pytest_bdd_after_step(request, feature, scenario, step, step_func, step_func
             print(f"[TestRail] 스텝 '{step.name}' TC 번호 발견: {step_case_id} (TestRail 연동 미활성화)")
         
         # TC 번호가 없지만 실패한 프론트 동작 스텝인 경우 - 스크린샷만 저장 (참고용)
-        elif step_status == "failed" and not step_case_id and testrail_run_id:
+        elif step_status == "failed" and not step_case_id:
             # 프론트 동작 실패인 경우 로그만 남기고 스크린샷 저장
             print(f"[TestRail] 스텝 '{step.name}' 실패 (TC 번호 없음): {error_msg}")
-            # 스크린샷은 저장 (나중에 참고용, TestRail에는 업로드 안 함)
-            screenshot_path = _capture_screenshot(f"frontend_fail_{step.name.replace(' ', '_')}", request, step_func_args)
-            if screenshot_path:
-                logger.info(f"프론트 동작 실패 스크린샷 저장: {screenshot_path}")
-        
-        # TC 번호가 없지만 실패한 프론트 동작 스텝인 경우 - 스크린샷만 저장 (참고용)
-        elif step_status == "failed" and not step_case_id and testrail_run_id:
-            # 프론트 동작 실패인 경우 로그만 남기고 스크린샷 저장
-            print(f"[TestRail] 스텝 '{step.name}' 실패 (TC 번호 없음): {error_msg}")
-            # 스크린샷은 저장 (나중에 참고용, TestRail에는 업로드 안 함)
-            screenshot_path = _capture_screenshot(f"frontend_fail_{step.name.replace(' ', '_')}", request, step_func_args)
+            # 프론트 실패 시점에 찍은 스크린샷 확인
+            screenshot_path = None
+            if step_func_args:
+                bdd_context = step_func_args.get('bdd_context')
+                if bdd_context:
+                    if hasattr(bdd_context, 'get'):
+                        screenshot_path = bdd_context.get('frontend_failure_screenshot')
+                    elif hasattr(bdd_context, 'store'):
+                        screenshot_path = bdd_context.store.get('frontend_failure_screenshot')
+            
+            # 저장된 스크린샷이 없으면 새로 찍기
+            if not screenshot_path:
+                screenshot_path = _capture_screenshot(f"frontend_fail_{step.name.replace(' ', '_')}", request, step_func_args)
+            
             if screenshot_path:
                 logger.info(f"프론트 동작 실패 스크린샷 저장: {screenshot_path}")
     

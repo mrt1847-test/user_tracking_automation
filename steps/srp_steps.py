@@ -10,6 +10,9 @@ from pages.search_page import SearchPage
 from pages.home_page import HomePage
 from pages.Etc import Etc
 
+# 프론트 실패 처리 헬퍼 함수 import
+from utils.frontend_helpers import record_frontend_failure
+
 logger = logging.getLogger(__name__)
 
 
@@ -27,9 +30,7 @@ def when_user_searches_keyword(browser_session, keyword, bdd_context):
         logger.info(f"검색 완료: keyword={keyword}")
     except Exception as e:
         logger.error(f"검색 실패: {e}", exc_info=True)
-        bdd_context['frontend_action_failed'] = True
-        bdd_context['frontend_error_message'] = f"검색 실패: {str(e)}"
-        bdd_context['failed_step_name'] = "사용자가 키워드를 검색한다"
+        record_frontend_failure(browser_session, bdd_context, f"검색 실패: {str(e)}", "사용자가 키워드를 검색한다")
         if 'keyword' not in bdd_context.store:
             bdd_context.store['keyword'] = keyword
 
@@ -44,9 +45,7 @@ def then_search_results_page_is_displayed(browser_session, bdd_context):
         logger.info("검색 결과 페이지 표시 확인")
     except Exception as e:
         logger.error(f"검색 결과 페이지 표시 확인 실패: {e}", exc_info=True)
-        bdd_context['frontend_action_failed'] = True
-        bdd_context['frontend_error_message'] = f"검색 결과 페이지 표시 확인 실패: {str(e)}"
-        bdd_context['failed_step_name'] = "검색 결과 페이지가 표시된다"
+        record_frontend_failure(browser_session, bdd_context, f"검색 결과 페이지 표시 확인 실패: {str(e)}", "검색 결과 페이지가 표시된다")
 
 
 @given(parsers.parse('사용자가 "{keyword}"을 검색했다'))
@@ -66,9 +65,7 @@ def given_user_searched_keyword(browser_session, keyword, bdd_context):
             logger.info(f"이미 검색 결과 페이지에 있음: keyword={keyword}")
     except Exception as e:
         logger.error(f"검색 상태 확인 실패: {e}", exc_info=True)
-        bdd_context['frontend_action_failed'] = True
-        bdd_context['frontend_error_message'] = f"검색 상태 확인 실패: {str(e)}"
-        bdd_context['failed_step_name'] = "사용자가 키워드를 검색했다"
+        record_frontend_failure(browser_session, bdd_context, f"검색 상태 확인 실패: {str(e)}", "사용자가 키워드를 검색했다")
         if 'keyword' not in bdd_context.store:
             bdd_context.store['keyword'] = keyword
 
@@ -95,17 +92,23 @@ def module_exists_in_search_results(browser_session, module_title, request, bdd_
         # 모듈이 존재하는지 확인 (count == 0이면 모듈이 없음)
         module_count = module.count()
         if module_count == 0:
-            # 모듈이 없으면 현재 시나리오만 skip
-            pytest.skip(f"'{module_title}' 모듈이 검색 결과에 없습니다.")
+            # 모듈이 없으면 skip 플래그 설정 (시나리오는 계속 진행)
+            skip_reason = f"'{module_title}' 모듈이 검색 결과에 없습니다."
+            logger.warning(skip_reason)
+            if hasattr(bdd_context, '__setitem__'):
+                bdd_context['skip_reason'] = skip_reason
+            elif hasattr(bdd_context, 'store'):
+                bdd_context.store['skip_reason'] = skip_reason
+            # module_title은 저장 (다음 스텝에서 사용 가능하도록)
+            bdd_context.store['module_title'] = module_title
+            return  # 여기서 종료 (다음 스텝으로 진행하되 skip 상태로 기록됨)
         
         # 모듈이 있으면 visibility 확인 (실패 시 플래그만 설정)
         try:
             expect(module.first).to_be_attached()
         except AssertionError as e:
             logger.error(f"모듈 존재 확인 실패: {e}")
-            bdd_context['frontend_action_failed'] = True
-            bdd_context['frontend_error_message'] = f"모듈 존재 확인 실패: {str(e)}"
-            bdd_context['failed_step_name'] = "검색 결과 페이지에 모듈이 있다"
+            record_frontend_failure(browser_session, bdd_context, f"모듈 존재 확인 실패: {str(e)}", "검색 결과 페이지에 모듈이 있다")
             # module_title은 저장 (다음 스텝에서 사용 가능하도록)
             bdd_context.store['module_title'] = module_title
             return  # 여기서 종료 (다음 스텝으로 진행)
@@ -114,14 +117,9 @@ def module_exists_in_search_results(browser_session, module_title, request, bdd_
         bdd_context.store['module_title'] = module_title
         
         logger.info(f"{module_title} 모듈 존재 확인 완료")
-    except pytest.skip.Exception:
-        # skip 예외는 다시 발생 (시나리오 자체를 skip)
-        raise
     except Exception as e:
         logger.error(f"모듈 확인 중 예외 발생: {e}", exc_info=True)
-        bdd_context['frontend_action_failed'] = True
-        bdd_context['frontend_error_message'] = str(e)
-        bdd_context['failed_step_name'] = "검색 결과 페이지에 모듈이 있다"
+        record_frontend_failure(browser_session, bdd_context, str(e), "검색 결과 페이지에 모듈이 있다")
         if 'module_title' not in bdd_context.store:
             bdd_context.store['module_title'] = module_title
 
@@ -147,17 +145,23 @@ def module_exists_in_search_results_type2(browser_session, module_title, request
         # 모듈이 존재하는지 확인 (count == 0이면 모듈이 없음)
         module_count = module.count()
         if module_count == 0:
-            # 모듈이 없으면 현재 시나리오만 skip
-            pytest.skip(f"'{module_title}' 모듈이 검색 결과에 없습니다.")
+            # 모듈이 없으면 skip 플래그 설정 (시나리오는 계속 진행)
+            skip_reason = f"'{module_title}' 모듈이 검색 결과에 없습니다."
+            logger.warning(skip_reason)
+            if hasattr(bdd_context, '__setitem__'):
+                bdd_context['skip_reason'] = skip_reason
+            elif hasattr(bdd_context, 'store'):
+                bdd_context.store['skip_reason'] = skip_reason
+            # module_title은 저장 (다음 스텝에서 사용 가능하도록)
+            bdd_context.store['module_title'] = module_title
+            return  # 여기서 종료 (다음 스텝으로 진행하되 skip 상태로 기록됨)
         
         # 모듈이 있으면 visibility 확인 (실패 시 플래그만 설정)
         try:
             expect(module.first).to_be_attached()
         except AssertionError as e:
             logger.error(f"모듈 존재 확인 실패: {e}")
-            bdd_context['frontend_action_failed'] = True
-            bdd_context['frontend_error_message'] = f"모듈 존재 확인 실패: {str(e)}"
-            bdd_context['failed_step_name'] = "검색 결과 페이지에 모듈이 있다 (type2)"
+            record_frontend_failure(browser_session, bdd_context, f"모듈 존재 확인 실패: {str(e)}", "검색 결과 페이지에 모듈이 있다 (type2)")
             # module_title은 저장 (다음 스텝에서 사용 가능하도록)
             bdd_context.store['module_title'] = module_title
             return  # 여기서 종료 (다음 스텝으로 진행)
@@ -166,14 +170,9 @@ def module_exists_in_search_results_type2(browser_session, module_title, request
         bdd_context.store['module_title'] = module_title
         
         logger.info(f"{module_title} 모듈 존재 확인 완료")
-    except pytest.skip.Exception:
-        # skip 예외는 다시 발생 (시나리오 자체를 skip)
-        raise
     except Exception as e:
         logger.error(f"모듈 확인 중 예외 발생: {e}", exc_info=True)
-        bdd_context['frontend_action_failed'] = True
-        bdd_context['frontend_error_message'] = str(e)
-        bdd_context['failed_step_name'] = "검색 결과 페이지에 모듈이 있다 (type2)"
+        record_frontend_failure(browser_session, bdd_context, str(e), "검색 결과 페이지에 모듈이 있다 (type2)")
         if 'module_title' not in bdd_context.store:
             bdd_context.store['module_title'] = module_title
 
@@ -191,9 +190,7 @@ def user_goes_to_top_search_module_page(browser_session, keyword, goodscode, bdd
         bdd_context.store['keyword'] = keyword
     except Exception as e:
         logger.error(f"최상단 클릭아이템 모듈 페이지 이동 실패: {e}", exc_info=True)
-        bdd_context['frontend_action_failed'] = True
-        bdd_context['frontend_error_message'] = f"최상단 클릭아이템 모듈 페이지 이동 실패: {str(e)}"
-        bdd_context['failed_step_name'] = "사용자가 최상단 클릭아이템 모듈 페이지로 이동한다"
+        record_frontend_failure(browser_session, bdd_context, f"최상단 클릭아이템 모듈 페이지 이동 실패: {str(e)}", "사용자가 최상단 클릭아이템 모듈 페이지로 이동한다")
         if 'module_title' not in bdd_context.store:
             bdd_context.store['module_title'] = "최상단 클릭아이템"
         if 'keyword' not in bdd_context.store:
@@ -229,9 +226,7 @@ def user_confirms_and_clicks_product_in_module(browser_session, module_title, bd
         except AssertionError as e:
             # 실패 정보 저장하되 예외는 다시 발생시키지 않음
             logger.error(f"상품 노출 확인 실패: {e}")
-            bdd_context['frontend_action_failed'] = True
-            bdd_context['frontend_error_message'] = f"상품 노출 확인 실패: {str(e)}"
-            bdd_context['failed_step_name'] = "사용자가 모듈 내 상품을 확인하고 클릭한다"
+            record_frontend_failure(browser_session, bdd_context, f"상품 노출 확인 실패: {str(e)}", "사용자가 모듈 내 상품을 확인하고 클릭한다")
             if 'module_title' not in bdd_context.store:
                 bdd_context.store['module_title'] = module_title
             return  # 여기서 종료 (다음 스텝으로 진행)
@@ -264,9 +259,7 @@ def user_confirms_and_clicks_product_in_module(browser_session, module_title, bd
             logger.info(f"{module_title} 모듈 내 상품 확인 및 클릭 완료: {goodscode}")
         except Exception as e:
             logger.error(f"상품 클릭 실패: {e}", exc_info=True)
-            bdd_context['frontend_action_failed'] = True
-            bdd_context['frontend_error_message'] = f"상품 클릭 실패: {str(e)}"
-            bdd_context['failed_step_name'] = "사용자가 모듈 내 상품을 확인하고 클릭한다"
+            record_frontend_failure(browser_session, bdd_context, f"상품 클릭 실패: {str(e)}", "사용자가 모듈 내 상품을 확인하고 클릭한다")
             # goodscode는 저장 (일부 정보라도 보존)
             if 'goodscode' in locals():
                 bdd_context.store['goodscode'] = goodscode
@@ -276,9 +269,7 @@ def user_confirms_and_clicks_product_in_module(browser_session, module_title, bd
     except Exception as e:
         # 예상치 못한 예외 처리
         logger.error(f"프론트 동작 중 예외 발생: {e}", exc_info=True)
-        bdd_context['frontend_action_failed'] = True
-        bdd_context['frontend_error_message'] = str(e)
-        bdd_context['failed_step_name'] = "사용자가 모듈 내 상품을 확인하고 클릭한다"
+        record_frontend_failure(browser_session, bdd_context, str(e), "사용자가 모듈 내 상품을 확인하고 클릭한다")
         if 'module_title' not in bdd_context.store:
             bdd_context.store['module_title'] = module_title
 
@@ -314,9 +305,7 @@ def user_confirms_and_clicks_product_in_module_type2(browser_session, module_tit
         except AssertionError as e:
             # 실패 정보 저장하되 예외는 다시 발생시키지 않음
             logger.error(f"상품 노출 확인 실패: {e}")
-            bdd_context['frontend_action_failed'] = True
-            bdd_context['frontend_error_message'] = f"상품 노출 확인 실패: {str(e)}"
-            bdd_context['failed_step_name'] = "사용자가 모듈 내 상품을 확인하고 클릭한다 (type2)"
+            record_frontend_failure(browser_session, bdd_context, f"상품 노출 확인 실패: {str(e)}", "사용자가 모듈 내 상품을 확인하고 클릭한다 (type2)")
             if 'module_title' not in bdd_context.store:
                 bdd_context.store['module_title'] = module_title
             return  # 여기서 종료 (다음 스텝으로 진행)
@@ -342,9 +331,7 @@ def user_confirms_and_clicks_product_in_module_type2(browser_session, module_tit
             logger.info(f"{module_title} 모듈 내 상품 확인 및 클릭 완료: {goodscode}")
         except Exception as e:
             logger.error(f"상품 클릭 실패: {e}", exc_info=True)
-            bdd_context['frontend_action_failed'] = True
-            bdd_context['frontend_error_message'] = f"상품 클릭 실패: {str(e)}"
-            bdd_context['failed_step_name'] = "사용자가 모듈 내 상품을 확인하고 클릭한다 (type2)"
+            record_frontend_failure(browser_session, bdd_context, f"상품 클릭 실패: {str(e)}", "사용자가 모듈 내 상품을 확인하고 클릭한다 (type2)")
             # goodscode는 저장 (일부 정보라도 보존)
             if 'goodscode' in locals():
                 bdd_context.store['goodscode'] = goodscode
@@ -354,9 +341,7 @@ def user_confirms_and_clicks_product_in_module_type2(browser_session, module_tit
     except Exception as e:
         # 예상치 못한 예외 처리
         logger.error(f"프론트 동작 중 예외 발생: {e}", exc_info=True)
-        bdd_context['frontend_action_failed'] = True
-        bdd_context['frontend_error_message'] = str(e)
-        bdd_context['failed_step_name'] = "사용자가 모듈 내 상품을 확인하고 클릭한다 (type2)"
+        record_frontend_failure(browser_session, bdd_context, str(e), "사용자가 모듈 내 상품을 확인하고 클릭한다 (type2)")
         if 'module_title' not in bdd_context.store:
             bdd_context.store['module_title'] = module_title
 
@@ -398,8 +383,7 @@ def product_page_is_opened(browser_session, bdd_context):
                 search_page.verify_product_code_in_url(current_url, goodscode)
         except AssertionError as e:
             logger.error(f"상품 페이지 이동 확인 실패: {e}")
-            bdd_context['frontend_action_failed'] = True
-            bdd_context['frontend_error_message'] = f"상품 페이지 이동 확인 실패: {str(e)}"
+            record_frontend_failure(browser_session, bdd_context, f"상품 페이지 이동 확인 실패: {str(e)}", "상품 페이지로 이동되었다")
             # 계속 진행 (PDP PV 로그 수집은 시도)
         
         # 🔥 PDP PV 로그 수집을 위해 networkidle 상태까지 대기
@@ -420,5 +404,4 @@ def product_page_is_opened(browser_session, bdd_context):
         
     except Exception as e:
         logger.error(f"상품 페이지 이동 확인 중 예외 발생: {e}", exc_info=True)
-        bdd_context['frontend_action_failed'] = True
-        bdd_context['frontend_error_message'] = str(e)
+        record_frontend_failure(browser_session, bdd_context, str(e), "상품 페이지로 이동되었다")
