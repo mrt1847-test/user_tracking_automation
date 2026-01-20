@@ -51,18 +51,18 @@ def _check_and_validate_event_logs(
     # 1. 로그 수집 확인
     logs = get_event_logs(tracker, event_type, goodscode, module_config_data)
     
-    # 2. 로그가 없으면 프론트 실패 여부 확인
+    # 2. 프론트 실패 여부 확인 (로그 유무와 관계없이 확인)
+    frontend_failed = False
+    frontend_error = None
+    if hasattr(bdd_context, 'get'):
+        frontend_failed = bdd_context.get('frontend_action_failed', False)
+        frontend_error = bdd_context.get('frontend_error_message')
+    elif hasattr(bdd_context, 'store'):
+        frontend_failed = bdd_context.store.get('frontend_action_failed', False)
+        frontend_error = bdd_context.store.get('frontend_error_message')
+    
+    # 3. 로그가 없으면 실패 처리
     if len(logs) == 0:
-        # 프론트 실패 확인
-        frontend_failed = False
-        frontend_error = None
-        if hasattr(bdd_context, 'get'):
-            frontend_failed = bdd_context.get('frontend_action_failed', False)
-            frontend_error = bdd_context.get('frontend_error_message')
-        elif hasattr(bdd_context, 'store'):
-            frontend_failed = bdd_context.store.get('frontend_action_failed', False)
-            frontend_error = bdd_context.store.get('frontend_error_message')
-        
         if frontend_failed:
             # 프론트 실패로 인한 로그 수집 실패
             error_message = f"[TestRail TC: {tc_id}] {event_type} 로그가 수집되지 않았습니다.\n[프론트 실패 사유]\n{frontend_error or '프론트 동작 실패'}"
@@ -77,7 +77,7 @@ def _check_and_validate_event_logs(
         bdd_context['validation_error_message'] = error_message
         return False
     
-    # 3. 로그가 있으면 정합성 검증 수행
+    # 4. 로그가 있으면 정합성 검증 수행 (프론트 실패 여부와 관계없이 검증 진행)
     logger.info(f"[TestRail TC: {tc_id}] {event_type} 로그 정합성 검증 시작")
     success, errors = validate_event_type_logs(
         tracker=tracker,
@@ -89,7 +89,8 @@ def _check_and_validate_event_logs(
     )
     
     if not success:
-        error_message = f"[TestRail TC: {tc_id}] {event_type} 로그 정합성 검증 실패:\n" + "\n".join(errors)
+        # 검증 실패 시 실패 처리 (프론트 실패 여부와 관계없이)
+        error_message = f"[TestRail TC: {tc_id}] {event_type} 로그 정합성 검증 실패:\n[필드값 정합성 오류]\n" + "\n".join(errors)
         logger.error(error_message)
         
         # TestRail 기록을 위해 실패 플래그 설정
@@ -97,9 +98,12 @@ def _check_and_validate_event_logs(
         bdd_context['validation_error_message'] = error_message
         return False
     
-    # 성공 시 실패 플래그 제거
+    # 5. 검증 통과 시 pass 처리 (프론트 실패가 있어도 로그가 있고 검증이 통과하면 pass)
     bdd_context['validation_failed'] = False
-    logger.info(f"[TestRail TC: {tc_id}] {event_type} 로그 정합성 검증 통과")
+    if frontend_failed:
+        logger.info(f"[TestRail TC: {tc_id}] {event_type} 로그 정합성 검증 통과 (프론트 실패가 있었지만 이벤트 로그 검증 통과)")
+    else:
+        logger.info(f"[TestRail TC: {tc_id}] {event_type} 로그 정합성 검증 통과")
     return True
 
 
