@@ -273,6 +273,17 @@ def _process_config_section(
             expected[field_name] = processed_value
 
 
+def _load_config() -> Dict[str, Any]:
+    """config.json 파일 로드"""
+    config_path = Path(__file__).parent.parent / 'config.json'
+    try:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        # config.json이 없으면 기본값 반환
+        return {'environment': 'prod'}
+
+
 def replace_placeholders(value: Any, goodscode: str, frontend_data: Optional[Dict[str, Any]] = None) -> Any:
     """
     값에서 placeholder를 실제 값으로 치환
@@ -301,6 +312,12 @@ def replace_placeholders(value: Any, goodscode: str, frontend_data: Optional[Dic
         # {goodscode} placeholder 치환 (기존 형식 유지)
         if '{goodscode}' in value:
             value = value.replace('{goodscode}', goodscode)
+        
+        # <environment> placeholder 치환 (config.json에서 읽어옴)
+        if '<environment>' in value:
+            config = _load_config()
+            environment = config.get('environment', 'prod')
+            value = value.replace('<environment>', environment)
         
         # frontend_data에서 값 가져오기
         if frontend_data:
