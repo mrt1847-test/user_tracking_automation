@@ -357,6 +357,10 @@ class SearchPage(BasePage):
             return self.page.locator(".text__title", has_text="의 비슷한 인기브랜드에요")
         elif module_title == "브랜드 인기상품":
             return self.page.locator(".text__title", has_text="인기상품")
+        elif module_title == "대체검색어":
+            return self.page.locator(".text__title", has_text="도 보시겠어요")
+        elif module_title == "MD's Pick":
+            return self.page.get_by_text("믿고 사는 MD's Pick")
         return self.page.locator(".text__title", has_text=module_title)
     
     def scroll_module_into_view(self, module_locator: Locator) -> None:
