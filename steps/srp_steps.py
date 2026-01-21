@@ -246,7 +246,11 @@ def user_confirms_and_clicks_product_in_module(browser_session, module_title, bd
         
         # 상품 클릭
         try:
-            new_page = search_page.click_product_and_wait_new_page(product)
+            if module_title == "4.5 이상":
+                product_locator = product.locator("xpath=..")
+            else:
+                product_locator = product
+            new_page = search_page.click_product_and_wait_new_page(product_locator)
             
             # 명시적 페이지 전환 (상태 관리자 패턴)
             browser_session.switch_to(new_page)
@@ -388,7 +392,7 @@ def product_page_is_opened(browser_session, bdd_context):
         
         # 🔥 PDP PV 로그 수집을 위해 domcontentloaded 상태까지 대기
         try:
-            browser_session.page.wait_for_load_state("domcontentloaded", timeout=10000)
+            browser_session.page.wait_for_load_state("networkidle", timeout=10000)
             logger.debug("domcontentloaded 상태 대기 완료 (PDP PV 로그 수집 대기)")
         except Exception as e:
             logger.warning(f"domcontentloaded 대기 실패, load 상태로 대기: {e}")

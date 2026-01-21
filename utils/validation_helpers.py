@@ -434,7 +434,7 @@ def validate_event_type_logs(
         exclude_fields: 검증에서 제외할 필드 목록
     
     Returns:
-        (성공 여부, 에러 메시지 리스트, 통과한 필드와 값 딕셔너리)
+        (성공 여부, 에러 메시지 리스트, 통과한 필드와 기대값 딕셔너리)
     """
     errors = []
     all_passed_fields = {}  # 모든 로그에서 통과한 필드와 값 딕셔너리
