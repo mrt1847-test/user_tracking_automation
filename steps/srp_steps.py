@@ -246,11 +246,7 @@ def user_confirms_and_clicks_product_in_module(browser_session, module_title, bd
         
         # 상품 클릭
         try:
-            if module_title == "4.5 이상":
-                product_locator = product.locator("xpath=..")
-            else:
-                product_locator = product
-            new_page = search_page.click_product_and_wait_new_page(product_locator)
+            new_page = search_page.click_product_and_wait_new_page(product)
             
             # 명시적 페이지 전환 (상태 관리자 패턴)
             browser_session.switch_to(new_page)
@@ -297,7 +293,7 @@ def user_confirms_and_clicks_product_in_module_type2(browser_session, module_tit
         
         # 모듈 내 상품 찾기
         parent = search_page.get_module_parent(module, 3)
-        if module_title == "4.5 이상":
+        if module_title == "4.5 이상" or module_title == "MD's Pick":
             product = search_page.get_product_in_module_type3(parent)
         else:
             product = search_page.get_product_in_module_type2(parent)
@@ -320,7 +316,7 @@ def user_confirms_and_clicks_product_in_module_type2(browser_session, module_tit
         # 🔥 가격 정보는 이제 PDP PV 로그에서 추출하므로 프론트엔드에서 수집하지 않음
         # (PDP PV 로그는 상품 페이지 이동 후 수집됨)
         
-        # 상품 클릭
+        # 상품 클릭s
         try:
             new_page = search_page.click_product_and_wait_new_page(product)
             

@@ -497,9 +497,10 @@ def _save_tracking_logs(bdd_context, tracker, goodscode, module_title):
         
         all_logs.extend(tracker.get_pdp_pv_logs_by_goodscode(goodscode))
         if module_spm:
-            all_logs.extend(tracker.get_product_exposure_logs_by_goodscode(goodscode, module_spm))
+            product_exposure_logs = tracker.get_product_exposure_logs_by_goodscode(goodscode, module_spm)
         else:
-            all_logs.extend(tracker.get_product_exposure_logs_by_goodscode(goodscode))
+            product_exposure_logs = tracker.get_product_exposure_logs_by_goodscode(goodscode)
+        all_logs.extend(product_exposure_logs)
         all_logs.extend(tracker.get_product_click_logs_by_goodscode(goodscode))
         all_logs.extend(tracker.get_product_atc_click_logs_by_goodscode(goodscode))
         

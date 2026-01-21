@@ -4,7 +4,7 @@ from pages.search_page import SearchPage
 from pages.Etc import Etc
 import json
 from utils.NetworkTracker import NetworkTracker
-from utils.validation_helpers import validate_tracking_logs, EVENT_TYPE_METHODS, load_module_config
+from utils.validation_helpers import validate_tracking_logs, EVENT_TYPE_METHODS, load_module_config, _find_spm_recursive
 from config.validation_rules import SRP_VALIDATION_RULES
 import pytest
 import io
@@ -81,22 +81,31 @@ def test_01_srp_1(page):
     # 모듈 설정 로드
     module_config = load_module_config()
     module_title = "먼저 둘러보세요"
-    module_spm = None
+    event_spm_map = {}
     gmkt_area_code = None
     if module_title in module_config:
-        # common 섹션에서 spm 가져오기
-        common_config = module_config[module_title].get('common', {})
-        if common_config:
-            module_spm = common_config.get('spm')
+        module_config_data = module_config[module_title]
+        
+        # Module Exposure: module_exposure 섹션에서 SPM 재귀적으로 찾기
+        module_exposure = module_config_data.get('module_exposure', {})
+        if module_exposure:
+            event_spm_map['module_exposure'] = _find_spm_recursive(module_exposure)
+        
+        # Product Exposure: product_exposure 섹션에서 SPM 재귀적으로 찾기
+        product_exposure = module_config_data.get('product_exposure', {})
+        if product_exposure:
+            event_spm_map['product_exposure'] = _find_spm_recursive(product_exposure)
+        
         # product_exposure 섹션에서 gmkt_area_code 가져오기
-        product_exposure_config = module_config[module_title].get('product_exposure', {})
-        if product_exposure_config:
-            params_exp = product_exposure_config.get('params-exp', {})
+        if product_exposure:
+            params_exp = product_exposure.get('params-exp', {})
             if params_exp:
                 parsed = params_exp.get('parsed', {})
                 if parsed:
                     gmkt_area_code = parsed.get('gmkt_area_code')
-        logger.info(f"모듈 '{module_title}'의 SPM 값: {module_spm}")
+        
+        logger.info(f"모듈 '{module_title}'의 Module Exposure SPM 값: {event_spm_map.get('module_exposure')}")
+        logger.info(f"모듈 '{module_title}'의 Product Exposure SPM 값: {event_spm_map.get('product_exposure')}")
         logger.info(f"모듈 '{module_title}'의 gmkt_area_code 값: {gmkt_area_code}")
     
     # 정합성 검증 (간결하게)
@@ -132,19 +141,22 @@ def test_01_srp_1(page):
             if method_name in ['get_pv_logs', 'get_pdp_pv_logs']:
                 logs = get_logs_method()  # PV, PDP PV
             elif method_name == 'get_module_exposure_logs_by_spm':
-                # Module Exposure는 spm으로 필터링
-                if module_spm:
-                    logs = get_logs_method(module_spm)
+                # Module Exposure는 해당 섹션에서 찾은 spm으로 필터링
+                event_spm = event_spm_map.get('module_exposure')
+                if event_spm:
+                    logs = get_logs_method(event_spm)
                 else:
                     # spm이 없으면 전체 Module Exposure 로그 사용
                     logs = tracker.get_logs('Module Exposure')
-                    logger.warning(f"모듈 '{module_title}'의 SPM 값이 없어 전체 Module Exposure 로그를 사용합니다.")
+                    logger.warning(f"모듈 '{module_title}'의 Module Exposure SPM 값이 없어 전체 Module Exposure 로그를 사용합니다.")
             elif method_name == 'get_product_exposure_logs_by_goodscode':
-                # Product Exposure는 spm으로 추가 필터링
-                if module_spm:
-                    logs = get_logs_method(goodscode, module_spm)
+                # Product Exposure는 product_exposure 섹션에서 찾은 spm으로 필터링 (재귀적으로 찾은 값 사용)
+                event_spm = event_spm_map.get('product_exposure')
+                if event_spm:
+                    logs = get_logs_method(goodscode, event_spm)
                 else:
                     logs = get_logs_method(goodscode)
+                    logger.warning(f"모듈 '{module_title}'의 Product Exposure SPM 값이 없어 goodscode로만 필터링합니다.")
             elif method_name == 'get_product_click_logs_by_goodscode':
                 # Product Click은 goodscode로만 필터링
                 logs = get_logs_method(goodscode)
@@ -160,7 +172,7 @@ def test_01_srp_1(page):
                 logger.info(f"{event_type} 로그 저장 완료: {filepath.resolve()} (로그 개수: {len(logs)})")
             else:
                 logger.warning(f"{event_type} 로그가 없어 빈 파일로 저장했습니다: {filepath.resolve()}")
-                if event_type == 'module_exposure' and module_spm:
+                if event_type == 'module_exposure' and event_spm_map.get('module_exposure'):
                     # Module Exposure 로그가 없을 때 디버깅 정보 출력
                     all_module_logs = tracker.get_logs('Module Exposure')
                     logger.warning(f"전체 Module Exposure 로그 개수: {len(all_module_logs)}")
@@ -169,10 +181,10 @@ def test_01_srp_1(page):
                         for idx, log in enumerate(all_module_logs[:5]):  # 최대 5개만 출력
                             log_spm = tracker._extract_spm_from_log(log)
                             logger.warning(f"Module Exposure 로그 #{idx+1}의 spm: {log_spm}")
-                        logger.warning(f"필터링하려는 spm: {module_spm}")
+                        logger.warning(f"필터링하려는 spm: {event_spm_map.get('module_exposure')}")
                         
                         # 필터링 테스트
-                        filtered_test = tracker.get_module_exposure_logs_by_spm(module_spm)
+                        filtered_test = tracker.get_module_exposure_logs_by_spm(event_spm_map.get('module_exposure'))
                         logger.warning(f"필터링 후 Module Exposure 로그 개수: {len(filtered_test)}")
                     else:
                         logger.warning(f"전체 Module Exposure 로그가 없습니다.")
@@ -183,23 +195,29 @@ def test_01_srp_1(page):
         # PV는 goodscode와 무관하므로 전체 로그를 가져옴
         all_logs.extend(tracker.get_pv_logs())
         
-        # Module Exposure는 spm 값으로 필터링 (모듈별 config에서 가져온 spm 사용)
-        if module_spm:
-            module_exposure_logs = tracker.get_module_exposure_logs_by_spm(module_spm)
+        # Module Exposure는 해당 섹션에서 찾은 SPM으로 필터링
+        module_exposure_spm = event_spm_map.get('module_exposure')
+        if module_exposure_spm:
+            module_exposure_logs = tracker.get_module_exposure_logs_by_spm(module_exposure_spm)
             all_logs.extend(module_exposure_logs)
-            logger.info(f"SPM '{module_spm}'로 필터링된 Module Exposure 로그: {len(module_exposure_logs)}개")
+            logger.info(f"SPM '{module_exposure_spm}'로 필터링된 Module Exposure 로그: {len(module_exposure_logs)}개")
         else:
             # spm이 없으면 전체 Module Exposure 로그 사용
             all_logs.extend(tracker.get_logs('Module Exposure'))
-            logger.warning(f"모듈 '{module_title}'의 SPM 값이 없어 전체 Module Exposure 로그를 사용합니다.")
+            logger.warning(f"모듈 '{module_title}'의 Module Exposure SPM 값이 없어 전체 Module Exposure 로그를 사용합니다.")
         
         # PDP PV, Product 관련 이벤트는 goodscode로 필터링
         all_logs.extend(tracker.get_pdp_pv_logs_by_goodscode(goodscode))
-        # Product Exposure는 spm으로 추가 필터링
-        if module_spm:
-            all_logs.extend(tracker.get_product_exposure_logs_by_goodscode(goodscode, module_spm))
+        
+        # Product Exposure는 product_exposure 섹션에서 찾은 SPM으로 필터링 (재귀적으로 찾은 값)
+        product_exposure_spm = event_spm_map.get('product_exposure')
+        if product_exposure_spm:
+            product_exposure_logs = tracker.get_product_exposure_logs_by_goodscode(goodscode, product_exposure_spm)
+            logger.info(f"SPM '{product_exposure_spm}'로 필터링된 Product Exposure 로그: {len(product_exposure_logs)}개")
         else:
-            all_logs.extend(tracker.get_product_exposure_logs_by_goodscode(goodscode))
+            product_exposure_logs = tracker.get_product_exposure_logs_by_goodscode(goodscode)
+            logger.warning(f"모듈 '{module_title}'의 Product Exposure SPM 값이 없어 goodscode로만 필터링합니다.")
+        all_logs.extend(product_exposure_logs)
         # Product Click은 goodscode로만 필터링
         all_logs.extend(tracker.get_product_click_logs_by_goodscode(goodscode))
         all_logs.extend(tracker.get_product_atc_click_logs_by_goodscode(goodscode))

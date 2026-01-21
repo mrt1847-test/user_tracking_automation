@@ -1,0 +1,392 @@
+"""
+구글 시트 연동 유틸리티
+JSON 파일과 구글 시트 간 양방향 동기화 기능 제공
+"""
+import json
+import os
+from pathlib import Path
+from typing import Dict, List, Optional, Any, Tuple
+import gspread
+from google.oauth2.service_account import Credentials
+from google.oauth2.credentials import Credentials as OAuthCredentials
+from gspread.http_client import HTTPClient
+import requests
+import logging
+import urllib3
+
+# SSL 경고 비활성화 (회사 프록시/방화벽 환경에서 자체 서명 인증서 사용 시)
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+logger = logging.getLogger(__name__)
+
+# 이벤트 타입 매핑: tracking_all JSON의 type → config JSON의 섹션 키
+TRACKING_TYPE_TO_CONFIG_KEY = {
+    'PV': 'pv',
+    'PDP PV': 'pdp_pv',
+    'Module Exposure': 'module_exposure',
+    'Product Exposure': 'product_exposure',
+    'Product Click': 'product_click',
+    'Product ATC Click': 'product_atc_click',
+}
+
+# 역매핑: config JSON의 섹션 키 → tracking_all JSON의 type
+CONFIG_KEY_TO_TRACKING_TYPE = {v: k for k, v in TRACKING_TYPE_TO_CONFIG_KEY.items()}
+
+
+class GoogleSheetsSync:
+    """구글 시트 연동 클래스"""
+    
+    def __init__(self, spreadsheet_id: str, credentials_path: Optional[str] = None):
+        """
+        구글 시트 동기화 클래스 초기화
+        
+        Args:
+            spreadsheet_id: 구글 시트 ID
+            credentials_path: 서비스 계정 JSON 파일 경로 (None이면 환경변수에서 찾음)
+        """
+        self.spreadsheet_id = spreadsheet_id
+        self.client = self._authenticate(credentials_path)
+        self.spreadsheet = self.client.open_by_key(spreadsheet_id)
+    
+    def _authenticate(self, credentials_path: Optional[str] = None) -> gspread.Client:
+        """
+        구글 시트 API 인증
+        
+        Args:
+            credentials_path: 서비스 계정 JSON 파일 경로
+            
+        Returns:
+            gspread.Client 인스턴스
+        """
+        if credentials_path:
+            creds = Credentials.from_service_account_file(
+                credentials_path,
+                scopes=['https://www.googleapis.com/auth/spreadsheets']
+            )
+        else:
+            # 환경변수에서 경로 찾기
+            env_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+            if env_path and Path(env_path).exists():
+                creds = Credentials.from_service_account_file(
+                    env_path,
+                    scopes=['https://www.googleapis.com/auth/spreadsheets']
+                )
+            else:
+                raise ValueError(
+                    "인증 정보를 찾을 수 없습니다. "
+                    "credentials_path를 제공하거나 GOOGLE_APPLICATION_CREDENTIALS 환경변수를 설정하세요."
+                )
+        
+        # gspread 클라이언트 생성
+        client = gspread.authorize(creds)
+        
+        # SSL 검증 비활성화 (회사 프록시/방화벽 환경 대응)
+        client.http_client.session.verify = False
+        
+        return client
+    
+    def get_or_create_worksheet(self, worksheet_name: str) -> gspread.Worksheet:
+        """
+        워크시트 가져오기 또는 생성
+        
+        Args:
+            worksheet_name: 워크시트 이름
+            
+        Returns:
+            gspread.Worksheet 인스턴스
+        """
+        try:
+            return self.spreadsheet.worksheet(worksheet_name)
+        except gspread.exceptions.WorksheetNotFound:
+            logger.info(f"워크시트 '{worksheet_name}'를 생성합니다.")
+            return self.spreadsheet.add_worksheet(title=worksheet_name, rows=1000, cols=10)
+    
+    def write_event_type_table(self, worksheet: gspread.Worksheet, 
+                               event_type: str, data: List[Dict[str, str]], 
+                               start_row: int = 1) -> int:
+        """
+        이벤트 타입별 테이블을 시트에 작성
+        
+        Args:
+            worksheet: 워크시트 객체
+            event_type: 이벤트 타입 (예: "Module Exposure")
+            data: 평면화된 데이터 리스트 (각 항목은 {"path": "...", "field": "...", "value": "..."})
+            start_row: 시작 행 번호 (1-based)
+            
+        Returns:
+            다음 시작 행 번호
+        """
+        if not data:
+            return start_row
+        
+        # 헤더 작성
+        worksheet.update(f'A{start_row}:C{start_row}', [[f'[{event_type}]', '', '']], value_input_option='RAW')
+        start_row += 1
+        
+        # 컬럼 헤더
+        worksheet.update(f'A{start_row}:C{start_row}', [['경로', '필드명', '값']], value_input_option='RAW')
+        start_row += 1
+        
+        # 데이터 행 작성
+        rows = [[item.get('path', ''), item.get('field', ''), item.get('value', '')] for item in data]
+        if rows:
+            worksheet.update(f'A{start_row}:C{start_row + len(rows) - 1}', rows, value_input_option='RAW')
+            start_row += len(rows)
+        
+        # 빈 행 추가
+        start_row += 1
+        
+        return start_row
+    
+    def read_event_type_table(self, worksheet: gspread.Worksheet, 
+                             event_type: str, start_row: int = 1) -> Tuple[List[Dict[str, str]], int]:
+        """
+        시트에서 이벤트 타입별 테이블 읽기
+        
+        Args:
+            worksheet: 워크시트 객체
+            event_type: 이벤트 타입 (예: "Module Exposure")
+            start_row: 시작 검색 행 번호 (1-based)
+            
+        Returns:
+            (데이터 리스트, 다음 시작 행 번호)
+        """
+        data = []
+        current_row = start_row
+        
+        # 이벤트 타입 헤더 찾기
+        all_values = worksheet.get_all_values()
+        header_found = False
+        
+        for i, row in enumerate(all_values[start_row - 1:], start=start_row):
+            if row and row[0] and f'[{event_type}]' in row[0]:
+                header_found = True
+                current_row = i + 1
+                break
+        
+        if not header_found:
+            return [], current_row
+        
+        # 컬럼 헤더 스킵
+        if current_row <= len(all_values):
+            current_row += 1
+        
+        # 데이터 행 읽기
+        for i, row in enumerate(all_values[current_row - 1:], start=current_row):
+            # 빈 행 확인 (3개 컬럼 모두 비어있거나 경로가 없으면)
+            if not row or len(row) == 0 or (len(row) >= 1 and row[0].strip() == ''):
+                # 빈 행 발견 시 종료
+                return data, i + 1
+            
+            # 다음 이벤트 타입 헤더인지 확인
+            if row[0] and row[0].startswith('[') and row[0].endswith(']'):
+                return data, i
+            
+            # 경로가 있으면 데이터로 추가 (필드명과 값은 선택적)
+            if row[0] and row[0].strip():  # 경로가 있는 경우만
+                path = row[0].strip()
+                field = row[1].strip() if len(row) > 1 else ''
+                value = row[2].strip() if len(row) > 2 else ''
+                data.append({'path': path, 'field': field, 'value': value})
+        
+        return data, current_row + len(data) + 1
+
+
+def flatten_json(obj: Any, parent_path: str = '', exclude_keys: Optional[List[str]] = None) -> List[Dict[str, str]]:
+    """
+    중첩된 JSON 객체를 평면화하여 시트 행 데이터로 변환
+    
+    Args:
+        obj: 변환할 JSON 객체
+        parent_path: 부모 경로 (재귀 호출 시 사용)
+        exclude_keys: 제외할 키 목록
+        
+    Returns:
+        평면화된 데이터 리스트 [{"path": "...", "field": "...", "value": "..."}]
+    """
+    if exclude_keys is None:
+        exclude_keys = []
+    
+    result = []
+    
+    if isinstance(obj, dict):
+        for key, value in obj.items():
+            if key in exclude_keys:
+                continue
+            
+            current_path = f"{parent_path}.{key}" if parent_path else key
+            current_field = key  # 필드명은 경로의 마지막 부분
+            
+            if isinstance(value, (dict, list)):
+                result.extend(flatten_json(value, current_path, exclude_keys))
+            else:
+                # 리프 노드: 값 저장
+                result.append({
+                    'path': current_path,
+                    'field': current_field,
+                    'value': _serialize_value(value)
+                })
+    
+    elif isinstance(obj, list):
+        # 배열 처리
+        if len(obj) == 0:
+            field_name = parent_path.split('.')[-1] if parent_path else ''
+            result.append({
+                'path': parent_path,
+                'field': field_name,
+                'value': '[]'
+            })
+        elif len(obj) == 1 and not isinstance(obj[0], (dict, list)):
+            # 단일 요소 배열: 배열 제거하고 값만 저장
+            field_name = parent_path.split('.')[-1] if parent_path else ''
+            result.append({
+                'path': parent_path,
+                'field': field_name,
+                'value': _serialize_value(obj[0])
+            })
+        else:
+            # 다중 요소 배열 또는 중첩 배열: JSON 문자열로 저장
+            field_name = parent_path.split('.')[-1] if parent_path else ''
+            result.append({
+                'path': parent_path,
+                'field': field_name,
+                'value': json.dumps(obj, ensure_ascii=False)
+            })
+    
+    else:
+        # 기본 타입
+        field_name = parent_path.split('.')[-1] if parent_path else ''
+        result.append({
+            'path': parent_path,
+            'field': field_name,
+            'value': _serialize_value(obj)
+        })
+    
+    return result
+
+
+def _serialize_value(value: Any) -> str:
+    """값을 문자열로 직렬화"""
+    if value is None:
+        return ''
+    elif isinstance(value, bool):
+        return 'true' if value else 'false'
+    elif isinstance(value, (int, float)):
+        return str(value)
+    elif isinstance(value, str):
+        return value
+    else:
+        return json.dumps(value, ensure_ascii=False)
+
+
+def unflatten_json(rows: List[Dict[str, str]]) -> Dict[str, Any]:
+    """
+    평면화된 행 데이터를 중첩된 JSON 객체로 재구성
+    
+    Args:
+        rows: 평면화된 데이터 리스트 [{"path": "...", "field": "...", "value": "..."}]
+        
+    Returns:
+        중첩된 JSON 딕셔너리
+    """
+    result = {}
+    
+    for row in rows:
+        path = row.get('path', '')
+        value = row.get('value', '')
+        
+        if not path:
+            continue
+        
+        # 경로를 키 리스트로 분할
+        keys = path.split('.')
+        
+        # 중첩 구조 생성
+        current = result
+        for i, key in enumerate(keys[:-1]):
+            if key not in current:
+                current[key] = {}
+            elif not isinstance(current[key], dict):
+                # 이미 다른 타입의 값이 있으면 무시
+                break
+            current = current[key]
+        
+        # 마지막 키에 값 할당
+        final_key = keys[-1]
+        current[final_key] = _deserialize_value(value)
+    
+    return result
+
+
+def _deserialize_value(value: str) -> Any:
+    """문자열 값을 적절한 타입으로 역직렬화"""
+    if value == '':
+        return None
+    
+    # JSON 배열/객체인지 확인
+    if value.startswith('[') or value.startswith('{'):
+        try:
+            return json.loads(value)
+        except json.JSONDecodeError:
+            pass
+    
+    # 불리언 확인
+    if value.lower() == 'true':
+        return True
+    if value.lower() == 'false':
+        return False
+    
+    # 숫자 확인
+    try:
+        if '.' in value:
+            return float(value)
+        else:
+            return int(value)
+    except ValueError:
+        pass
+    
+    # 문자열 그대로 반환
+    return value
+
+
+def group_by_event_type(tracking_data: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
+    """
+    tracking_all JSON 데이터를 이벤트 타입별로 그룹화
+    
+    Args:
+        tracking_data: tracking_all JSON 파일의 배열 데이터
+        
+    Returns:
+        이벤트 타입별로 그룹화된 딕셔너리
+    """
+    grouped = {}
+    
+    for item in tracking_data:
+        event_type = item.get('type', 'Unknown')
+        if event_type not in grouped:
+            grouped[event_type] = []
+        grouped[event_type].append(item)
+    
+    return grouped
+
+
+def extract_payload_for_config(event_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    tracking_all JSON의 이벤트 데이터에서 config JSON에 사용할 payload 추출
+    
+    Args:
+        event_data: tracking_all JSON의 단일 이벤트 항목
+        
+    Returns:
+        config JSON 형식의 payload 구조
+    """
+    payload = event_data.get('payload', {})
+    
+    # decoded_gokey가 있으면 params 구조 추출
+    if 'decoded_gokey' in payload and isinstance(payload['decoded_gokey'], dict):
+        decoded = payload['decoded_gokey']
+        if 'params' in decoded:
+            # params를 최상위로 병합하는 방식이 아니라 구조 유지
+            pass
+    
+    return payload

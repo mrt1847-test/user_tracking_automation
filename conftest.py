@@ -14,7 +14,7 @@ pytest_plugins = [
 
 import shutil
 import re
-from src.gtas_python_core_v2.gtas_python_core_vault_v2 import Vault
+# from src.gtas_python_core_v2.gtas_python_core_vault_v2 import Vault
 from playwright.sync_api import sync_playwright, Browser, BrowserContext, Page
 import os
 import pytest
@@ -431,607 +431,607 @@ def _capture_screenshot(case_id_num, request=None, step_func_args=None):
 from utils.frontend_helpers import capture_frontend_failure_screenshot
 
 
-def _collect_step_logs():
-    """
-    현재 스텝의 로그 수집
+# def _collect_step_logs():
+#     """
+#     현재 스텝의 로그 수집
     
-    Returns:
-        로그 문자열 또는 None
-    """
-    try:
-        logs = test_log_handler.get_logs()
-        if logs and logs.strip():
-            return logs
-    except Exception as e:
-        logger.warning(f"로그 수집 실패: {e}")
+#     Returns:
+#         로그 문자열 또는 None
+#     """
+#     try:
+#         logs = test_log_handler.get_logs()
+#         if logs and logs.strip():
+#             return logs
+#     except Exception as e:
+#         logger.warning(f"로그 수집 실패: {e}")
     
-    return None
+#     return None
 
 
-def _attach_screenshot_to_testrail(result_id, screenshot_path):
-    """
-    TestRail 결과에 스크린샷 첨부
+# def _attach_screenshot_to_testrail(result_id, screenshot_path):
+#     """
+#     TestRail 결과에 스크린샷 첨부
     
-    Args:
-        result_id: TestRail 결과 ID
-        screenshot_path: 스크린샷 파일 경로
-    """
-    if not screenshot_path or not result_id:
-        return
+#     Args:
+#         result_id: TestRail 결과 ID
+#         screenshot_path: 스크린샷 파일 경로
+#     """
+#     if not screenshot_path or not result_id:
+#         return
     
-    try:
-        with open(screenshot_path, "rb") as f:
-            testrail_post(
-                f"add_attachment_to_result/{result_id}",
-                files={"attachment": f},
-            )
-        print(f"[TestRail] 스크린샷 첨부 완료: {screenshot_path}")
-    except Exception as e:
-        logger.warning(f"TestRail 스크린샷 업로드 실패: {e}")
+#     try:
+#         with open(screenshot_path, "rb") as f:
+#             testrail_post(
+#                 f"add_attachment_to_result/{result_id}",
+#                 files={"attachment": f},
+#             )
+#         print(f"[TestRail] 스크린샷 첨부 완료: {screenshot_path}")
+#     except Exception as e:
+#         logger.warning(f"TestRail 스크린샷 업로드 실패: {e}")
 
 
-@pytest.hookimpl(hookwrapper=True)
-def pytest_bdd_before_step(request, feature, scenario, step, step_func):
-    """
-    각 스텝 실행 전 로그 핸들러 초기화
-    스텝별로 로그가 누적되지 않도록 각 스텝 시작 전에 초기화
-    """
-    test_log_handler.clear()
-    outcome = yield
+# @pytest.hookimpl(hookwrapper=True)
+# def pytest_bdd_before_step(request, feature, scenario, step, step_func):
+#     """
+#     각 스텝 실행 전 로그 핸들러 초기화
+#     스텝별로 로그가 누적되지 않도록 각 스텝 시작 전에 초기화
+#     """
+#     test_log_handler.clear()
+#     outcome = yield
 
 
-@pytest.hookimpl(hookwrapper=True)
-def pytest_bdd_after_step(request, feature, scenario, step, step_func, step_func_args):
-    """
-    각 스텝 실행 후 TestRail에 기록
-    스텝 파라미터에서 TC 번호를 추출하여 TestRail에 기록
-    로그와 스크린샷 첨부 기능 포함
-    """
-    outcome = yield
+# @pytest.hookimpl(hookwrapper=True)
+# def pytest_bdd_after_step(request, feature, scenario, step, step_func, step_func_args):
+#     """
+#     각 스텝 실행 후 TestRail에 기록
+#     스텝 파라미터에서 TC 번호를 추출하여 TestRail에 기록
+#     로그와 스크린샷 첨부 기능 포함
+#     """
+#     outcome = yield
     
-    # 훅 시작 로그 (예외 발생 전에도 출력되도록 try 밖에)
-    logger.debug(f"===== pytest_bdd_after_step 시작: 스텝='{step.name}' =====")
+#     # 훅 시작 로그 (예외 발생 전에도 출력되도록 try 밖에)
+#     logger.debug(f"===== pytest_bdd_after_step 시작: 스텝='{step.name}' =====")
     
-    try:
-        # 디버깅: testrail_run_id 확인
-        logger.debug(f"pytest_bdd_after_step 실행: 스텝='{step.name}', testrail_run_id={testrail_run_id}")
+#     try:
+#         # 디버깅: testrail_run_id 확인
+#         logger.debug(f"pytest_bdd_after_step 실행: 스텝='{step.name}', testrail_run_id={testrail_run_id}")
         
-        # 스텝 실행 결과 확인
-        if outcome.excinfo is not None:
-            step_status = "failed"
-            error_msg = str(outcome.excinfo[1]) if outcome.excinfo[1] else "Unknown error"
-            logger.debug(f"스텝 실행 중 예외 발생: {error_msg}")
-        else:
-            # Soft Assertion 지원: bdd_context에서 실패 여부 확인
-            step_status = "passed"
-            error_msg = None
+#         # 스텝 실행 결과 확인
+#         if outcome.excinfo is not None:
+#             step_status = "failed"
+#             error_msg = str(outcome.excinfo[1]) if outcome.excinfo[1] else "Unknown error"
+#             logger.debug(f"스텝 실행 중 예외 발생: {error_msg}")
+#         else:
+#             # Soft Assertion 지원: bdd_context에서 실패 여부 확인
+#             step_status = "passed"
+#             error_msg = None
             
-            if step_func_args:
-                bdd_context = step_func_args.get('bdd_context')
-                if bdd_context and hasattr(bdd_context, 'get'):
-                    # 검증 스텝인지 확인 (스텝 이름에 "정합성 검증" 포함)
-                    is_validation_step = "정합성 검증" in step.name
+#             if step_func_args:
+#                 bdd_context = step_func_args.get('bdd_context')
+#                 if bdd_context and hasattr(bdd_context, 'get'):
+#                     # 검증 스텝인지 확인 (스텝 이름에 "정합성 검증" 포함)
+#                     is_validation_step = "정합성 검증" in step.name
                     
-                    if is_validation_step:
-                        # 검증 스텝: validation_failed만 확인 (프론트 실패 정보는 이미 error_message에 포함됨)
-                        validation_failed = bdd_context.get('validation_failed', False)
-                        if validation_failed:
-                            step_status = "failed"
-                            validation_error = bdd_context.get('validation_error_message', '검증 실패')
-                            # outcome.excinfo가 있으면 그것을 우선, 없으면 validation_error 사용
-                            if error_msg is None or not error_msg:
-                                error_msg = validation_error
-                            logger.debug(f"검증 스텝 실패 감지: validation_failed={validation_failed}, error_msg={error_msg}")
-                    else:
-                        # 프론트 동작 스텝: frontend_action_failed 확인
-                        if bdd_context.get('frontend_action_failed'):
-                            step_status = "failed"
-                            if error_msg is None:
-                                error_msg = bdd_context.get('frontend_error_message', '프론트 동작 실패')
+#                     if is_validation_step:
+#                         # 검증 스텝: validation_failed만 확인 (프론트 실패 정보는 이미 error_message에 포함됨)
+#                         validation_failed = bdd_context.get('validation_failed', False)
+#                         if validation_failed:
+#                             step_status = "failed"
+#                             validation_error = bdd_context.get('validation_error_message', '검증 실패')
+#                             # outcome.excinfo가 있으면 그것을 우선, 없으면 validation_error 사용
+#                             if error_msg is None or not error_msg:
+#                                 error_msg = validation_error
+#                             logger.debug(f"검증 스텝 실패 감지: validation_failed={validation_failed}, error_msg={error_msg}")
+#                     else:
+#                         # 프론트 동작 스텝: frontend_action_failed 확인
+#                         if bdd_context.get('frontend_action_failed'):
+#                             step_status = "failed"
+#                             if error_msg is None:
+#                                 error_msg = bdd_context.get('frontend_error_message', '프론트 동작 실패')
         
-        # TC 번호 추출 시도
-        step_case_id = None
+#         # TC 번호 추출 시도
+#         step_case_id = None
         
-        # 디버깅: step_func_args 내용 확인
-        if step_func_args:
-            logger.debug(f"step_func_args 키: {list(step_func_args.keys())}")
-            # TC 번호 후보 값들 확인 (모든 값 출력)
-            for arg_name, arg_value in step_func_args.items():
-                if arg_name != 'bdd_context':  # bdd_context는 너무 클 수 있으므로 제외
-                    logger.debug(f"step_func_args[{arg_name}] = {arg_value} (타입: {type(arg_value).__name__})")
+#         # 디버깅: step_func_args 내용 확인
+#         if step_func_args:
+#             logger.debug(f"step_func_args 키: {list(step_func_args.keys())}")
+#             # TC 번호 후보 값들 확인 (모든 값 출력)
+#             for arg_name, arg_value in step_func_args.items():
+#                 if arg_name != 'bdd_context':  # bdd_context는 너무 클 수 있으므로 제외
+#                     logger.debug(f"step_func_args[{arg_name}] = {arg_value} (타입: {type(arg_value).__name__})")
         
-        # 1. step_func_args에서 TC 번호 파라미터 찾기 (tc_id, tc_module_exposure, tc_product_exposure 등)
-        if step_func_args:
-            for arg_name, arg_value in step_func_args.items():
-                # TC 번호 형식 확인 (C로 시작하는 문자열)
-                if isinstance(arg_value, str):
-                    arg_value_stripped = arg_value.strip()
-                    # C로 시작하고 뒤에 숫자가 오는 경우
-                    if arg_value_stripped.startswith("C") and len(arg_value_stripped) > 1:
-                        try:
-                            # C 뒤의 부분이 숫자인지 확인
-                            if arg_value_stripped[1:].isdigit():
-                                step_case_id = arg_value_stripped
-                                logger.debug(f"step_func_args에서 TC 번호 발견: {arg_name}={step_case_id} (스텝: {step.name})")
-                                break
-                        except (ValueError, IndexError):
-                            pass
-                    # 디버깅: 검증 스텝인데 TC 번호가 없는 경우
-                    elif "정합성 검증" in step.name and arg_name == "tc_id":
-                        logger.warning(f"검증 스텝 '{step.name}'에서 tc_id 파라미터 값이 TC 번호 형식이 아닙니다: '{arg_value_stripped}'")
+#         # 1. step_func_args에서 TC 번호 파라미터 찾기 (tc_id, tc_module_exposure, tc_product_exposure 등)
+#         if step_func_args:
+#             for arg_name, arg_value in step_func_args.items():
+#                 # TC 번호 형식 확인 (C로 시작하는 문자열)
+#                 if isinstance(arg_value, str):
+#                     arg_value_stripped = arg_value.strip()
+#                     # C로 시작하고 뒤에 숫자가 오는 경우
+#                     if arg_value_stripped.startswith("C") and len(arg_value_stripped) > 1:
+#                         try:
+#                             # C 뒤의 부분이 숫자인지 확인
+#                             if arg_value_stripped[1:].isdigit():
+#                                 step_case_id = arg_value_stripped
+#                                 logger.debug(f"step_func_args에서 TC 번호 발견: {arg_name}={step_case_id} (스텝: {step.name})")
+#                                 break
+#                         except (ValueError, IndexError):
+#                             pass
+#                     # 디버깅: 검증 스텝인데 TC 번호가 없는 경우
+#                     elif "정합성 검증" in step.name and arg_name == "tc_id":
+#                         logger.warning(f"검증 스텝 '{step.name}'에서 tc_id 파라미터 값이 TC 번호 형식이 아닙니다: '{arg_value_stripped}'")
         
-        # 2. step_func_args에서 bdd_context를 통해 TC 번호 찾기
-        if step_case_id is None and step_func_args:
-            bdd_context = step_func_args.get('bdd_context')
-            if bdd_context:
-                logger.debug(f"bdd_context 타입: {type(bdd_context).__name__}, hasattr('get'): {hasattr(bdd_context, 'get')}")
-                if hasattr(bdd_context, 'get'):
-                    step_case_id = bdd_context.get('testrail_tc_id')
-                    if step_case_id:
-                        logger.debug(f"bdd_context.get('testrail_tc_id')에서 TC 번호 발견: {step_case_id}")
-                elif hasattr(bdd_context, 'store'):
-                    step_case_id = bdd_context.store.get('testrail_tc_id')
-                    if step_case_id:
-                        logger.debug(f"bdd_context.store.get('testrail_tc_id')에서 TC 번호 발견: {step_case_id}")
+#         # 2. step_func_args에서 bdd_context를 통해 TC 번호 찾기
+#         if step_case_id is None and step_func_args:
+#             bdd_context = step_func_args.get('bdd_context')
+#             if bdd_context:
+#                 logger.debug(f"bdd_context 타입: {type(bdd_context).__name__}, hasattr('get'): {hasattr(bdd_context, 'get')}")
+#                 if hasattr(bdd_context, 'get'):
+#                     step_case_id = bdd_context.get('testrail_tc_id')
+#                     if step_case_id:
+#                         logger.debug(f"bdd_context.get('testrail_tc_id')에서 TC 번호 발견: {step_case_id}")
+#                 elif hasattr(bdd_context, 'store'):
+#                     step_case_id = bdd_context.store.get('testrail_tc_id')
+#                     if step_case_id:
+#                         logger.debug(f"bdd_context.store.get('testrail_tc_id')에서 TC 번호 발견: {step_case_id}")
                 
-                # 디버깅: bdd_context에 저장된 모든 testrail 관련 키 확인
-                if hasattr(bdd_context, 'get'):
-                    testrail_keys = [k for k in dir(bdd_context) if 'testrail' in k.lower() or 'tc' in k.lower()]
-                    if testrail_keys:
-                        logger.debug(f"bdd_context의 testrail 관련 키: {testrail_keys}")
-                        for key in ['testrail_tc_id', 'tc_id']:
-                            if hasattr(bdd_context, 'get'):
-                                value = bdd_context.get(key)
-                                if value:
-                                    logger.debug(f"bdd_context.get('{key}') = {value}")
+#                 # 디버깅: bdd_context에 저장된 모든 testrail 관련 키 확인
+#                 if hasattr(bdd_context, 'get'):
+#                     testrail_keys = [k for k in dir(bdd_context) if 'testrail' in k.lower() or 'tc' in k.lower()]
+#                     if testrail_keys:
+#                         logger.debug(f"bdd_context의 testrail 관련 키: {testrail_keys}")
+#                         for key in ['testrail_tc_id', 'tc_id']:
+#                             if hasattr(bdd_context, 'get'):
+#                                 value = bdd_context.get(key)
+#                                 if value:
+#                                     logger.debug(f"bdd_context.get('{key}') = {value}")
         
-        logger.debug(f"추출된 TC 번호: {step_case_id}, testrail_run_id: {testrail_run_id}, step_status: {step_status}")
+#         logger.debug(f"추출된 TC 번호: {step_case_id}, testrail_run_id: {testrail_run_id}, step_status: {step_status}")
         
-        # TestRail 기록 (testrail_run_id가 설정되어 있고 TC 번호가 있을 때만)
-        if step_case_id and testrail_run_id:
-            logger.debug(f"TestRail 기록 시작: case_id={step_case_id}, status={step_status}")
-            # Cxxxx → 숫자만 추출
-            case_id_num = int(step_case_id[1:]) if step_case_id.startswith("C") else int(step_case_id)
+#         # TestRail 기록 (testrail_run_id가 설정되어 있고 TC 번호가 있을 때만)
+#         if step_case_id and testrail_run_id:
+#             logger.debug(f"TestRail 기록 시작: case_id={step_case_id}, status={step_status}")
+#             # Cxxxx → 숫자만 추출
+#             case_id_num = int(step_case_id[1:]) if step_case_id.startswith("C") else int(step_case_id)
             
-            # skip_reason 확인
-            skip_reason = None
-            if step_func_args:
-                bdd_context = step_func_args.get('bdd_context')
-                if bdd_context:
-                    if hasattr(bdd_context, 'get'):
-                        skip_reason = bdd_context.get('skip_reason')
-                    elif hasattr(bdd_context, 'store'):
-                        skip_reason = bdd_context.store.get('skip_reason')
+#             # skip_reason 확인
+#             skip_reason = None
+#             if step_func_args:
+#                 bdd_context = step_func_args.get('bdd_context')
+#                 if bdd_context:
+#                     if hasattr(bdd_context, 'get'):
+#                         skip_reason = bdd_context.get('skip_reason')
+#                     elif hasattr(bdd_context, 'store'):
+#                         skip_reason = bdd_context.store.get('skip_reason')
             
-            # 상태 결정: skip_reason이 있으면 skip (4), 실패면 failed (5), 아니면 passed (1)
-            if skip_reason:
-                status_id = 4  # TestRail skip/retest 상태
-                step_status = "skipped"
-            elif step_status == "failed":
-                status_id = 5
-            else:
-                status_id = 1
+#             # 상태 결정: skip_reason이 있으면 skip (4), 실패면 failed (5), 아니면 passed (1)
+#             if skip_reason:
+#                 status_id = 4  # TestRail skip/retest 상태
+#                 step_status = "skipped"
+#             elif step_status == "failed":
+#                 status_id = 5
+#             else:
+#                 status_id = 1
             
-            comment = f"스텝: {step.name}\n"
-            if skip_reason:
-                comment += f"Skip: {skip_reason}\n"
-            if error_msg:
-                comment += f"오류: {error_msg}"
+#             comment = f"스텝: {step.name}\n"
+#             if skip_reason:
+#                 comment += f"Skip: {skip_reason}\n"
+#             if error_msg:
+#                 comment += f"오류: {error_msg}"
             
-            # 검증 스텝인 경우 통과한 필드 목록 추가
-            is_validation_step = "정합성 검증" in step.name
-            if step_func_args and is_validation_step:
-                bdd_context = step_func_args.get('bdd_context')
-                if bdd_context:
-                    passed_fields = None
-                    if hasattr(bdd_context, 'get'):
-                        passed_fields = bdd_context.get('validation_passed_fields')
-                    elif hasattr(bdd_context, 'store'):
-                        passed_fields = bdd_context.store.get('validation_passed_fields')
+#             # 검증 스텝인 경우 통과한 필드 목록 추가
+#             is_validation_step = "정합성 검증" in step.name
+#             if step_func_args and is_validation_step:
+#                 bdd_context = step_func_args.get('bdd_context')
+#                 if bdd_context:
+#                     passed_fields = None
+#                     if hasattr(bdd_context, 'get'):
+#                         passed_fields = bdd_context.get('validation_passed_fields')
+#                     elif hasattr(bdd_context, 'store'):
+#                         passed_fields = bdd_context.store.get('validation_passed_fields')
                     
-                    if passed_fields and isinstance(passed_fields, dict) and len(passed_fields) > 0:
-                        comment += f"\n\n[통과한 필드]\n"
-                        for field, value in passed_fields.items():
-                            comment += f"{field}: {value}\n"
+#                     if passed_fields and isinstance(passed_fields, dict) and len(passed_fields) > 0:
+#                         comment += f"\n\n[통과한 필드]\n"
+#                         for field, value in passed_fields.items():
+#                             comment += f"{field}: {value}\n"
             
-            # 로그 수집
-            log_content = _collect_step_logs()
-            if log_content:
-                comment += f"\n\n--- 실행 로그 ---\n{log_content}"
-            # 로그 수집 후 초기화 (다음 스텝과 로그 섞임 방지)
-            test_log_handler.clear()
+#             # 로그 수집
+#             log_content = _collect_step_logs()
+#             if log_content:
+#                 comment += f"\n\n--- 실행 로그 ---\n{log_content}"
+#             # 로그 수집 후 초기화 (다음 스텝과 로그 섞임 방지)
+#             test_log_handler.clear()
             
-            # 스크린샷 경로 확인 (프론트 실패 시점에 찍은 스크린샷 우선 사용)
-            screenshot_path = None
-            if step_status == "failed":
-                # 검증 스텝인지 확인
-                is_validation_step = "정합성 검증" in step.name
+#             # 스크린샷 경로 확인 (프론트 실패 시점에 찍은 스크린샷 우선 사용)
+#             screenshot_path = None
+#             if step_status == "failed":
+#                 # 검증 스텝인지 확인
+#                 is_validation_step = "정합성 검증" in step.name
                 
-                if is_validation_step:
-                    # 검증 스텝: 프론트 실패로 인한 로그 수집 실패인 경우 프론트 실패 스크린샷 사용
-                    if step_func_args:
-                        bdd_context = step_func_args.get('bdd_context')
-                        if bdd_context:
-                            # 프론트 실패가 있고 error_message에 "프론트 실패 사유"가 포함되어 있으면 스크린샷 사용
-                            if hasattr(bdd_context, 'get'):
-                                if bdd_context.get('frontend_action_failed') and error_msg and "[프론트 실패 사유]" in error_msg:
-                                    screenshot_path = bdd_context.get('frontend_failure_screenshot')
-                            elif hasattr(bdd_context, 'store'):
-                                if bdd_context.store.get('frontend_action_failed') and error_msg and "[프론트 실패 사유]" in error_msg:
-                                    screenshot_path = bdd_context.store.get('frontend_failure_screenshot')
+#                 if is_validation_step:
+#                     # 검증 스텝: 프론트 실패로 인한 로그 수집 실패인 경우 프론트 실패 스크린샷 사용
+#                     if step_func_args:
+#                         bdd_context = step_func_args.get('bdd_context')
+#                         if bdd_context:
+#                             # 프론트 실패가 있고 error_message에 "프론트 실패 사유"가 포함되어 있으면 스크린샷 사용
+#                             if hasattr(bdd_context, 'get'):
+#                                 if bdd_context.get('frontend_action_failed') and error_msg and "[프론트 실패 사유]" in error_msg:
+#                                     screenshot_path = bdd_context.get('frontend_failure_screenshot')
+#                             elif hasattr(bdd_context, 'store'):
+#                                 if bdd_context.store.get('frontend_action_failed') and error_msg and "[프론트 실패 사유]" in error_msg:
+#                                     screenshot_path = bdd_context.store.get('frontend_failure_screenshot')
                     
-                    # 스크린샷이 없으면 검증 실패 스크린샷 찍기
-                    if not screenshot_path:
-                        screenshot_path = _capture_screenshot(case_id_num, request, step_func_args)
-                else:
-                    # 프론트 동작 스텝: 프론트 실패 스크린샷 확인
-                    if step_func_args:
-                        bdd_context = step_func_args.get('bdd_context')
-                        if bdd_context:
-                            if hasattr(bdd_context, 'get'):
-                                screenshot_path = bdd_context.get('frontend_failure_screenshot')
-                            elif hasattr(bdd_context, 'store'):
-                                screenshot_path = bdd_context.store.get('frontend_failure_screenshot')
+#                     # 스크린샷이 없으면 검증 실패 스크린샷 찍기
+#                     if not screenshot_path:
+#                         screenshot_path = _capture_screenshot(case_id_num, request, step_func_args)
+#                 else:
+#                     # 프론트 동작 스텝: 프론트 실패 스크린샷 확인
+#                     if step_func_args:
+#                         bdd_context = step_func_args.get('bdd_context')
+#                         if bdd_context:
+#                             if hasattr(bdd_context, 'get'):
+#                                 screenshot_path = bdd_context.get('frontend_failure_screenshot')
+#                             elif hasattr(bdd_context, 'store'):
+#                                 screenshot_path = bdd_context.store.get('frontend_failure_screenshot')
                     
-                    # 저장된 스크린샷이 없으면 새로 찍기
-                    if not screenshot_path:
-                        screenshot_path = _capture_screenshot(case_id_num, request, step_func_args)
+#                     # 저장된 스크린샷이 없으면 새로 찍기
+#                     if not screenshot_path:
+#                         screenshot_path = _capture_screenshot(case_id_num, request, step_func_args)
             
-            payload = {
-                "status_id": status_id,
-                "comment": comment,
-            }
+#             payload = {
+#                 "status_id": status_id,
+#                 "comment": comment,
+#             }
             
-            result_id = None
-            try:
-                logger.debug(f"TestRail API 호출: add_result_for_case/{testrail_run_id}/{case_id_num}")
-                result_obj = testrail_post(
-                    f"add_result_for_case/{testrail_run_id}/{case_id_num}", 
-                    payload
-                )
-                result_id = result_obj.get("id")
-                print(f"[TestRail] 스텝 '{step.name}' 결과 기록 완료 (case_id: {step_case_id}, status: {step_status}, result_id: {result_id})")
-            except Exception as e:
-                logger.warning(f"스텝 TestRail 기록 실패: {e}")
-                import traceback
-                logger.debug(f"TestRail 기록 실패 상세:\n{traceback.format_exc()}")
+#             result_id = None
+#             try:
+#                 logger.debug(f"TestRail API 호출: add_result_for_case/{testrail_run_id}/{case_id_num}")
+#                 result_obj = testrail_post(
+#                     f"add_result_for_case/{testrail_run_id}/{case_id_num}", 
+#                     payload
+#                 )
+#                 result_id = result_obj.get("id")
+#                 print(f"[TestRail] 스텝 '{step.name}' 결과 기록 완료 (case_id: {step_case_id}, status: {step_status}, result_id: {result_id})")
+#             except Exception as e:
+#                 logger.warning(f"스텝 TestRail 기록 실패: {e}")
+#                 import traceback
+#                 logger.debug(f"TestRail 기록 실패 상세:\n{traceback.format_exc()}")
             
-            # 스크린샷 첨부
-            _attach_screenshot_to_testrail(result_id, screenshot_path)
+#             # 스크린샷 첨부
+#             _attach_screenshot_to_testrail(result_id, screenshot_path)
             
-        elif step_case_id:
-            # TC 번호는 있지만 testrail_run_id가 없는 경우 (TestRail 연동 미활성화)
-            logger.debug(f"TC 번호는 있지만 testrail_run_id가 None입니다. step_case_id={step_case_id}, testrail_run_id={testrail_run_id}")
-            print(f"[TestRail] 스텝 '{step.name}' TC 번호 발견: {step_case_id} (TestRail 연동 미활성화)")
-        elif not step_case_id:
-            # TC 번호가 없는 경우
-            logger.debug(f"TC 번호를 찾을 수 없습니다. step_func_args={step_func_args is not None}, step_status={step_status}")
+#         elif step_case_id:
+#             # TC 번호는 있지만 testrail_run_id가 없는 경우 (TestRail 연동 미활성화)
+#             logger.debug(f"TC 번호는 있지만 testrail_run_id가 None입니다. step_case_id={step_case_id}, testrail_run_id={testrail_run_id}")
+#             print(f"[TestRail] 스텝 '{step.name}' TC 번호 발견: {step_case_id} (TestRail 연동 미활성화)")
+#         elif not step_case_id:
+#             # TC 번호가 없는 경우
+#             logger.debug(f"TC 번호를 찾을 수 없습니다. step_func_args={step_func_args is not None}, step_status={step_status}")
         
-        # TC 번호가 없지만 실패한 프론트 동작 스텝인 경우 - 스크린샷만 저장 (참고용)
-        if step_status == "failed" and not step_case_id:
-            # 프론트 동작 실패인 경우 로그만 남기고 스크린샷 저장
-            print(f"[TestRail] 스텝 '{step.name}' 실패 (TC 번호 없음): {error_msg}")
-            # 프론트 실패 시점에 찍은 스크린샷 확인
-            screenshot_path = None
-            if step_func_args:
-                bdd_context = step_func_args.get('bdd_context')
-                if bdd_context:
-                    if hasattr(bdd_context, 'get'):
-                        screenshot_path = bdd_context.get('frontend_failure_screenshot')
-                    elif hasattr(bdd_context, 'store'):
-                        screenshot_path = bdd_context.store.get('frontend_failure_screenshot')
+#         # TC 번호가 없지만 실패한 프론트 동작 스텝인 경우 - 스크린샷만 저장 (참고용)
+#         if step_status == "failed" and not step_case_id:
+#             # 프론트 동작 실패인 경우 로그만 남기고 스크린샷 저장
+#             print(f"[TestRail] 스텝 '{step.name}' 실패 (TC 번호 없음): {error_msg}")
+#             # 프론트 실패 시점에 찍은 스크린샷 확인
+#             screenshot_path = None
+#             if step_func_args:
+#                 bdd_context = step_func_args.get('bdd_context')
+#                 if bdd_context:
+#                     if hasattr(bdd_context, 'get'):
+#                         screenshot_path = bdd_context.get('frontend_failure_screenshot')
+#                     elif hasattr(bdd_context, 'store'):
+#                         screenshot_path = bdd_context.store.get('frontend_failure_screenshot')
             
-            # 저장된 스크린샷이 없으면 새로 찍기
-            if not screenshot_path:
-                screenshot_path = _capture_screenshot(f"frontend_fail_{step.name.replace(' ', '_')}", request, step_func_args)
+#             # 저장된 스크린샷이 없으면 새로 찍기
+#             if not screenshot_path:
+#                 screenshot_path = _capture_screenshot(f"frontend_fail_{step.name.replace(' ', '_')}", request, step_func_args)
             
-            if screenshot_path:
-                logger.info(f"프론트 동작 실패 스크린샷 저장: {screenshot_path}")
+#             if screenshot_path:
+#                 logger.info(f"프론트 동작 실패 스크린샷 저장: {screenshot_path}")
         
-        logger.debug(f"===== pytest_bdd_after_step 종료 (정상) =====")
+#         logger.debug(f"===== pytest_bdd_after_step 종료 (정상) =====")
     
-    except Exception as e:
-        import traceback
-        logger.error(f"pytest_bdd_after_step 처리 중 예외 발생: {e}")
-        logger.error(f"예외 상세:\n{traceback.format_exc()}")
-        logger.debug(f"===== pytest_bdd_after_step 종료 (예외 발생) =====")
+#     except Exception as e:
+#         import traceback
+#         logger.error(f"pytest_bdd_after_step 처리 중 예외 발생: {e}")
+#         logger.error(f"예외 상세:\n{traceback.format_exc()}")
+#         logger.debug(f"===== pytest_bdd_after_step 종료 (예외 발생) =====")
 
 
-# JSON 파일이 들어 있는 폴더 지정
-JSON_DIR = Path(__file__).parent / "json"  # json 폴더 내의 JSON 파일 전부 대상
+# # JSON 파일이 들어 있는 폴더 지정
+# JSON_DIR = Path(__file__).parent / "json"  # json 폴더 내의 JSON 파일 전부 대상
 
 
-# Config 파일 로딩
-config = {}
-try:
-    with open('config.json', 'r', encoding='utf-8') as config_file:
-        config = json.load(config_file)
-except FileNotFoundError:
-    raise RuntimeError("config.json 파일을 찾을 수 없습니다.")
-except json.JSONDecodeError as e:
-    raise RuntimeError(f"config.json 파일의 JSON 형식이 잘못되었습니다: {e}")
+# # Config 파일 로딩
+# config = {}
+# try:
+#     with open('config.json', 'r', encoding='utf-8') as config_file:
+#         config = json.load(config_file)
+# except FileNotFoundError:
+#     raise RuntimeError("config.json 파일을 찾을 수 없습니다.")
+# except json.JSONDecodeError as e:
+#     raise RuntimeError(f"config.json 파일의 JSON 형식이 잘못되었습니다: {e}")
 
-# 환경변수 기반 설정
-try:
-    TESTRAIL_BASE_URL = config['tr_url']
-    TESTRAIL_PROJECT_ID = config['project_id']
-    TESTRAIL_SUITE_ID = config['suite_id']
-    TESTRAIL_SECTION_ID = config['section_id']
-    TESTRAIL_MILESTONE_ID = config['milestone_id']
-except KeyError as e:
-    raise RuntimeError(f"config.json에 필수 키 '{e}'가 없습니다.")
+# # 환경변수 기반 설정
+# try:
+#     TESTRAIL_BASE_URL = config['tr_url']
+#     TESTRAIL_PROJECT_ID = config['project_id']
+#     TESTRAIL_SUITE_ID = config['suite_id']
+#     TESTRAIL_SECTION_ID = config['section_id']
+#     TESTRAIL_MILESTONE_ID = config['milestone_id']
+# except KeyError as e:
+#     raise RuntimeError(f"config.json에 필수 키 '{e}'가 없습니다.")
 
-try:
-    if Vault is None:
-        raise RuntimeError("Vault 모듈을 import할 수 없습니다.")
-    vault_credentials = Vault("gmarket").get_Kv_credential("authentication/testrail/automation")
-    TESTRAIL_USER = vault_credentials.get("username")
-    TESTRAIL_TOKEN = vault_credentials.get("password")
-    if not TESTRAIL_USER or not TESTRAIL_TOKEN:
-        raise RuntimeError("TestRail 인증 정보(username 또는 password)가 없습니다.")
-except Exception as e:
-    raise RuntimeError(f"TestRail 인증 정보를 가져오는 중 오류 발생: {e}")
-testrail_run_id = None
-case_id_map = {}  # {섹션 이름: [케이스ID 리스트]}
-test_logs = {}  # {nodeid: 로그 문자열} - 테스트별 로그 저장
-current_test_nodeid = None  # 현재 실행 중인 테스트의 nodeid
-
-
-def testrail_get(endpoint):
-    url = f"{TESTRAIL_BASE_URL}/index.php?/api/v2/{endpoint}"
-    r = requests.get(url, auth=(TESTRAIL_USER, TESTRAIL_TOKEN))
-    r.raise_for_status()
-    return r.json()
+# try:
+#     if Vault is None:
+#         raise RuntimeError("Vault 모듈을 import할 수 없습니다.")
+#     vault_credentials = Vault("gmarket").get_Kv_credential("authentication/testrail/automation")
+#     TESTRAIL_USER = vault_credentials.get("username")
+#     TESTRAIL_TOKEN = vault_credentials.get("password")
+#     if not TESTRAIL_USER or not TESTRAIL_TOKEN:
+#         raise RuntimeError("TestRail 인증 정보(username 또는 password)가 없습니다.")
+# except Exception as e:
+#     raise RuntimeError(f"TestRail 인증 정보를 가져오는 중 오류 발생: {e}")
+# testrail_run_id = None
+# case_id_map = {}  # {섹션 이름: [케이스ID 리스트]}
+# test_logs = {}  # {nodeid: 로그 문자열} - 테스트별 로그 저장
+# current_test_nodeid = None  # 현재 실행 중인 테스트의 nodeid
 
 
-def testrail_post(endpoint, payload=None, files=None):
-    url = f"{TESTRAIL_BASE_URL}/index.php?/api/v2/{endpoint}"
-    if files:
-        r = requests.post(url, auth=(TESTRAIL_USER, TESTRAIL_TOKEN), files=files)
-    else:
-        r = requests.post(url, auth=(TESTRAIL_USER, TESTRAIL_TOKEN), json=payload)
-    r.raise_for_status()
-    return r.json()
+# def testrail_get(endpoint):
+#     url = f"{TESTRAIL_BASE_URL}/index.php?/api/v2/{endpoint}"
+#     r = requests.get(url, auth=(TESTRAIL_USER, TESTRAIL_TOKEN))
+#     r.raise_for_status()
+#     return r.json()
 
 
-from collections import defaultdict
+# def testrail_post(endpoint, payload=None, files=None):
+#     url = f"{TESTRAIL_BASE_URL}/index.php?/api/v2/{endpoint}"
+#     if files:
+#         r = requests.post(url, auth=(TESTRAIL_USER, TESTRAIL_TOKEN), files=files)
+#     else:
+#         r = requests.post(url, auth=(TESTRAIL_USER, TESTRAIL_TOKEN), json=payload)
+#     r.raise_for_status()
+#     return r.json()
 
-def get_all_subsection_ids(parent_section_id, all_sections):
-    """
-    사전 인덱싱(Indexing)을 통해 성능을 비약적으로 향상시킨 버전
-    """
-    # 1. 데이터를 정수형으로 미리 가공하고, 부모-자식 관계 맵을 생성 (O(N))
-    children_map = defaultdict(list)
+
+# from collections import defaultdict
+
+# def get_all_subsection_ids(parent_section_id, all_sections):
+#     """
+#     사전 인덱싱(Indexing)을 통해 성능을 비약적으로 향상시킨 버전
+#     """
+#     # 1. 데이터를 정수형으로 미리 가공하고, 부모-자식 관계 맵을 생성 (O(N))
+#     children_map = defaultdict(list)
     
-    # 입력 받은 parent_section_id도 미리 정수로 변환
-    try:
-        root_id = int(parent_section_id)
-    except (ValueError, TypeError):
-        return [parent_section_id]
+#     # 입력 받은 parent_section_id도 미리 정수로 변환
+#     try:
+#         root_id = int(parent_section_id)
+#     except (ValueError, TypeError):
+#         return [parent_section_id]
 
-    for section in all_sections:
-        try:
-            s_id = int(section["id"])
-            p_id = section.get("parent_id")
-            # 부모가 있는 경우에만 맵에 추가
-            if p_id is not None:
-                p_id = int(p_id)
-                children_map[p_id].append(s_id)
-        except (ValueError, TypeError):
-            continue
+#     for section in all_sections:
+#         try:
+#             s_id = int(section["id"])
+#             p_id = section.get("parent_id")
+#             # 부모가 있는 경우에만 맵에 추가
+#             if p_id is not None:
+#                 p_id = int(p_id)
+#                 children_map[p_id].append(s_id)
+#         except (ValueError, TypeError):
+#             continue
 
-    # 2. 재귀적으로 ID를 수집 (O(M), M은 하위 섹션의 개수)
-    result_ids = []
-    visited = set()
+#     # 2. 재귀적으로 ID를 수집 (O(M), M은 하위 섹션의 개수)
+#     result_ids = []
+#     visited = set()
 
-    def collect(current_id):
-        if current_id in visited:
-            return
-        visited.add(current_id)
-        result_ids.append(current_id)
+#     def collect(current_id):
+#         if current_id in visited:
+#             return
+#         visited.add(current_id)
+#         result_ids.append(current_id)
         
-        # 맵에서 자식들을 바로 찾아 순회 (전체 리스트를 훑지 않음)
-        for child_id in children_map.get(current_id, []):
-            collect(child_id)
+#         # 맵에서 자식들을 바로 찾아 순회 (전체 리스트를 훑지 않음)
+#         for child_id in children_map.get(current_id, []):
+#             collect(child_id)
 
-    collect(root_id)
-    return result_ids
+#     collect(root_id)
+#     return result_ids
 
 
-@pytest.hookimpl(tryfirst=True)
-def pytest_sessionstart(session):
-    """
-    테스트 실행 시작 시:
-    1. section_id 기반으로 해당 섹션과 모든 하위 섹션의 케이스 ID 가져오기
-    2. 그 케이스들로 Run 생성
-    """
-    global testrail_run_id, case_id_map
+# @pytest.hookimpl(tryfirst=True)
+# def pytest_sessionstart(session):
+#     """
+#     테스트 실행 시작 시:
+#     1. section_id 기반으로 해당 섹션과 모든 하위 섹션의 케이스 ID 가져오기
+#     2. 그 케이스들로 Run 생성
+#     """
+#     global testrail_run_id, case_id_map
     
-    logger.debug(f"pytest_sessionstart 실행 시작")
-    logger.debug(f"현재 testrail_run_id 값: {testrail_run_id}")
+#     logger.debug(f"pytest_sessionstart 실행 시작")
+#     logger.debug(f"현재 testrail_run_id 값: {testrail_run_id}")
     
-    if testrail_run_id is not None:
-        print(f"[TestRail] 이미 Run(ID={testrail_run_id})이 존재합니다. 새 Run 생성 생략")
-        return
+#     if testrail_run_id is not None:
+#         print(f"[TestRail] 이미 Run(ID={testrail_run_id})이 존재합니다. 새 Run 생성 생략")
+#         return
     
-    if not TESTRAIL_SECTION_ID:
-        logger.error(f"TESTRAIL_SECTION_ID가 정의되지 않았습니다.")
-        raise RuntimeError("[TestRail] TESTRAIL_SECTION_ID가 정의되지 않았습니다.")
+#     if not TESTRAIL_SECTION_ID:
+#         logger.error(f"TESTRAIL_SECTION_ID가 정의되지 않았습니다.")
+#         raise RuntimeError("[TestRail] TESTRAIL_SECTION_ID가 정의되지 않았습니다.")
     
-    # TESTRAIL_SECTION_ID를 정수로 변환
-    try:
-        section_id_int = int(TESTRAIL_SECTION_ID)
-    except (ValueError, TypeError):
-        raise RuntimeError(f"[TestRail] TESTRAIL_SECTION_ID '{TESTRAIL_SECTION_ID}'를 정수로 변환할 수 없습니다.")
+#     # TESTRAIL_SECTION_ID를 정수로 변환
+#     try:
+#         section_id_int = int(TESTRAIL_SECTION_ID)
+#     except (ValueError, TypeError):
+#         raise RuntimeError(f"[TestRail] TESTRAIL_SECTION_ID '{TESTRAIL_SECTION_ID}'를 정수로 변환할 수 없습니다.")
     
-    # 1. 모든 섹션 가져오기
-    print(f"[TestRail] 모든 섹션 가져오기 중...")
-    all_sections = testrail_get(
-        f"get_sections/{TESTRAIL_PROJECT_ID}&suite_id={TESTRAIL_SUITE_ID}"
-    )
+#     # 1. 모든 섹션 가져오기
+#     print(f"[TestRail] 모든 섹션 가져오기 중...")
+#     all_sections = testrail_get(
+#         f"get_sections/{TESTRAIL_PROJECT_ID}&suite_id={TESTRAIL_SUITE_ID}"
+#     )
     
-    # 디버깅: 섹션 구조 확인
-    print(f"[TestRail] 총 {len(all_sections)}개 섹션 발견")
-    print(f"[TestRail] 찾고자 하는 섹션 ID: {section_id_int} (타입: {type(section_id_int).__name__})")
+#     # 디버깅: 섹션 구조 확인
+#     print(f"[TestRail] 총 {len(all_sections)}개 섹션 발견")
+#     print(f"[TestRail] 찾고자 하는 섹션 ID: {section_id_int} (타입: {type(section_id_int).__name__})")
     
-    # 지정된 섹션이 존재하는지 확인
-    section_exists = any(s.get("id") == section_id_int for s in all_sections)
-    if not section_exists:
-        logger.warning(f"섹션 ID {section_id_int}가 존재하지 않습니다.")
-        logger.debug(f"사용 가능한 섹션 ID 샘플 (최대 10개):")
-        for s in all_sections[:10]:
-            print(f"  - ID: {s.get('id')}, Name: {s.get('name')}, Parent ID: {s.get('parent_id')}")
+#     # 지정된 섹션이 존재하는지 확인
+#     section_exists = any(s.get("id") == section_id_int for s in all_sections)
+#     if not section_exists:
+#         logger.warning(f"섹션 ID {section_id_int}가 존재하지 않습니다.")
+#         logger.debug(f"사용 가능한 섹션 ID 샘플 (최대 10개):")
+#         for s in all_sections[:10]:
+#             print(f"  - ID: {s.get('id')}, Name: {s.get('name')}, Parent ID: {s.get('parent_id')}")
     
-    # 2. 지정된 섹션과 모든 하위 섹션 ID 찾기 (중복 제거)
-    all_section_ids = get_all_subsection_ids(section_id_int, all_sections)
-    # 중복 제거 (혹시 모를 중복 방지)
-    all_section_ids = list(dict.fromkeys(all_section_ids))  # 순서 유지하면서 중복 제거
-    print(f"[TestRail] 섹션 ID {section_id_int}와 하위 섹션 {len(all_section_ids) - 1}개 발견 (중복 제거됨): {all_section_ids}")
+#     # 2. 지정된 섹션과 모든 하위 섹션 ID 찾기 (중복 제거)
+#     all_section_ids = get_all_subsection_ids(section_id_int, all_sections)
+#     # 중복 제거 (혹시 모를 중복 방지)
+#     all_section_ids = list(dict.fromkeys(all_section_ids))  # 순서 유지하면서 중복 제거
+#     print(f"[TestRail] 섹션 ID {section_id_int}와 하위 섹션 {len(all_section_ids) - 1}개 발견 (중복 제거됨): {all_section_ids}")
     
-    # 3. 각 섹션의 케이스 가져오기 (중복 섹션 ID는 건너뛰기)
-    all_case_ids = []
-    processed_sections = set()  # 이미 처리한 섹션 ID 추적
-    for section_id in all_section_ids:
-        # 이미 처리한 섹션이면 건너뛰기
-        if section_id in processed_sections:
-            continue
-        processed_sections.add(section_id)
+#     # 3. 각 섹션의 케이스 가져오기 (중복 섹션 ID는 건너뛰기)
+#     all_case_ids = []
+#     processed_sections = set()  # 이미 처리한 섹션 ID 추적
+#     for section_id in all_section_ids:
+#         # 이미 처리한 섹션이면 건너뛰기
+#         if section_id in processed_sections:
+#             continue
+#         processed_sections.add(section_id)
         
-        try:
-            cases = testrail_get(
-                f"get_cases/{TESTRAIL_PROJECT_ID}&suite_id={TESTRAIL_SUITE_ID}&section_id={section_id}"
-            )
-            section_case_ids = [c["id"] for c in cases]
-            all_case_ids.extend(section_case_ids)
-            case_id_map[section_id] = section_case_ids
-            if section_case_ids:
-                print(f"[TestRail] 섹션 {section_id}: {len(section_case_ids)}개 케이스 발견")
-        except Exception as e:
-            logger.warning(f"섹션 {section_id}의 케이스 가져오기 실패: {e}")
+#         try:
+#             cases = testrail_get(
+#                 f"get_cases/{TESTRAIL_PROJECT_ID}&suite_id={TESTRAIL_SUITE_ID}&section_id={section_id}"
+#             )
+#             section_case_ids = [c["id"] for c in cases]
+#             all_case_ids.extend(section_case_ids)
+#             case_id_map[section_id] = section_case_ids
+#             if section_case_ids:
+#                 print(f"[TestRail] 섹션 {section_id}: {len(section_case_ids)}개 케이스 발견")
+#         except Exception as e:
+#             logger.warning(f"섹션 {section_id}의 케이스 가져오기 실패: {e}")
     
-    # 중복 제거 (같은 케이스가 여러 섹션에 있을 수 있음)
-    all_case_ids = list(set(all_case_ids))
+#     # 중복 제거 (같은 케이스가 여러 섹션에 있을 수 있음)
+#     all_case_ids = list(set(all_case_ids))
     
-    if not all_case_ids:
-        raise RuntimeError(f"[TestRail] section_id '{section_id_int}'와 하위 섹션에 케이스가 없습니다.")
+#     if not all_case_ids:
+#         raise RuntimeError(f"[TestRail] section_id '{section_id_int}'와 하위 섹션에 케이스가 없습니다.")
     
-    print(f"[TestRail] 총 {len(all_case_ids)}개 케이스 수집 완료")
+#     print(f"[TestRail] 총 {len(all_case_ids)}개 케이스 수집 완료")
     
-    # 4. Run 생성
-    run_name = f"Gmarket Regression test dweb {datetime.now():%Y-%m-%d %H:%M:%S}"
-    payload = {
-        "suite_id": TESTRAIL_SUITE_ID,
-        "name": run_name,
-        "include_all": False,
-        "case_ids": all_case_ids,
-        "milestone_id": TESTRAIL_MILESTONE_ID
-    }
-    try:
-        logger.debug(f"TestRail Run 생성 시도: project_id={TESTRAIL_PROJECT_ID}, case_ids 개수={len(all_case_ids)}")
-        run = testrail_post(f"add_run/{TESTRAIL_PROJECT_ID}", payload)
-        testrail_run_id = run["id"]
-        print(f"[TestRail] section_id '{section_id_int}' (하위 섹션 포함) Run 생성 완료 (ID={testrail_run_id})")
-        logger.debug(f"pytest_sessionstart 완료: testrail_run_id={testrail_run_id}")
-    except Exception as e:
-        logger.error(f"TestRail Run 생성 실패: {e}")
-        import traceback
-        logger.debug(f"Run 생성 실패 상세:\n{traceback.format_exc()}")
-        raise
+#     # 4. Run 생성
+#     run_name = f"Gmarket Regression test dweb {datetime.now():%Y-%m-%d %H:%M:%S}"
+#     payload = {
+#         "suite_id": TESTRAIL_SUITE_ID,
+#         "name": run_name,
+#         "include_all": False,
+#         "case_ids": all_case_ids,
+#         "milestone_id": TESTRAIL_MILESTONE_ID
+#     }
+#     try:
+#         logger.debug(f"TestRail Run 생성 시도: project_id={TESTRAIL_PROJECT_ID}, case_ids 개수={len(all_case_ids)}")
+#         run = testrail_post(f"add_run/{TESTRAIL_PROJECT_ID}", payload)
+#         testrail_run_id = run["id"]
+#         print(f"[TestRail] section_id '{section_id_int}' (하위 섹션 포함) Run 생성 완료 (ID={testrail_run_id})")
+#         logger.debug(f"pytest_sessionstart 완료: testrail_run_id={testrail_run_id}")
+#     except Exception as e:
+#         logger.error(f"TestRail Run 생성 실패: {e}")
+#         import traceback
+#         logger.debug(f"Run 생성 실패 상세:\n{traceback.format_exc()}")
+#         raise
 
 
-# 커스텀 로그 핸들러 - 테스트 실행 중 로그를 수집
-class TestLogHandler(logging.Handler):
-    """테스트 실행 중 로그를 수집하는 커스텀 핸들러"""
-    def __init__(self):
-        super().__init__()
-        self.logs = []
+# # 커스텀 로그 핸들러 - 테스트 실행 중 로그를 수집
+# class TestLogHandler(logging.Handler):
+#     """테스트 실행 중 로그를 수집하는 커스텀 핸들러"""
+#     def __init__(self):
+#         super().__init__()
+#         self.logs = []
     
-    def emit(self, record):
-        """로그 레코드를 수집"""
-        if record.levelno >= logging.INFO:  # INFO 이상만 수집
-            log_message = self.format(record)
-            self.logs.append(log_message)
+#     def emit(self, record):
+#         """로그 레코드를 수집"""
+#         if record.levelno >= logging.INFO:  # INFO 이상만 수집
+#             log_message = self.format(record)
+#             self.logs.append(log_message)
     
-    def clear(self):
-        """로그 초기화"""
-        self.logs = []
+#     def clear(self):
+#         """로그 초기화"""
+#         self.logs = []
     
-    def get_logs(self):
-        """수집된 로그 반환"""
-        return "\n".join(self.logs)
+#     def get_logs(self):
+#         """수집된 로그 반환"""
+#         return "\n".join(self.logs)
 
-# 전역 로그 핸들러
-test_log_handler = TestLogHandler()
-test_log_handler.setLevel(logging.INFO)
-test_log_handler.setFormatter(logging.Formatter('%(levelname)s: %(message)s'))
+# # 전역 로그 핸들러
+# test_log_handler = TestLogHandler()
+# test_log_handler.setLevel(logging.INFO)
+# test_log_handler.setFormatter(logging.Formatter('%(levelname)s: %(message)s'))
 
-# 루트 로거에 핸들러 추가
-root_logger = logging.getLogger()
-root_logger.addHandler(test_log_handler)
+# # 루트 로거에 핸들러 추가
+# root_logger = logging.getLogger()
+# root_logger.addHandler(test_log_handler)
 
 
-@pytest.hookimpl(hookwrapper=True)
-def pytest_runtest_setup(item):
-    """테스트 시작 시 로그 핸들러 초기화"""
-    global current_test_nodeid
-    current_test_nodeid = item.nodeid
-    test_log_handler.clear()
+# @pytest.hookimpl(hookwrapper=True)
+# def pytest_runtest_setup(item):
+#     """테스트 시작 시 로그 핸들러 초기화"""
+#     global current_test_nodeid
+#     current_test_nodeid = item.nodeid
+#     test_log_handler.clear()
     
-    outcome = yield
+#     outcome = yield
 
 
-@pytest.hookimpl(hookwrapper=True)
-def pytest_runtest_teardown(item, nextitem):
-    """테스트 종료 시 로그 핸들러 초기화 (다음 테스트와 로그 섞임 방지)"""
-    outcome = yield
-    # teardown 후에 초기화 (pytest_runtest_logreport와 pytest_runtest_makereport가 모두 실행된 후)
-    # 다음 테스트가 있는 경우에만 초기화 (마지막 테스트는 세션 종료 시 정리)
-    if nextitem:
-        test_log_handler.clear()
+# @pytest.hookimpl(hookwrapper=True)
+# def pytest_runtest_teardown(item, nextitem):
+#     """테스트 종료 시 로그 핸들러 초기화 (다음 테스트와 로그 섞임 방지)"""
+#     outcome = yield
+#     # teardown 후에 초기화 (pytest_runtest_logreport와 pytest_runtest_makereport가 모두 실행된 후)
+#     # 다음 테스트가 있는 경우에만 초기화 (마지막 테스트는 세션 종료 시 정리)
+#     if nextitem:
+#         test_log_handler.clear()
 
 
-@pytest.hookimpl(hookwrapper=True, tryfirst=True)
-def pytest_runtest_logreport(report):
-    """
-    각 테스트의 로그를 수집하여 test_logs에 저장
-    pytest_runtest_makereport보다 먼저 실행되도록 tryfirst=True 설정
-    """
-    outcome = yield
-    # setup, call, teardown 모든 단계에서 로그 수집
-    if report.when == "call":  # 실행 단계만
-        nodeid = report.nodeid
-        if report.outcome in ("passed", "failed", "skipped"):
-            # 수집된 로그 가져오기 (이 시점에 현재 테스트의 로그만 있어야 함)
-            # pytest_runtest_setup과 pytest_bdd_before_scenario에서 이미 초기화했으므로
-            # 현재 테스트의 로그만 있어야 함
-            logs = test_log_handler.get_logs()
-            if logs and logs.strip():
-                # nodeid를 키로 사용하여 저장 (성공/실패 모두 저장)
-                test_logs[nodeid] = logs
-                # 로그 라인 수 확인
-                log_lines = logs.split(chr(10))
-                logger.debug(f"테스트 {nodeid} 로그 수집 완료: {len(log_lines)}줄 (outcome: {report.outcome})")
-                # 로그를 test_logs에 저장했으므로 즉시 초기화 (다음 테스트와 로그 섞임 방지)
-                # pytest_runtest_makereport에서 사용할 때까지는 test_logs에 보관됨
-                test_log_handler.clear()
-            else:
-                logger.debug(f"테스트 {nodeid} 로그 없음 (빈 로그 또는 수집 실패, outcome: {report.outcome})")
-                # 로그가 없어도 초기화 (이전 로그 제거)
-                test_log_handler.clear()
+# @pytest.hookimpl(hookwrapper=True, tryfirst=True)
+# def pytest_runtest_logreport(report):
+#     """
+#     각 테스트의 로그를 수집하여 test_logs에 저장
+#     pytest_runtest_makereport보다 먼저 실행되도록 tryfirst=True 설정
+#     """
+#     outcome = yield
+#     # setup, call, teardown 모든 단계에서 로그 수집
+#     if report.when == "call":  # 실행 단계만
+#         nodeid = report.nodeid
+#         if report.outcome in ("passed", "failed", "skipped"):
+#             # 수집된 로그 가져오기 (이 시점에 현재 테스트의 로그만 있어야 함)
+#             # pytest_runtest_setup과 pytest_bdd_before_scenario에서 이미 초기화했으므로
+#             # 현재 테스트의 로그만 있어야 함
+#             logs = test_log_handler.get_logs()
+#             if logs and logs.strip():
+#                 # nodeid를 키로 사용하여 저장 (성공/실패 모두 저장)
+#                 test_logs[nodeid] = logs
+#                 # 로그 라인 수 확인
+#                 log_lines = logs.split(chr(10))
+#                 logger.debug(f"테스트 {nodeid} 로그 수집 완료: {len(log_lines)}줄 (outcome: {report.outcome})")
+#                 # 로그를 test_logs에 저장했으므로 즉시 초기화 (다음 테스트와 로그 섞임 방지)
+#                 # pytest_runtest_makereport에서 사용할 때까지는 test_logs에 보관됨
+#                 test_log_handler.clear()
+#             else:
+#                 logger.debug(f"테스트 {nodeid} 로그 없음 (빈 로그 또는 수집 실패, outcome: {report.outcome})")
+#                 # 로그가 없어도 초기화 (이전 로그 제거)
+#                 test_log_handler.clear()
 
 
 
-@pytest.hookimpl(trylast=True)
-def pytest_sessionfinish(session, exitstatus):
-    """
-    전체 테스트 종료 후 Run 닫기
-    """
-    global testrail_run_id
-    if testrail_run_id:
-        testrail_post(f"close_run/{testrail_run_id}", {})
-        print(f"[TestRail] Run {testrail_run_id} 종료 완료")
+# @pytest.hookimpl(trylast=True)
+# def pytest_sessionfinish(session, exitstatus):
+#     """
+#     전체 테스트 종료 후 Run 닫기
+#     """
+#     global testrail_run_id
+#     if testrail_run_id:
+#         testrail_post(f"close_run/{testrail_run_id}", {})
+#         print(f"[TestRail] Run {testrail_run_id} 종료 완료")
 
-    screenshots_dir = "screenshots"
-    if os.path.exists(screenshots_dir):
-        shutil.rmtree(screenshots_dir)  # 폴더 통째로 삭제
-        print(f"[CLEANUP] '{screenshots_dir}' 폴더 삭제 완료")
+#     screenshots_dir = "screenshots"
+#     if os.path.exists(screenshots_dir):
+#         shutil.rmtree(screenshots_dir)  # 폴더 통째로 삭제
+#         print(f"[CLEANUP] '{screenshots_dir}' 폴더 삭제 완료")

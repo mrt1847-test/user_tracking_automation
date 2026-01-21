@@ -435,7 +435,7 @@ class SearchPage(BasePage):
             상품 Locator 객체
         """
         logger.debug("모듈 내 상품 요소 찾기")
-        return parent_locator.locator("span.box__itemcard-img > a").first
+        return parent_locator.locator(".box__itemcard-info > a").first
     
     def scroll_product_into_view(self, product_locator: Locator) -> None:
         """
@@ -536,11 +536,13 @@ class SearchPage(BasePage):
             새 탭의 Page 객체
         """
         logger.debug("상품 클릭 및 새 탭 대기")
+
+        time.sleep(3)
         
         # 일반 클릭 시도
         try:
-            with self.page.context.expect_page(timeout=10000) as new_page_info:
-                product_locator.click(timeout=3000)
+            with self.page.context.expect_page(timeout=5000) as new_page_info:
+                product_locator.click(force=True, timeout=3000)
             
             new_page = new_page_info.value
             logger.debug(f"새 탭 생성됨: {new_page.url}")
@@ -550,14 +552,14 @@ class SearchPage(BasePage):
             try:
                 popup_close_button = self.page.locator(".button__popup-close")
                 if popup_close_button.count() > 0:
-                    popup_close_button.first.click(timeout=2000)
+                    popup_close_button.first.click(force=True, timeout=2000)
                     logger.debug("팝업 닫기 버튼 클릭 완료")
                     # 잠시 대기 (팝업이 닫히는 시간)
                     self.page.wait_for_timeout(500)
                 
                 # 다시 일반 클릭 시도
                 with self.page.context.expect_page(timeout=10000) as new_page_info:
-                    product_locator.click(timeout=3000)
+                    product_locator.click(force=True, timeout=3000)
                 
                 new_page = new_page_info.value
                 logger.debug(f"팝업 닫기 후 새 탭 생성됨: {new_page.url}")

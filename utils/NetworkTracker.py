@@ -2,6 +2,7 @@ import re
 import json
 import time
 import logging
+import copy
 from urllib.parse import unquote
 from typing import Dict, List, Optional, Any, Tuple
 from playwright.sync_api import Page, Request, BrowserContext
@@ -819,6 +820,53 @@ class NetworkTracker:
         """
         return self.get_logs_by_goodscode(goodscode, 'Module Exposure')
     
+    def _find_spm_recursive(self, obj: Any, visited: Optional[set] = None) -> Optional[str]:
+        """
+        재귀적으로 딕셔너리/리스트를 탐색하여 'spm' 키를 찾음
+        순환 참조 방지를 위해 visited set 사용
+        
+        Args:
+            obj: 탐색할 객체 (dict, list, 또는 기타)
+            visited: 방문한 객체 ID 집합 (순환 참조 방지)
+        
+        Returns:
+            찾은 spm 값의 문자열 변환 또는 None
+        """
+        if visited is None:
+            visited = set()
+        
+        # 순환 참조 방지 (dict와 list만 체크)
+        if isinstance(obj, (dict, list)):
+            obj_id = id(obj)
+            if obj_id in visited:
+                return None
+            visited.add(obj_id)
+        
+        # 딕셔너리인 경우
+        if isinstance(obj, dict):
+            # 'spm' 키가 있고 값이 있으면 반환
+            if 'spm' in obj and obj['spm']:
+                return str(obj['spm'])
+            
+            # 모든 값에 대해 재귀적으로 탐색
+            for value in obj.values():
+                result = self._find_spm_recursive(value, visited)
+                if result is not None:
+                    return result
+        
+        # 리스트인 경우
+        elif isinstance(obj, list):
+            for item in obj:
+                result = self._find_spm_recursive(item, visited)
+                if result is not None:
+                    return result
+        
+        # 순환 참조 방지를 위해 방문 기록 제거
+        if isinstance(obj, (dict, list)):
+            visited.discard(id(obj))
+        
+        return None
+    
     def _extract_spm_from_log(self, log: Dict[str, Any]) -> Optional[str]:
         """
         로그에서 spm 값 추출 (우선순위 기반 탐색)
@@ -845,55 +893,7 @@ class NetworkTracker:
                 return str(params['spm'])
         
         # 우선 경로에서 못 찾았으면 재귀적으로 탐색
-        def find_spm_recursive(obj: Any, visited: Optional[set] = None) -> Optional[str]:
-            """
-            재귀적으로 딕셔너리/리스트를 탐색하여 'spm' 키를 찾음
-            순환 참조 방지를 위해 visited set 사용
-            
-            Args:
-                obj: 탐색할 객체 (dict, list, 또는 기타)
-                visited: 방문한 객체 ID 집합 (순환 참조 방지)
-            
-            Returns:
-                찾은 spm 값의 문자열 변환 또는 None
-            """
-            if visited is None:
-                visited = set()
-            
-            # 순환 참조 방지 (dict와 list만 체크)
-            if isinstance(obj, (dict, list)):
-                obj_id = id(obj)
-                if obj_id in visited:
-                    return None
-                visited.add(obj_id)
-            
-            # 딕셔너리인 경우
-            if isinstance(obj, dict):
-                # 'spm' 키가 있고 값이 있으면 반환
-                if 'spm' in obj and obj['spm']:
-                    return str(obj['spm'])
-                
-                # 모든 값에 대해 재귀적으로 탐색
-                for value in obj.values():
-                    result = find_spm_recursive(value, visited)
-                    if result is not None:
-                        return result
-            
-            # 리스트인 경우
-            elif isinstance(obj, list):
-                for item in obj:
-                    result = find_spm_recursive(item, visited)
-                    if result is not None:
-                        return result
-            
-            # 순환 참조 방지를 위해 방문 기록 제거
-            if isinstance(obj, (dict, list)):
-                visited.discard(id(obj))
-            
-            return None
-        
-        # payload 전체에서 재귀적으로 spm 찾기
-        return find_spm_recursive(payload)
+        return self._find_spm_recursive(payload)
     
     def _check_spm_match(self, log_spm: str, target_spm: str) -> bool:
         """
@@ -961,7 +961,10 @@ class NetworkTracker:
     
     def _extract_spm_from_product_exposure_item(self, item: Dict[str, Any]) -> Optional[str]:
         """
-        Product Exposure의 expdata.parsed 배열 항목에서 spm 추출
+        Product Exposure의 expdata.parsed 배열 항목에서 spm 추출 (재귀적 탐색)
+        
+        Module Exposure와 동일하게 우선 최상위에서 직접 확인하고,
+        없으면 재귀적으로 탐색하여 spm 필드를 찾음
         
         Args:
             item: expdata.parsed 배열의 항목
@@ -969,11 +972,15 @@ class NetworkTracker:
         Returns:
             추출된 spm 값 또는 None
         """
-        if isinstance(item, dict):
-            # 직접 spm 필드 확인
-            if 'spm' in item and item['spm']:
-                return str(item['spm'])
-        return None
+        if not isinstance(item, dict):
+            return None
+        
+        # 우선 최상위에서 직접 spm 필드 확인
+        if 'spm' in item and item['spm']:
+            return str(item['spm'])
+        
+        # 없으면 재귀적으로 탐색 (Module Exposure와 동일한 방식)
+        return self._find_spm_recursive(item)
     
     def get_product_exposure_logs_by_goodscode(self, goodscode: str, spm: Optional[str] = None) -> List[Dict[str, Any]]:
         """
@@ -998,13 +1005,16 @@ class NetworkTracker:
         matched_items = 0
         
         for log in logs:
-            # expdata.parsed 배열에서 goodscode와 spm이 모두 매칭되는 항목이 있는지 확인
-            payload = log.get('payload', {})
+            # 로그 복사 (원본 수정 방지)
+            filtered_log = copy.deepcopy(log)
+            
+            # expdata.parsed 배열에서 goodscode와 spm이 모두 매칭되는 항목만 필터링
+            payload = filtered_log.get('payload', {})
             decoded_gokey = payload.get('decoded_gokey', {})
             params = decoded_gokey.get('params', {}) if isinstance(decoded_gokey, dict) else {}
             expdata = params.get('expdata', {}) if isinstance(params, dict) else {}
             
-            matched = False
+            filtered_items = []
             if isinstance(expdata, dict) and 'parsed' in expdata:
                 parsed_list = expdata.get('parsed', [])
                 if isinstance(parsed_list, list):
@@ -1039,7 +1049,7 @@ class NetworkTracker:
                         item_spm = self._extract_spm_from_product_exposure_item(item)
                         if item_spm:
                             if self._check_spm_match(item_spm, spm):
-                                matched = True
+                                filtered_items.append(item)
                                 matched_items += 1
                                 logger.debug(f"Product Exposure 매칭: goodscode={item_goodscode}, spm={item_spm}, target_spm={spm}")
                             else:
@@ -1047,8 +1057,10 @@ class NetworkTracker:
                         else:
                             logger.debug(f"Product Exposure SPM 추출 실패: goodscode={item_goodscode}")
             
-            if matched:
-                filtered_logs.append(log)
+            # 필터링된 항목이 있으면 로그에 반영
+            if filtered_items:
+                expdata['parsed'] = filtered_items
+                filtered_logs.append(filtered_log)
             else:
                 logger.debug(f"Product Exposure 로그 필터링 제외: goodscode={goodscode}, spm={spm}와 매칭되는 항목 없음")
         
