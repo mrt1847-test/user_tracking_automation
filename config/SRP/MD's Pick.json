@@ -100,10 +100,20 @@
     }
   },
   "product_exposure": {
-    "uidaplus": "11758850530814005372000000",
-    "spm-url": "gmktpc.home.searchtop.dsearchbox",
-    "spm-pre": "",
+    "gmkey": "EXP",
+    "ts": "mandatory",
+    "rd": "mandatory",
+    "gokey": "mandatory",
+    "cna": "mandatory",
     "spm-cnt": "gmktpc.searchlist.0",
+    "spm-url": "gmktpc.home.searchtop.dsearchbox",
+    "_gr_uid_": "11758850530814005372000000",
+    "uidaplus": "11758850530814005372000000",
+    "logtype": "2",
+    "scr": "mandatory",
+    "_isCombine": "1",
+    "_p_url": "mandatory",
+    "spm-pre": "",
     "_f_t": "false",
     "pid": "www_gmarket_co_kr",
     "cguid": "11758850530814005372000000",
@@ -157,10 +167,10 @@
                   "trafficType": "organic"
                 }
               },
-              "_p_group": "skip",
               "_p_prod": "<상품번호>",
               "_p_sku": "0",
-              "_p_catalog": "skip"
+              "_p_catalog": "skip",
+              "_p_group": "skip"
             }
           }
         },
@@ -172,7 +182,6 @@
     "_eventType": "custom",
     "_method": "POST",
     "_pkgSize": "skip",
-    "_isCombine": "1",
     "cache": "mandatory",
     "jsver": "aplus.js",
     "lver": "1.13.26-1",
@@ -206,7 +215,6 @@
       "chrome"
     ],
     "s": "1280x720",
-    "scr": "mandatory",
     "m": "360ee",
     "ism": [
       "pc",
@@ -220,10 +228,19 @@
     "_g_encode": "utf-8"
   },
   "product_click": {
-    "uidaplus": "11758850530814005372000000",
-    "spm-url": "gmktpc.home.searchtop.dsearchbox",
-    "spm-pre": "",
+    "gmkey": "CLK",
+    "ts": "mandatory",
+    "rd": "mandatory",
+    "gokey": "mandatory",
+    "cna": "mandatory",
     "spm-cnt": "gmktpc.searchlist.0",
+    "spm-url": "gmktpc.home.searchtop.dsearchbox",
+    "_gr_uid_": "11758850530814005372000000",
+    "uidaplus": "11758850530814005372000000",
+    "logtype": "2",
+    "scr": "mandatory",
+    "_p_url": "mandatory",
+    "spm-pre": "",
     "_f_t": "false",
     "pid": "www_gmarket_co_kr",
     "cguid": "11758850530814005372000000",
@@ -267,10 +284,10 @@
             "trafficType": "organic"
           }
         },
-        "_p_group": "skip",
         "_p_prod": "<상품번호>",
         "_p_sku": "0",
-        "_p_catalog": "skip"
+        "_p_catalog": "skip",
+        "_p_group": "skip"
       }
     },
     "_is_auto_clk": "1",
@@ -309,7 +326,6 @@
       "chrome"
     ],
     "s": "1280x720",
-    "scr": "mandatory",
     "m": "360ee",
     "ism": [
       "pc",
@@ -326,7 +342,7 @@
     "payload": {
       "logtype": "1",
       "title": "G마켓 - (50%특가)쿤달 올데이 스멜커버 청소년샴푸 3종 400ml 2개 +샴푸브러쉬 증정 / 3가지향 택 1",
-      "pre": "https://www.gmarket.co.kr/n/search?spm=gmktpc.home.searchtop.dsearchbox.1fbf486awqLETJ&keyword=%EC%BF%A4%EB%8B%AC",
+      "pre": "https://www.gmarket.co.kr/n/search?spm=gmktpc.home.searchtop.dsearchbox.1fbf486aY1zP1A&keyword=%EC%BF%A4%EB%8B%AC",
       "scr": "mandatory",
       "_p_url": "mandatory",
       "ts": "mandatory",
@@ -334,7 +350,7 @@
       "cna": "mandatory",
       "spm-cnt": "gmktpc.pdp.0",
       "spm-url": "gmktpc.searchlist.mdspick.d0_0",
-      "spm-pre": "gmktpc.home.searchtop.dsearchbox.1fbf486awqLETJ",
+      "spm-pre": "gmktpc.home.searchtop.dsearchbox.1fbf486aY1zP1A",
       "uidaplus": "11758850530814005372000000",
       "sidx": "aplusSidex",
       "ckx": "aplusCkx",
@@ -349,11 +365,12 @@
       "origin_price": "<원가>",
       "promotion_price": "<할인가>",
       "coupon_price": "<쿠폰적용가>",
+      "payment_price": "{\r\n  \"0\": {\r\n    \"payment_type\": \"A\",\r\n    \"payment_method_id\": \"13915685558\",\r\n    \"payment_method_name\": \"G마켓 삼성카드 첫 결제 시 50% 할인\",\r\n    \"price_threshold\": \"10000\",\r\n    \"discount_percent\": \"\",\r\n    \"discount_amount\": \"\",\r\n    \"price\": \"7500\",\r\n    \"max_discount_amount\": \"70000\"\r\n  },\r\n  \"1\": {\r\n    \"payment_type\": \"B\",\r\n    \"payment_method_id\": \"13924277169\",\r\n    \"payment_method_name\": \"스마일카드 첫결제 8만원 할인\",\r\n    \"price_threshold\": \"80100\",\r\n    \"discount_percent\": \"\",\r\n    \"discount_amount\": \"80000\",\r\n    \"price\": \"\",\r\n    \"max_discount_amount\": \"\"\r\n  }\r\n}",
       "_p_sku": "0",
       "price_signal": "30 Days Lowest Price",
       "item_status": "1",
       "ab_buckets": "skip",
-      "pageid": "qmh3ie8taa4caxcp19be33e53c0bd1102681450a5f",
+      "pageid": "epv4idovnr4caxcp19be4141dbeb9b2789d1126cc4",
       "server_env": "<environment>",
       "goodscode": "2809108578",
       "utparam-url": "mandatory",
@@ -428,7 +445,7 @@
       "query": "<검색어>",
       "searchScenario": "keyword",
       "ab_buckets": "skip",
-      "pageid": "qmh3ie8taa4caxcp19be33e35a21919a930d102070",
+      "pageid": "epv4idovnr4caxcp19be413fb212468b592f76a821",
       "server_env": "<environment>",
       "keyword": "쿤달",
       "_is_auto_pv": "1",

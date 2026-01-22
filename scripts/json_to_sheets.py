@@ -95,7 +95,7 @@ def replace_value_with_placeholder(field_name: str, value: Any) -> Any:
         "raw" : "mandatory",
         "params-exp": "mandatory",
         "module_index": "mandatory",
-        "ab_buckets": ["#108^4#B", "#108^3#B"],
+        "ab_buckets": "skip",
         "cache": "mandatory",
         "platformType": ["pc", "mac"],
         "device_model": ["Windows", "Macintosh"],
@@ -109,9 +109,11 @@ def replace_value_with_placeholder(field_name: str, value: Any) -> Any:
         "ism": ["pc", "mac"],
         "b": "mandatory",
         "pvid" : "mandatory",
-        "_p_catalog" : "mandatory",
-        "_p_group" : "mandatory",
-        "utparam-url" : "mandatory"
+        "_p_catalog" : "skip",
+        "_p_group" : "skip",
+        "utparam-url" : "mandatory",
+        "search_session_id" : "mandatory",
+        "_pkgSize" : "skip"
     }
     
     if field_name in field_placeholder_map:
@@ -168,26 +170,38 @@ def process_event_type_payload(event_data: Dict[str, Any], event_type: str) -> D
         return {'payload': payload}
     
     elif event_type == 'Product Exposure':
-        # product_exposure는 decoded_gokey.params에서 모든 필드 추출
+        # product_exposure는 decoded_gokey.params + payload 최상위 필드 포함
         result = {}
+        
+        # payload 최상위 필드 중 단순 값 필드들 추가 (dict/list 제외)
+        for key, value in payload.items():
+            if key != 'decoded_gokey' and not isinstance(value, (dict, list)):
+                result[key] = value
+        
+        # decoded_gokey.params의 모든 필드 추가 (params 값이 우선)
         if 'decoded_gokey' in payload and isinstance(payload['decoded_gokey'], dict):
             decoded = payload['decoded_gokey']
             if 'params' in decoded:
                 params = decoded['params']
-                # params의 모든 필드를 포함
-                result = params.copy()
+                result.update(params)
         
         return result if result else payload
     
     elif event_type == 'Product Click':
-        # product_click도 decoded_gokey.params에서 모든 필드 추출
+        # product_click도 decoded_gokey.params + payload 최상위 필드 포함
         result = {}
+        
+        # payload 최상위 필드 중 단순 값 필드들 추가 (dict/list 제외)
+        for key, value in payload.items():
+            if key != 'decoded_gokey' and not isinstance(value, (dict, list)):
+                result[key] = value
+        
+        # decoded_gokey.params의 모든 필드 추가 (params 값이 우선)
         if 'decoded_gokey' in payload and isinstance(payload['decoded_gokey'], dict):
             decoded = payload['decoded_gokey']
             if 'params' in decoded:
                 params = decoded['params']
-                # params의 모든 필드를 포함
-                result = params.copy()
+                result.update(params)
         
         return result if result else payload
     
