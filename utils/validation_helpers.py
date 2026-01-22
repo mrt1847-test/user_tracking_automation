@@ -161,7 +161,9 @@ def extract_price_info_from_pdp_pv(tracker: NetworkTracker, goodscode: str) -> O
     if 'promotion_price' in payload:
         price_info['promotion_price'] = str(payload['promotion_price'])
     if 'coupon_price' in payload:
-        price_info['coupon_price'] = str(payload['coupon_price'])
+        # coupon_price가 빈 문자열이거나 None이어도 추가 (빈 값도 유효한 값)
+        coupon_price_value = payload['coupon_price']
+        price_info['coupon_price'] = str(coupon_price_value) if coupon_price_value is not None else ''
     
     return price_info if price_info else None
 
@@ -351,17 +353,12 @@ def replace_placeholders(value: Any, goodscode: str, frontend_data: Optional[Dic
                 value = value.replace('<할인가>', str(frontend_data['promotion_price']))
             
             # <쿠폰적용가> placeholder 치환
-            if '<쿠폰적용가>' in value and 'coupon_price' in frontend_data:
-                value = value.replace('<쿠폰적용가>', str(frontend_data['coupon_price']))
+            if '<쿠폰적용가>' in value:
+                # coupon_price가 frontend_data에 없거나 None이면 빈 문자열로 치환
+                coupon_price = frontend_data.get('coupon_price', '')
+                value = value.replace('<쿠폰적용가>', str(coupon_price) if coupon_price is not None else '')
             
-            # {price} placeholder 치환 (기존 형식 유지)
-            if '{price}' in value and 'price' in frontend_data:
-                value = value.replace('{price}', str(frontend_data['price']))
-            
-            # {coupon_price} placeholder 치환 (기존 형식 유지)
-            if '{coupon_price}' in value and 'coupon_price' in frontend_data:
-                value = value.replace('{coupon_price}', str(frontend_data['coupon_price']))
-    
+
     return value
 
 

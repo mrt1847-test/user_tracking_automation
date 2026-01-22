@@ -555,7 +555,7 @@ class SearchPage(BasePage):
                     popup_close_button.first.click(force=True, timeout=2000)
                     logger.debug("팝업 닫기 버튼 클릭 완료")
                     # 잠시 대기 (팝업이 닫히는 시간)
-                    self.page.wait_for_timeout(500)
+                    time.sleep(2)
                 
                 # 다시 일반 클릭 시도
                 with self.page.context.expect_page(timeout=10000) as new_page_info:
