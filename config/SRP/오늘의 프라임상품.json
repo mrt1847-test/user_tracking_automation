@@ -47,11 +47,7 @@
               "gmkt_area_code": "",
               "section_index": "",
               "module_index": "mandatory",
-              "ab_buckets": [
-                "#108^4#B",
-                "#108^3#B",
-                "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
-              ]
+              "ab_buckets": "skip"
             }
           },
           "cache": "mandatory",
@@ -134,11 +130,7 @@
               "section_index": "",
               "module_index": "mandatory",
               "is_ad": "Y",
-              "ab_buckets": [
-                "#108^4#B",
-                "#108^3#B",
-                "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
-              ],
+              "ab_buckets": "skip",
               "is_airticket": "N",
               "utLogMap": {
                 "raw": "mandatory",
@@ -161,11 +153,7 @@
                   "origin_price": "<원가>",
                   "promotion_price": "<할인가>",
                   "coupon_price": "<쿠폰적용가>",
-                  "ab_buckets": [
-                    "#108^4#B",
-                    "#108^3#B",
-                    "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
-                  ],
+                  "ab_buckets": "skip",
                   "trafficType": "ad"
                 }
               },
@@ -252,11 +240,7 @@
         "section_index": "",
         "module_index": "mandatory",
         "is_ad": "Y",
-        "ab_buckets": [
-          "#108^4#B",
-          "#108^3#B",
-          "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
-        ],
+        "ab_buckets": "skip",
         "is_airticket": "N",
         "utLogMap": {
           "raw": "mandatory",
@@ -279,11 +263,7 @@
             "origin_price": "<원가>",
             "promotion_price": "<할인가>",
             "coupon_price": "<쿠폰적용가>",
-            "ab_buckets": [
-              "#108^4#B",
-              "#108^3#B",
-              "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
-            ],
+            "ab_buckets": "skip",
             "trafficType": "ad"
           }
         },
@@ -371,11 +351,7 @@
       "payment_price": "{\r\n  \"0\": {\r\n    \"payment_type\": \"A\",\r\n    \"payment_method_id\": \"13963052861\",\r\n    \"payment_method_name\": \"현대&스마일카드 1,000원 할인\",\r\n    \"price_threshold\": \"20000\",\r\n    \"discount_percent\": \"\",\r\n    \"discount_amount\": \"\",\r\n    \"price\": \"22720\",\r\n    \"max_discount_amount\": \"\"\r\n  },\r\n  \"1\": {\r\n    \"payment_type\": \"A\",\r\n    \"payment_method_id\": \"13927380549\",\r\n    \"payment_method_name\": \"G마켓 삼성카드 1,000원 할인\",\r\n    \"price_threshold\": \"20000\",\r\n    \"discount_percent\": \"\",\r\n    \"discount_amount\": \"\",\r\n    \"price\": \"22720\",\r\n    \"max_discount_amount\": \"\"\r\n  },\r\n  \"2\": {\r\n    \"payment_type\": \"B\",\r\n    \"payment_method_id\": \"13963294543\",\r\n    \"payment_method_name\": \"현대&스마일카드 10,000원 할인\",\r\n    \"price_threshold\": \"300000\",\r\n    \"discount_percent\": \"\",\r\n    \"discount_amount\": \"10000\",\r\n    \"price\": \"\",\r\n    \"max_discount_amount\": \"\"\r\n  },\r\n  \"3\": {\r\n    \"payment_type\": \"B\",\r\n    \"payment_method_id\": \"13927389360\",\r\n    \"payment_method_name\": \"G마켓 삼성카드 1만원 할인\",\r\n    \"price_threshold\": \"300000\",\r\n    \"discount_percent\": \"\",\r\n    \"discount_amount\": \"10000\",\r\n    \"price\": \"\",\r\n    \"max_discount_amount\": \"\"\r\n  },\r\n  \"4\": {\r\n    \"payment_type\": \"B\",\r\n    \"payment_method_id\": \"13963183692\",\r\n    \"payment_method_name\": \"현대&스마일카드 2,000원 할인\",\r\n    \"price_threshold\": \"100000\",\r\n    \"discount_percent\": \"\",\r\n    \"discount_amount\": \"2000\",\r\n    \"price\": \"\",\r\n    \"max_discount_amount\": \"\"\r\n  },\r\n  \"5\": {\r\n    \"payment_type\": \"B\",\r\n    \"payment_method_id\": \"13963127144\",\r\n    \"payment_method_name\": \"현대&스마일카드 1,500원 할인\",\r\n    \"price_threshold\": \"50000\",\r\n    \"discount_percent\": \"\",\r\n    \"discount_amount\": \"1500\",\r\n    \"price\": \"\",\r\n    \"max_discount_amount\": \"\"\r\n  }\r\n}",
       "_p_sku": "0",
       "item_status": "1",
-      "ab_buckets": [
-        "#108^4#B",
-        "#108^3#B",
-        "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
-      ],
+      "ab_buckets": "skip",
       "pageid": "qmh3ie8taa4caxcp19be338eceeb187a019118e252",
       "server_env": "<environment>",
       "goodscode": "4448231882",
@@ -450,11 +426,7 @@
       "_p_ispdp": "0",
       "query": "<검색어>",
       "searchScenario": "keyword",
-      "ab_buckets": [
-        "#108^4#B",
-        "#108^3#B",
-        "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
-      ],
+      "ab_buckets": "skip",
       "pageid": "qmh3ie8taa4caxcp19be338bfc44bde7feb2215135",
       "server_env": "<environment>",
       "keyword": "물티슈",

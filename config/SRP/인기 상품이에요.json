@@ -47,11 +47,7 @@
               "gmkt_area_code": "",
               "section_index": "",
               "module_index": "mandatory",
-              "ab_buckets": [
-                "#108^4#B",
-                "#108^3#B",
-                "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
-              ]
+              "ab_buckets": "skip"
             }
           },
           "cache": "mandatory",
@@ -134,11 +130,7 @@
               "section_index": "",
               "module_index": "mandatory",
               "is_ad": "N",
-              "ab_buckets": [
-                "#108^4#B",
-                "#108^3#B",
-                "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
-              ],
+              "ab_buckets": "skip",
               "is_airticket": "N",
               "utLogMap": {
                 "raw": "mandatory",
@@ -153,11 +145,7 @@
                   "sort": "popularity",
                   "search_session_id": "mandatory",
                   "scene": "search",
-                  "ab_buckets": [
-                    "#108^4#B",
-                    "#108^3#B",
-                    "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
-                  ],
+                  "ab_buckets": "skip",
                   "x_object_id": "<상품번호>",
                   "pageIndex": "0",
                   "pagePos": "0",
@@ -252,11 +240,7 @@
         "section_index": "",
         "module_index": "mandatory",
         "is_ad": "N",
-        "ab_buckets": [
-          "#108^4#B",
-          "#108^3#B",
-          "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
-        ],
+        "ab_buckets": "skip",
         "is_airticket": "N",
         "utLogMap": {
           "raw": "mandatory",
@@ -271,11 +255,7 @@
             "sort": "popularity",
             "search_session_id": "mandatory",
             "scene": "search",
-            "ab_buckets": [
-              "#108^4#B",
-              "#108^3#B",
-              "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
-            ],
+            "ab_buckets": "skip",
             "x_object_id": "<상품번호>",
             "pageIndex": "0",
             "pagePos": "0",
@@ -380,11 +360,7 @@
               "section_index": "",
               "module_index": "mandatory",
               "is_ad": "N",
-              "ab_buckets": [
-                "#108^4#B",
-                "#108^3#B",
-                "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
-              ],
+              "ab_buckets": "skip",
               "is_airticket": "N",
               "utLogMap": {
                 "raw": "mandatory",
@@ -399,11 +375,7 @@
                   "sort": "popularity",
                   "search_session_id": "mandatory",
                   "scene": "search",
-                  "ab_buckets": [
-                    "#108^4#B",
-                    "#108^3#B",
-                    "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
-                  ],
+                  "ab_buckets": "skip",
                   "x_object_id": "<상품번호>",
                   "pageIndex": "0",
                   "pagePos": "0",
@@ -505,11 +477,7 @@
       "_p_sku": "0",
       "price_signal": "Online Lowest Price",
       "item_status": "1",
-      "ab_buckets": [
-        "#108^4#B",
-        "#108^3#B",
-        "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
-      ],
+      "ab_buckets": "skip",
       "pageid": "qmh3ie8taa4caxcp19be339f2c521cd37694183e27",
       "server_env": "<environment>",
       "goodscode": "1501667618",
@@ -584,11 +552,7 @@
       "_p_ispdp": "0",
       "query": "<검색어>",
       "searchScenario": "keyword",
-      "ab_buckets": [
-        "#108^4#B",
-        "#108^3#B",
-        "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
-      ],
+      "ab_buckets": "skip",
       "pageid": "qmh3ie8taa4caxcp19be339c24018ddcc63a20eec0",
       "server_env": "<environment>",
       "keyword": "물티슈",

@@ -47,11 +47,7 @@
               "gmkt_area_code": "",
               "section_index": "",
               "module_index": "mandatory",
-              "ab_buckets": [
-                "#108^4#B",
-                "#108^3#B",
-                "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
-              ]
+              "ab_buckets": "skip"
             }
           },
           "cache": "mandatory",
@@ -134,11 +130,7 @@
               "section_index": "",
               "module_index": "mandatory",
               "is_ad": "N",
-              "ab_buckets": [
-                "#108^4#B",
-                "#108^3#B",
-                "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
-              ],
+              "ab_buckets": "skip",
               "is_airticket": "N",
               "utLogMap": {
                 "raw": "mandatory",
@@ -161,11 +153,7 @@
                   "origin_price": "<원가>",
                   "promotion_price": "<할인가>",
                   "coupon_price": "<쿠폰적용가>",
-                  "ab_buckets": [
-                    "#108^4#B",
-                    "#108^3#B",
-                    "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
-                  ],
+                  "ab_buckets": "skip",
                   "trafficType": "organic"
                 }
               },
@@ -252,11 +240,7 @@
         "section_index": "",
         "module_index": "mandatory",
         "is_ad": "N",
-        "ab_buckets": [
-          "#108^4#B",
-          "#108^3#B",
-          "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
-        ],
+        "ab_buckets": "skip",
         "is_airticket": "N",
         "utLogMap": {
           "raw": "mandatory",
@@ -279,11 +263,7 @@
             "origin_price": "<원가>",
             "promotion_price": "<할인가>",
             "coupon_price": "<쿠폰적용가>",
-            "ab_buckets": [
-              "#108^4#B",
-              "#108^3#B",
-              "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
-            ],
+            "ab_buckets": "skip",
             "trafficType": "organic"
           }
         },
@@ -380,11 +360,7 @@
               "section_index": "",
               "module_index": "mandatory",
               "is_ad": "N",
-              "ab_buckets": [
-                "#108^4#B",
-                "#108^3#B",
-                "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
-              ],
+              "ab_buckets": "skip",
               "is_airticket": "N",
               "utLogMap": {
                 "raw": "mandatory",
@@ -407,11 +383,7 @@
                   "origin_price": "<원가>",
                   "promotion_price": "<할인가>",
                   "coupon_price": "<쿠폰적용가>",
-                  "ab_buckets": [
-                    "#108^4#B",
-                    "#108^3#B",
-                    "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
-                  ],
+                  "ab_buckets": "skip",
                   "trafficType": "organic"
                 }
               },
@@ -500,11 +472,7 @@
       "promotion_price": "<할인가>",
       "_p_sku": "0",
       "item_status": "1",
-      "ab_buckets": [
-        "#108^4#B",
-        "#108^3#B",
-        "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
-      ],
+      "ab_buckets": "skip",
       "pageid": "qmh3ie8taa4caxcp19be33c7f8311fb16432122b4f",
       "server_env": "<environment>",
       "goodscode": "4393225429",
@@ -579,11 +547,7 @@
       "_p_ispdp": "0",
       "query": "<검색어>",
       "searchScenario": "keyword",
-      "ab_buckets": [
-        "#108^4#B",
-        "#108^3#B",
-        "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
-      ],
+      "ab_buckets": "skip",
       "pageid": "qmh3ie8taa4caxcp19be33c40ed1c589f5e2416823",
       "server_env": "<environment>",
       "keyword": "메가커피+1만원",
