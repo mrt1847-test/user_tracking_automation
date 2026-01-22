@@ -250,17 +250,11 @@ def create_login_state(pw):
 @pytest.fixture(scope="session")
 def ensure_login_state(pw):
     """
-    state.json 존재 여부 및 유효성 확인.
-    없거나 만료 시 자동 로그인 수행
+    매 세션마다 로그인 수행하여 새로운 state.json 생성
+    기존 state.json이 있어도 무시하고 새로 로그인
     """
-    if not os.path.exists(STATE_PATH):
-        print("[INFO] state.json 없음 → 로그인 시도")
-        create_login_state(pw)
-    elif not is_state_valid(STATE_PATH):
-        print("[INFO] state.json 만료됨 → 재로그인 시도")
-        create_login_state(pw)
-    else:
-        print("[INFO] 로그인 세션 유효 → 기존 state.json 사용")
+    print("[INFO] 세션 시작 → 새로 로그인 수행")
+    create_login_state(pw)
     return STATE_PATH
 # ------------------------
 # :넷: page fixture (각 시나리오마다 독립적으로 생성)
