@@ -1,9 +1,499 @@
 {
-    "module_exposure": {
+  "module_exposure": {
+    "payload": {
+      "gmkey": "EXP",
+      "ts": "mandatory",
+      "rd": "mandatory",
+      "gokey": "mandatory",
+      "cna": "mandatory",
+      "spm-cnt": "gmktpc.searchlist.0",
+      "spm-url": "gmktpc.home.searchtop.dsearchbox",
+      "_gr_uid_": "11758850530814005372000000",
+      "uidaplus": "11758850530814005372000000",
+      "logtype": "2",
+      "scr": "mandatory",
+      "_p_url": "mandatory",
       "decoded_gokey": {
+        "decoded_gokey": "mandatory",
         "params": {
-          "spm": "gmktpc.searchlist.departmentbranditem"
+          "uidaplus": "11758850530814005372000000",
+          "spm-url": "gmktpc.home.searchtop.dsearchbox",
+          "spm-pre": "",
+          "spm-cnt": "gmktpc.searchlist.0",
+          "_f_t": "false",
+          "pid": "www_gmarket_co_kr",
+          "cguid": "11758850530814005372000000",
+          "pguid": "skip",
+          "sguid": "skip",
+          "channel_code": "200003514",
+          "st_page_id": "mandatory",
+          "server_env": "<environment>",
+          "_is_auto_exp": "1",
+          "_eventType": "IObserver",
+          "_method": "POST",
+          "is_auto": "1",
+          "scm": "",
+          "spm": "gmktpc.searchlist.departmentbranditem",
+          "_w": "mandatory",
+          "_h": "mandatory",
+          "_x": "mandatory",
+          "_y": "mandatory",
+          "_rate": "mandatory",
+          "_viewability": "intersection",
+          "params-exp": {
+            "raw": "mandatory",
+            "parsed": {
+              "gmkt_page_id": "",
+              "gmkt_area_code": "",
+              "section_index": "",
+              "module_index": "mandatory",
+              "ab_buckets": [
+                "#108^4#B",
+                "#108^3#B"
+              ]
+            }
+          },
+          "cache": "mandatory",
+          "jsver": "aplus.js",
+          "lver": "1.13.26-1",
+          "customSdkId": "",
+          "platformType": [
+            "pc",
+            "mac"
+          ],
+          "device_model": [
+            "Windows",
+            "Macintosh"
+          ],
+          "os": [
+            "Windows",
+            "Mac OS X"
+          ],
+          "os_version": [
+            "win10",
+            "10.15.7"
+          ],
+          "language": [
+            "ko-KR",
+            "en-US"
+          ],
+          "o": [
+            "win10",
+            "mac"
+          ],
+          "w": [
+            "webkit",
+            "chrome"
+          ],
+          "s": "1280x720",
+          "scr": "mandatory",
+          "m": "360ee",
+          "ism": [
+            "pc",
+            "mac"
+          ],
+          "p": "1",
+          "b": "mandatory",
+          "tag": "1",
+          "stag": "-1",
+          "lstag": "-1",
+          "_g_encode": "utf-8"
         }
       }
     }
+  },
+  "product_exposure": {
+    "uidaplus": "11758850530814005372000000",
+    "spm-url": "gmktpc.home.searchtop.dsearchbox",
+    "spm-pre": "",
+    "spm-cnt": "gmktpc.searchlist.0",
+    "_f_t": "false",
+    "pid": "www_gmarket_co_kr",
+    "cguid": "11758850530814005372000000",
+    "pguid": "skip",
+    "sguid": "skip",
+    "channel_code": "200003514",
+    "st_page_id": "mandatory",
+    "server_env": "<environment>",
+    "expdata": {
+      "raw": "mandatory",
+      "parsed[0]": {
+        "exargs": {
+          "_w": "mandatory",
+          "_h": "mandatory",
+          "_x": "mandatory",
+          "_y": "mandatory",
+          "_rate": "mandatory",
+          "_viewability": "intersection",
+          "params-exp": {
+            "raw": "mandatory",
+            "parsed": {
+              "gmkt_page_id": "",
+              "gmkt_area_code": "200010136",
+              "section_index": "",
+              "module_index": "mandatory",
+              "is_ad": "N",
+              "ab_buckets": [
+                "#108^4#B",
+                "#108^3#B"
+              ],
+              "is_airticket": "N",
+              "utLogMap": {
+                "raw": "mandatory",
+                "parsed": {
+                  "scene": "search",
+                  "sub_scene": "main_srp",
+                  "x_object_id": "<상품번호>",
+                  "x_object_type": "item",
+                  "x_sku_id": "0",
+                  "pageIndex": "0",
+                  "pagePos": "0",
+                  "pageSize": "5",
+                  "listno": "0",
+                  "sort": "popularity",
+                  "searchScenario": "keyword",
+                  "query": "<검색어>",
+                  "pvid": "mandatory",
+                  "pvid_sys": "gmarket server",
+                  "search_session_id": "095f0558-6bbb-48e3-ac6a-00e213025a47",
+                  "origin_price": "<원가>",
+                  "promotion_price": "<할인가>",
+                  "coupon_price": "<쿠폰적용가>",
+                  "ab_buckets": [
+                    "#108^4#B",
+                    "#108^3#B"
+                  ],
+                  "trafficType": "organic"
+                }
+              },
+              "_p_prod": "<상품번호>",
+              "_p_sku": "0",
+              "_p_catalog": "mandatory",
+              "_p_group": "mandatory"
+            }
+          }
+        },
+        "scm": "",
+        "spm": "gmktpc.searchlist.departmentbranditem.d0_tab0_item0"
+      }
+    },
+    "_is_auto_exp": "1",
+    "_eventType": "custom",
+    "_method": "POST",
+    "_pkgSize": "5",
+    "_isCombine": "1",
+    "cache": "mandatory",
+    "jsver": "aplus.js",
+    "lver": "1.13.26-1",
+    "customSdkId": "",
+    "platformType": [
+      "pc",
+      "mac"
+    ],
+    "device_model": [
+      "Windows",
+      "Macintosh"
+    ],
+    "os": [
+      "Windows",
+      "Mac OS X"
+    ],
+    "os_version": [
+      "win10",
+      "10.15.7"
+    ],
+    "language": [
+      "ko-KR",
+      "en-US"
+    ],
+    "o": [
+      "win10",
+      "mac"
+    ],
+    "w": [
+      "webkit",
+      "chrome"
+    ],
+    "s": "1280x720",
+    "scr": "mandatory",
+    "m": "360ee",
+    "ism": [
+      "pc",
+      "mac"
+    ],
+    "p": "1",
+    "b": "mandatory",
+    "tag": "1",
+    "stag": "-1",
+    "lstag": "-1",
+    "_g_encode": "utf-8"
+  },
+  "product_click": {
+    "uidaplus": "11758850530814005372000000",
+    "spm-url": "gmktpc.home.searchtop.dsearchbox",
+    "spm-pre": "",
+    "spm-cnt": "gmktpc.searchlist.0",
+    "_f_t": "false",
+    "pid": "www_gmarket_co_kr",
+    "cguid": "11758850530814005372000000",
+    "pguid": "skip",
+    "sguid": "skip",
+    "channel_code": "200003514",
+    "st_page_id": "mandatory",
+    "server_env": "<environment>",
+    "params-clk": {
+      "raw": "mandatory",
+      "parsed": {
+        "gmkt_page_id": "",
+        "gmkt_area_code": "200010136",
+        "section_index": "",
+        "module_index": "mandatory",
+        "is_ad": "N",
+        "ab_buckets": [
+          "#108^4#B",
+          "#108^3#B"
+        ],
+        "is_airticket": "N",
+        "utLogMap": {
+          "raw": "mandatory",
+          "parsed": {
+            "scene": "search",
+            "sub_scene": "main_srp",
+            "x_object_id": "<상품번호>",
+            "x_object_type": "item",
+            "x_sku_id": "0",
+            "pageIndex": "0",
+            "pagePos": "0",
+            "pageSize": "5",
+            "listno": "0",
+            "sort": "popularity",
+            "searchScenario": "keyword",
+            "query": "<검색어>",
+            "pvid": "mandatory",
+            "pvid_sys": "gmarket server",
+            "search_session_id": "095f0558-6bbb-48e3-ac6a-00e213025a47",
+            "origin_price": "<원가>",
+            "promotion_price": "<할인가>",
+            "coupon_price": "<쿠폰적용가>",
+            "ab_buckets": [
+              "#108^4#B",
+              "#108^3#B"
+            ],
+            "trafficType": "organic"
+          }
+        },
+        "_p_prod": "<상품번호>",
+        "_p_sku": "0",
+        "_p_catalog": "mandatory",
+        "_p_group": "mandatory"
+      }
+    },
+    "_is_auto_clk": "1",
+    "spm": "gmktpc.searchlist.departmentbranditem.d0_tab0_item0",
+    "scm": "",
+    "cache": "mandatory",
+    "jsver": "aplus.js",
+    "lver": "1.13.26-1",
+    "customSdkId": "",
+    "platformType": [
+      "pc",
+      "mac"
+    ],
+    "device_model": [
+      "Windows",
+      "Macintosh"
+    ],
+    "os": [
+      "Windows",
+      "Mac OS X"
+    ],
+    "os_version": [
+      "win10",
+      "10.15.7"
+    ],
+    "language": [
+      "ko-KR",
+      "en-US"
+    ],
+    "o": [
+      "win10",
+      "mac"
+    ],
+    "w": [
+      "webkit",
+      "chrome"
+    ],
+    "s": "1280x720",
+    "scr": "mandatory",
+    "m": "360ee",
+    "ism": [
+      "pc",
+      "mac"
+    ],
+    "p": "1",
+    "b": "mandatory",
+    "tag": "1",
+    "stag": "-1",
+    "lstag": "-1",
+    "_g_encode": "utf-8"
+  },
+  "pdp_pv": {
+    "payload": {
+      "logtype": "1",
+      "title": "G마켓 - 대구백화점 스테파니올밴딩 와이드 골덴팬츠(A24PT4805)",
+      "pre": "https://www.gmarket.co.kr/n/search?spm=gmktpc.home.searchtop.dsearchbox.1fbf486a4hpXVL&keyword=%EC%95%84%EB%94%94%EB%8B%A4%EC%8A%A4",
+      "scr": "mandatory",
+      "_p_url": "mandatory",
+      "ts": "mandatory",
+      "rd": "mandatory",
+      "cna": "mandatory",
+      "spm-cnt": "gmktpc.pdp.0",
+      "spm-url": "gmktpc.searchlist.departmentbranditem.d0_tab0_item0",
+      "spm-pre": "gmktpc.home.searchtop.dsearchbox.1fbf486a4hpXVL",
+      "uidaplus": "11758850530814005372000000",
+      "sidx": "aplusSidex",
+      "ckx": "aplusCkx",
+      "pid": "item_gmarket_co_kr",
+      "cguid": "11758850530814005372000000",
+      "pguid": "skip",
+      "sguid": "skip",
+      "_p_typ": "pdp",
+      "_p_ispdp": "1",
+      "_p_prod": "<상품번호>",
+      "origin_price": "<원가>",
+      "promotion_price": "<할인가>",
+      "coupon_price": "<쿠폰적용가>",
+      "_p_sku": "0",
+      "item_status": "1",
+      "ab_buckets": [
+        "#108^4#B",
+        "#108^3#B"
+      ],
+      "pageid": "qmh3ie8taa4caxcp19be33cef551f1fde1d7c489d1",
+      "server_env": "<environment>",
+      "goodscode": "4640941786",
+      "utparam-url": "mandatory",
+      "_is_auto_pv": "1",
+      "cache": "mandatory",
+      "jsver": "aplus.js",
+      "lver": "1.13.26-1",
+      "platformType": [
+        "pc",
+        "mac"
+      ],
+      "device_model": [
+        "Windows",
+        "Macintosh"
+      ],
+      "os": [
+        "Windows",
+        "Mac OS X"
+      ],
+      "os_version": [
+        "win10",
+        "10.15.7"
+      ],
+      "language": [
+        "ko-KR",
+        "en-US"
+      ],
+      "o": [
+        "win10",
+        "mac"
+      ],
+      "w": [
+        "webkit",
+        "chrome"
+      ],
+      "s": "1280x720",
+      "m": "360ee",
+      "ism": [
+        "pc",
+        "mac"
+      ],
+      "p": "1",
+      "b": "mandatory",
+      "tag": "1",
+      "stag": "-1",
+      "lstag": "-1",
+      "_g_encode": "utf-8"
+    }
+  },
+  "pv": {
+    "payload": {
+      "logtype": "1",
+      "title": "G마켓 - 아디다스 검색결과",
+      "pre": "https://www.gmarket.co.kr/",
+      "scr": "mandatory",
+      "_p_url": "mandatory",
+      "ts": "mandatory",
+      "rd": "mandatory",
+      "cna": "mandatory",
+      "spm-cnt": "gmktpc.searchlist.0",
+      "spm-url": "gmktpc.home.searchtop.dsearchbox",
+      "uidaplus": "11758850530814005372000000",
+      "sidx": "aplusSidex",
+      "ckx": "aplusCkx",
+      "pid": "www_gmarket_co_kr",
+      "cguid": "11758850530814005372000000",
+      "pguid": "skip",
+      "sguid": "skip",
+      "channel_code": "200003514",
+      "_p_typ": "search",
+      "_p_ispdp": "0",
+      "query": "<검색어>",
+      "searchScenario": "keyword",
+      "ab_buckets": [
+        "#108^4#B",
+        "#108^3#B"
+      ],
+      "pageid": "qmh3ie8taa4caxcp19be33cd27ec2ae497123024ce",
+      "server_env": "<environment>",
+      "keyword": "아디다스",
+      "_is_auto_pv": "1",
+      "cache": "mandatory",
+      "jsver": "aplus.js",
+      "lver": "1.13.26-1",
+      "platformType": [
+        "pc",
+        "mac"
+      ],
+      "device_model": [
+        "Windows",
+        "Macintosh"
+      ],
+      "os": [
+        "Windows",
+        "Mac OS X"
+      ],
+      "os_version": [
+        "win10",
+        "10.15.7"
+      ],
+      "language": [
+        "ko-KR",
+        "en-US"
+      ],
+      "o": [
+        "win10",
+        "mac"
+      ],
+      "w": [
+        "webkit",
+        "chrome"
+      ],
+      "s": "1280x720",
+      "m": "360ee",
+      "ism": [
+        "pc",
+        "mac"
+      ],
+      "p": "1",
+      "b": "mandatory",
+      "tag": "1",
+      "stag": "-1",
+      "lstag": "-1",
+      "_g_encode": "utf-8"
+    }
   }
+}

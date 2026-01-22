@@ -20,6 +20,114 @@ from utils.google_sheets_sync import (
 )
 
 
+# 시트에서 제외할 필드명 목록
+EXCLUDE_FIELDS = [
+    # 여기에 제외할 필드명을 추가하세요
+    # 예: 'timestamp', 'method', 'url' 등
+]
+
+# SPM 필드별 점(.) 개수 설정 (해당 개수까지만 유지)
+SPM_DOT_COUNT = {
+    'spm-cnt': 2,  # spm-cnt는 점 2개까지 유지 (예: gmktpc.searchlist)
+    'spm-url': 3,  # spm-url은 점 3개까지 유지 (예: gmktpc.home.searchtop)
+}
+
+def truncate_spm_value(value: str, max_dots: int) -> str:
+    """
+    SPM 값을 점(.)으로 구분하여 지정된 개수까지만 유지
+    
+    Args:
+        value: 원본 SPM 값 (예: 'gmktpc.home.searchtop.dsearchbox.1fbf486aNeD7nd')
+        max_dots: 유지할 점(.)의 최대 개수 (예: 3이면 'gmktpc.home.searchtop' 반환)
+    
+    Returns:
+        잘린 SPM 값
+    """
+    if not isinstance(value, str):
+        return value
+    
+    parts = value.split('.')
+    # max_dots 개의 점을 유지하려면 max_dots + 1 개의 부분을 가져와야 함
+    # 예: max_dots=3이면 4개 부분 (gmktpc, home, searchtop, dsearchbox) -> 점 3개
+    truncated_parts = parts[:max_dots + 1]
+    return '.'.join(truncated_parts)
+
+def replace_value_with_placeholder(field_name: str, value: Any) -> Any:
+    """
+    필드명에 따라 실제 값을 placeholder로 치환
+    
+    Args:
+        field_name: 필드명 (예: 'keyword', 'origin_price', '_p_prod' 등)
+        value: 치환할 값
+    
+    Returns:
+        placeholder로 치환된 값 또는 원본 값 (리스트는 JSON 문자열로 변환)
+    """
+    # SPM 필드의 경우 점 개수에 따라 자르기
+    if field_name in SPM_DOT_COUNT:
+        max_dots = SPM_DOT_COUNT[field_name]
+        return truncate_spm_value(value, max_dots)
+    
+    # 필드명에 따라 placeholder로 치환
+    field_placeholder_map = {
+        'query': '<검색어>',
+        'origin_price': '<원가>',
+        'promotion_price': '<할인가>',
+        'coupon_price': '<쿠폰적용가>',
+        'server_env': '<environment>',
+        '_p_prod': '<상품번호>',
+        'x_object_id': '<상품번호>',
+        "ts": "mandatory",
+        "rd": "mandatory",
+        "scr": "mandatory",
+        "gokey": "mandatory",
+        "cna": "mandatory",
+        "_p_url": "mandatory",
+        "decoded_gokey": "mandatory",
+        "pguid": "skip",
+        "sguid": "skip",
+        "st_page_id": "mandatory",
+        "_w": "mandatory",
+        "_h": "mandatory",
+        "_x": "mandatory",
+        "_y": "mandatory",
+        "_rate": "mandatory",
+        "raw" : "mandatory",
+        "params-exp": "mandatory",
+        "module_index": "mandatory",
+        "ab_buckets": ["#108^4#B", "#108^3#B"],
+        "cache": "mandatory",
+        "platformType": ["pc", "mac"],
+        "device_model": ["Windows", "Macintosh"],
+        "os": ["Windows", "Mac OS X"],
+        "os_version": ["win10", "10.15.7"],
+        "language": ["ko-KR", "en-US"],
+        "o": ["win10", "mac"],
+        "w": ["webkit", "chrome"],
+        "s": "1280x720",
+        "m": "360ee",
+        "ism": ["pc", "mac"],
+        "b": "mandatory",
+        "pvid" : "mandatory",
+        "_p_catalog" : "mandatory",
+        "_p_group" : "mandatory",
+        "utparam-url" : "mandatory"
+    }
+    
+    if field_name in field_placeholder_map:
+        result = field_placeholder_map[field_name]
+        # 리스트나 딕셔너리는 JSON 문자열로 변환 (Google Sheets API 호환성)
+        if isinstance(result, (list, dict)):
+            return json.dumps(result, ensure_ascii=False)
+        return result
+    
+    # 원본 값도 리스트나 딕셔너리인 경우 JSON 문자열로 변환
+    if isinstance(value, (list, dict)):
+        return json.dumps(value, ensure_ascii=False)
+    
+    return value
+
+
 def load_tracking_json(file_path: str) -> List[Dict[str, Any]]:
     """
     tracking_all JSON 파일 로드
@@ -37,6 +145,8 @@ def load_tracking_json(file_path: str) -> List[Dict[str, Any]]:
         raise ValueError(f"JSON 파일은 배열 형태여야 합니다: {file_path}")
     
     return data
+
+
 
 
 def process_event_type_payload(event_data: Dict[str, Any], event_type: str) -> Dict[str, Any]:
@@ -58,36 +168,26 @@ def process_event_type_payload(event_data: Dict[str, Any], event_type: str) -> D
         return {'payload': payload}
     
     elif event_type == 'Product Exposure':
-        # product_exposure는 decoded_gokey.params에서 필요한 부분 추출
+        # product_exposure는 decoded_gokey.params에서 모든 필드 추출
         result = {}
         if 'decoded_gokey' in payload and isinstance(payload['decoded_gokey'], dict):
             decoded = payload['decoded_gokey']
             if 'params' in decoded:
                 params = decoded['params']
-                # 최상위 필드들 추출
-                for key in ['channel_code', 'cguid', 'spm-url', 'spm-pre', 'spm-cnt', 'spm']:
-                    if key in params:
-                        result[key] = params[key]
-                
-                # params-exp 구조 추가
-                if 'params-exp' in params:
-                    result['params-exp'] = params['params-exp']
+                # params의 모든 필드를 포함
+                result = params.copy()
         
         return result if result else payload
     
     elif event_type == 'Product Click':
-        # product_click도 유사하게 처리
+        # product_click도 decoded_gokey.params에서 모든 필드 추출
         result = {}
         if 'decoded_gokey' in payload and isinstance(payload['decoded_gokey'], dict):
             decoded = payload['decoded_gokey']
             if 'params' in decoded:
                 params = decoded['params']
-                for key in ['channel_code', 'cguid', 'spm-url', 'spm-pre', 'spm-cnt', 'spm']:
-                    if key in params:
-                        result[key] = params[key]
-                
-                if 'params-clk' in params:
-                    result['params-clk'] = params['params-clk']
+                # params의 모든 필드를 포함
+                result = params.copy()
         
         return result if result else payload
     
@@ -183,7 +283,17 @@ def main():
         flattened = flatten_json(config_data, exclude_keys=['timestamp', 'method', 'url'])
         
         if flattened:
-            print(f"  {len(flattened)}개 필드 평면화 완료")
+            # 제외할 필드명 필터링
+            if EXCLUDE_FIELDS:
+                flattened = [item for item in flattened if item.get('field') not in EXCLUDE_FIELDS]
+            
+            # 필드명에 따라 실제 값을 placeholder로 치환
+            for item in flattened:
+                if 'field' in item and 'value' in item:
+                    field_name = item['field']
+                    item['value'] = replace_value_with_placeholder(field_name, item['value'])
+            
+            print(f"  {len(flattened)}개 필드 평면화 완료 (필드명 기반 placeholder 치환 적용)")
             current_row = sync.write_event_type_table(worksheet, event_type, flattened, current_row)
             print(f"  시트에 작성 완료 (다음 행: {current_row})")
         else:

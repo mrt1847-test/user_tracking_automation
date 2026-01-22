@@ -7,7 +7,13 @@ import json
 from datetime import datetime
 from pathlib import Path
 from pytest_bdd import then, parsers
-from utils.validation_helpers import validate_event_type_logs, load_module_config, _find_spm_recursive, get_event_logs
+from utils.validation_helpers import (
+    validate_event_type_logs,
+    load_module_config,
+    _find_spm_recursive,
+    get_event_logs,
+    module_title_to_filename,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -505,7 +511,8 @@ def _save_tracking_logs(bdd_context, tracker, goodscode, module_title):
         all_logs.extend(tracker.get_product_atc_click_logs_by_goodscode(goodscode))
         
         if len(all_logs) > 0:
-            all_filepath = Path(f'json/tracking_all_{goodscode}_{timestamp}.json')
+            module_safe = module_title_to_filename(module_title)
+            all_filepath = Path(f'json/tracking_all_{module_safe}.json')
             all_filepath.parent.mkdir(parents=True, exist_ok=True)
             with open(all_filepath, 'w', encoding='utf-8') as f:
                 json.dump(all_logs, f, ensure_ascii=False, indent=2, default=str)

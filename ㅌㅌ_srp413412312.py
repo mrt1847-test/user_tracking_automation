@@ -4,7 +4,7 @@ from pages.search_page import SearchPage
 from pages.Etc import Etc
 import json
 from utils.NetworkTracker import NetworkTracker
-from utils.validation_helpers import validate_tracking_logs, EVENT_TYPE_METHODS, load_module_config, _find_spm_recursive
+from utils.validation_helpers import validate_tracking_logs, EVENT_TYPE_METHODS, load_module_config, _find_spm_recursive, module_title_to_filename
 from config.validation_rules import SRP_VALIDATION_RULES
 import pytest
 import io
@@ -223,7 +223,8 @@ def test_01_srp_1(page):
         all_logs.extend(tracker.get_product_atc_click_logs_by_goodscode(goodscode))
         
         if len(all_logs) > 0:
-            all_filepath = Path(f'json/tracking_all_{goodscode}_{timestamp}.json')
+            module_safe = module_title_to_filename(module_title)
+            all_filepath = Path(f'json/tracking_all_{module_safe}.json')
             all_filepath.parent.mkdir(parents=True, exist_ok=True)
             with open(all_filepath, 'w', encoding='utf-8') as f:
                 json.dump(all_logs, f, ensure_ascii=False, indent=2, default=str)

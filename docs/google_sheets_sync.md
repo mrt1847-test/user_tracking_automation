@@ -48,9 +48,11 @@ tracking_all JSON 파일을 구글 시트로 변환하여 기본 틀 생성
 
 ```bash
 python scripts/json_to_sheets.py \
-  --input json/tracking_all_2809108578_20260121_123834.json \
+  --input json/tracking_all_먼저_둘러보세요.json \
   --module "먼저 둘러보세요"
 ```
+
+(전체 로그 파일명: `tracking_all_{module_title}.json`. 모듈 타이틀의 공백·특수문자는 파일명용으로 치환됨.)
 
 ### 인자 설명
 
@@ -100,11 +102,7 @@ python scripts/json_to_sheets.py \
 ### 사용법
 
 ```bash
-python scripts/sheets_to_json.py \
-  --module "먼저 둘러보세요" \
-  --area SRP \
-  [--output config/SRP/먼저\ 둘러보세요.json] \
-  [--overwrite]
+python scripts/sheets_to_json.py --module "먼저 둘러보세요" --area SRP [--output config/SRP/먼저\ 둘러보세요.json] [--overwrite]
 ```
 
 ### 인자 설명
@@ -255,7 +253,7 @@ gspread.exceptions.APIError: 403 Forbidden
 2. **구글 시트로 변환**:
 ```bash
 python scripts/json_to_sheets.py \
-  --input json/tracking_all_2809108578_20260121_123834.json \
+  --input json/tracking_all_먼저_둘러보세요.json \
   --module "먼저 둘러보세요"
 ```
 
@@ -270,6 +268,142 @@ python scripts/sheets_to_json.py \
 ```
 
 5. **생성된 config JSON 사용** (테스트 실행)
+
+### SRP 모듈별 명령어 예시
+
+`config/SRP/` 폴더의 각 파일에 대한 명령어:
+
+#### 1. 4.5 이상
+
+```bash
+# JSON → 구글 시트
+python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "4.5 이상"
+
+# 구글 시트 → JSON
+python scripts/sheets_to_json.py --module "4.5 이상" --area SRP --overwrite
+```
+
+#### 2. MD's Pick
+
+```bash
+# JSON → 구글 시트
+python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "MD's Pick"
+
+# 구글 시트 → JSON
+python scripts/sheets_to_json.py --module "MD's Pick" --area SRP --overwrite
+```
+
+#### 3. 대체검색어
+
+```bash
+# JSON → 구글 시트
+python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "대체검색어"
+
+# 구글 시트 → JSON
+python scripts/sheets_to_json.py --module "대체검색어" --area SRP --overwrite
+```
+
+#### 4. 먼저 둘러보세요
+
+```bash
+# JSON → 구글 시트
+python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "먼저 둘러보세요"
+
+# 구글 시트 → JSON
+python scripts/sheets_to_json.py --module "먼저 둘러보세요" --area SRP --overwrite
+```
+
+#### 5. 백화점 브랜드
+
+```bash
+# JSON → 구글 시트
+python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "백화점 브랜드"
+
+# 구글 시트 → JSON
+python scripts/sheets_to_json.py --module "백화점 브랜드" --area SRP --overwrite
+```
+
+#### 6. 브랜드 인기상품
+
+```bash
+# JSON → 구글 시트
+python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "브랜드 인기상품"
+
+# 구글 시트 → JSON
+python scripts/sheets_to_json.py --module "브랜드 인기상품" --area SRP --overwrite
+```
+
+#### 7. 스타배송
+
+```bash
+# JSON → 구글 시트
+python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "스타배송"
+
+# 구글 시트 → JSON
+python scripts/sheets_to_json.py --module "스타배송" --area SRP --overwrite
+```
+
+#### 8. 오늘의 상품이에요
+
+```bash
+# JSON → 구글 시트
+python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "오늘의 상품이에요"
+
+# 구글 시트 → JSON
+python scripts/sheets_to_json.py --module "오늘의 상품이에요" --area SRP --overwrite
+```
+
+#### 9. 오늘의 슈퍼딜
+
+```bash
+# JSON → 구글 시트
+python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "오늘의 슈퍼딜"
+
+# 구글 시트 → JSON
+python scripts/sheets_to_json.py --module "오늘의 슈퍼딜" --area SRP --overwrite
+```
+
+#### 10. 오늘의 프라임상품
+
+```bash
+# JSON → 구글 시트
+python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "오늘의 프라임상품"
+
+# 구글 시트 → JSON
+python scripts/sheets_to_json.py --module "오늘의 프라임상품" --area SRP --overwrite
+```
+
+#### 11. 인기 상품이에요
+
+```bash
+# JSON → 구글 시트
+python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "인기 상품이에요"
+
+# 구글 시트 → JSON
+python scripts/sheets_to_json.py --module "인기 상품이에요" --area SRP --overwrite
+```
+
+#### 12. 일반상품
+
+```bash
+# JSON → 구글 시트
+python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "일반상품"
+
+# 구글 시트 → JSON
+python scripts/sheets_to_json.py --module "일반상품" --area SRP --overwrite
+```
+
+#### 13. 최상단 클릭아이템
+
+```bash
+# JSON → 구글 시트
+python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "최상단 클릭아이템"
+
+# 구글 시트 → JSON
+python scripts/sheets_to_json.py --module "최상단 클릭아이템" --area SRP --overwrite
+```
+
+**참고**: `<tracking_all_json_file>` 부분은 실제 tracking_all JSON 파일 경로로 교체해야 합니다 (예: `json/tracking_all_먼저_둘러보세요.json`).
 
 ## 참고
 

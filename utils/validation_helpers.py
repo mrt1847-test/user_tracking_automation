@@ -40,6 +40,23 @@ EVENT_TYPE_CONFIG_KEY_MAP = {
 }
 
 
+def module_title_to_filename(module_title: str) -> str:
+    """
+    모듈 타이틀을 파일명에 사용 가능한 문자열로 변환.
+    공백, 따옴표, Windows에서 불가한 문자 등 치환.
+    """
+    if not module_title:
+        return "unknown"
+    s = str(module_title).strip()
+    for old, new in [
+        (" ", "_"), ("'", ""), ("/", "_"), ("\\", "_"),
+        (":", "_"), ("*", "_"), ("?", "_"), ('"', "_"),
+        ("<", "_"), (">", "_"), ("|", "_"),
+    ]:
+        s = s.replace(old, new)
+    return s or "unknown"
+
+
 def detect_area_from_feature_path(feature_path: Optional[str] = None) -> str:
     """
     Feature 파일 경로에서 영역(SRP, PDP, HOME, CART 등) 추론

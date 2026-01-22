@@ -157,14 +157,28 @@ class GoogleSheetsSync:
         # 이벤트 타입 헤더 찾기
         all_values = worksheet.get_all_values()
         header_found = False
+        search_pattern = f'[{event_type}]'
         
-        for i, row in enumerate(all_values[start_row - 1:], start=start_row):
-            if row and row[0] and f'[{event_type}]' in row[0]:
-                header_found = True
-                current_row = i + 1
-                break
+        # 디버깅: 검색 범위 확인
+        search_range = all_values[start_row - 1:]
+        print(f"    [디버깅] 헤더 '{search_pattern}' 검색 중 (시작 행: {start_row}, 검색 범위: {len(search_range)}행)")
+        
+        for i, row in enumerate(search_range, start=start_row):
+            if row and len(row) > 0 and row[0]:
+                # 디버깅: 첫 번째 컬럼 값 확인
+                first_col = row[0].strip()
+                if search_pattern in first_col:
+                    header_found = True
+                    current_row = i + 1
+                    print(f"    [디버깅] 헤더 발견: 행 {i}, 값: '{first_col}'")
+                    break
         
         if not header_found:
+            # 디버깅: 헤더를 찾지 못한 경우 주변 행 출력
+            print(f"    [디버깅] 헤더 '{search_pattern}'를 찾지 못함. 검색 범위의 첫 10개 행:")
+            for i, row in enumerate(search_range[:10], start=start_row):
+                first_col = row[0].strip() if row and len(row) > 0 else ''
+                print(f"      행 {i}: '{first_col}'")
             return [], current_row
         
         # 컬럼 헤더 스킵
@@ -245,13 +259,11 @@ def flatten_json(obj: Any, parent_path: str = '', exclude_keys: Optional[List[st
                 'value': _serialize_value(obj[0])
             })
         else:
-            # 다중 요소 배열 또는 중첩 배열: JSON 문자열로 저장
-            field_name = parent_path.split('.')[-1] if parent_path else ''
-            result.append({
-                'path': parent_path,
-                'field': field_name,
-                'value': json.dumps(obj, ensure_ascii=False)
-            })
+            # 다중 요소 배열 또는 중첩 배열: 각 항목을 개별적으로 평면화
+            # expdata.parsed 같은 특수한 경우를 위해 배열의 각 항목을 재귀적으로 처리
+            for idx, item in enumerate(obj):
+                item_path = f"{parent_path}[{idx}]" if parent_path else f"[{idx}]"
+                result.extend(flatten_json(item, item_path, exclude_keys))
     
     else:
         # 기본 타입
@@ -319,33 +331,21 @@ def unflatten_json(rows: List[Dict[str, str]]) -> Dict[str, Any]:
 
 
 def _deserialize_value(value: str) -> Any:
-    """문자열 값을 적절한 타입으로 역직렬화"""
+    """문자열 값을 적절한 타입으로 역직렬화 (리스트는 제외하고 나머지는 문자열)"""
+    # 공란은 빈 문자열로 반환
     if value == '':
-        return None
+        return ''
     
-    # JSON 배열/객체인지 확인
-    if value.startswith('[') or value.startswith('{'):
+    # JSON 배열 형태는 파싱해서 리스트로 반환
+    if value.startswith('[') and value.endswith(']'):
         try:
-            return json.loads(value)
+            parsed = json.loads(value)
+            if isinstance(parsed, list):
+                return parsed
         except json.JSONDecodeError:
             pass
     
-    # 불리언 확인
-    if value.lower() == 'true':
-        return True
-    if value.lower() == 'false':
-        return False
-    
-    # 숫자 확인
-    try:
-        if '.' in value:
-            return float(value)
-        else:
-            return int(value)
-    except ValueError:
-        pass
-    
-    # 문자열 그대로 반환
+    # 나머지는 모두 문자열로 반환 (타입 변환 없음)
     return value
 
 

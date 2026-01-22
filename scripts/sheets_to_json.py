@@ -15,7 +15,7 @@ sys.path.insert(0, str(project_root))
 from utils.google_sheets_sync import (
     GoogleSheetsSync,
     unflatten_json,
-    CONFIG_KEY_TO_TRACKING_TYPE
+    TRACKING_TYPE_TO_CONFIG_KEY
 )
 
 
@@ -72,20 +72,30 @@ def read_all_event_types(
     
     current_row = 1
     
+    # 디버깅: 시트의 모든 값 확인
+    all_values = worksheet.get_all_values()
+    print(f"  [디버깅] 시트 총 행 수: {len(all_values)}")
+    if len(all_values) > 0:
+        print(f"  [디버깅] 첫 5개 행 샘플:")
+        for i, row in enumerate(all_values[:5], 1):
+            print(f"    행 {i}: {row[:3]}")  # 처음 3개 컬럼만 출력
+    
     for tracking_type in tracking_types:
-        # config 키로 변환
-        config_key = CONFIG_KEY_TO_TRACKING_TYPE.get(tracking_type)
+        # config 키로 변환 (올바른 매핑 사용)
+        config_key = TRACKING_TYPE_TO_CONFIG_KEY.get(tracking_type)
         if not config_key:
+            print(f"  [디버깅] [{tracking_type}]: config 키를 찾을 수 없음 (건너뜀)")
             continue
         
+        print(f"  [디버깅] [{tracking_type}] 검색 시작 (현재 행: {current_row})...")
         # 이벤트 타입 테이블 읽기
         data, next_row = sync.read_event_type_table(worksheet, tracking_type, current_row)
         
         if data:
             result[config_key] = data
-            print(f"  [{tracking_type}] → [{config_key}]: {len(data)}개 필드 읽음")
+            print(f"  ✅ [{tracking_type}] → [{config_key}]: {len(data)}개 필드 읽음")
         else:
-            print(f"  [{tracking_type}]: 데이터 없음")
+            print(f"  ⚠️  [{tracking_type}]: 데이터 없음 (헤더를 찾지 못했거나 데이터가 비어있음)")
         
         current_row = next_row
     
@@ -113,24 +123,8 @@ def create_config_json(
         # 평면 데이터를 중첩 구조로 변환
         nested_data = unflatten_json(flat_data)
         
-        # tracking_type 가져오기
-        tracking_type = CONFIG_KEY_TO_TRACKING_TYPE.get(config_key)
-        
-        if tracking_type:
-            # 이벤트 타입에 따라 구조 조정
-            if config_key == 'module_exposure':
-                config[config_key] = nested_data
-            elif config_key == 'product_exposure':
-                # product_exposure는 특별한 구조가 있을 수 있음
-                config[config_key] = nested_data
-            elif config_key == 'product_click':
-                config[config_key] = nested_data
-            elif config_key == 'product_atc_click':
-                config[config_key] = nested_data
-            elif config_key == 'pdp_pv':
-                config[config_key] = nested_data
-            else:
-                config[config_key] = nested_data
+        # config에 추가 (모든 이벤트 타입은 동일하게 처리)
+        config[config_key] = nested_data
     
     return config
 
@@ -187,10 +181,21 @@ def main():
     
     # 시트에서 데이터 읽기
     print(f"시트 '{args.module}'에서 데이터 읽는 중...")
-    event_data_dict = read_all_event_types(sync, args.module)
+    try:
+        event_data_dict = read_all_event_types(sync, args.module)
+    except Exception as e:
+        print(f"❌ 오류: 시트에서 데이터를 읽는 중 예외 발생: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
     
     if not event_data_dict:
         print("❌ 오류: 시트에서 데이터를 읽을 수 없습니다.")
+        print("   가능한 원인:")
+        print("   1. 시트가 비어있거나")
+        print("   2. 이벤트 타입 헤더([Module Exposure] 등)를 찾을 수 없거나")
+        print("   3. 시트 이름이 올바르지 않습니다")
+        print(f"   시트 이름 확인: '{args.module}'")
         sys.exit(1)
     
     # config JSON 구조 생성

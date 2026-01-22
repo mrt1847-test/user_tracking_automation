@@ -570,6 +570,63 @@ class NetworkTracker:
         """
         return self.get_logs('Click')
     
+    def _find_value_recursive(self, obj: Any, target_keys: List[str], visited: Optional[set] = None) -> Optional[str]:
+        """
+        재귀적으로 딕셔너리/리스트를 탐색하여 target_keys 중 하나를 찾음
+        순환 참조 방지를 위해 visited set 사용
+        
+        Args:
+            obj: 탐색할 객체 (dict, list, 또는 기타)
+            target_keys: 찾을 키 목록 (우선순위 순서)
+            visited: 방문한 객체 ID 집합 (순환 참조 방지)
+        
+        Returns:
+            찾은 값의 문자열 변환 또는 None
+        """
+        if visited is None:
+            visited = set()
+        
+        # 순환 참조 방지 (dict와 list만 체크)
+        if isinstance(obj, (dict, list)):
+            obj_id = id(obj)
+            if obj_id in visited:
+                return None
+            visited.add(obj_id)
+        
+        # 딕셔너리인 경우
+        if isinstance(obj, dict):
+            # 우선순위에 따라 키 확인 (_p_prod 우선)
+            for key in target_keys:
+                if key in obj:
+                    value = obj[key]
+                    if value:
+                        return str(value)
+            
+            # 'parsed' 키가 있으면 우선적으로 탐색 (디코딩된 데이터 구조)
+            if 'parsed' in obj and isinstance(obj['parsed'], (dict, list)):
+                result = self._find_value_recursive(obj['parsed'], target_keys, visited)
+                if result:
+                    return result
+            
+            # 모든 값에 대해 재귀 탐색
+            for value in obj.values():
+                result = self._find_value_recursive(value, target_keys, visited)
+                if result:
+                    return result
+        
+        # 리스트인 경우
+        elif isinstance(obj, list):
+            for item in obj:
+                result = self._find_value_recursive(item, target_keys, visited)
+                if result:
+                    return result
+        
+        # 방문 기록 제거 (재귀 종료 시)
+        if isinstance(obj, (dict, list)):
+            visited.discard(id(obj))
+        
+        return None
+    
     def _extract_goodscode_from_log(self, log: Dict[str, Any]) -> Optional[str]:
         """
         로그에서 goodscode 추출 (다단계 중첩 구조 지원)
@@ -584,62 +641,6 @@ class NetworkTracker:
         Returns:
             추출된 goodscode (_p_prod 우선, 없으면 x_object_id) 또는 None
         """
-        def find_value_recursive(obj: Any, target_keys: List[str], visited: Optional[set] = None) -> Optional[str]:
-            """
-            재귀적으로 딕셔너리/리스트를 탐색하여 target_keys 중 하나를 찾음
-            순환 참조 방지를 위해 visited set 사용
-            
-            Args:
-                obj: 탐색할 객체 (dict, list, 또는 기타)
-                target_keys: 찾을 키 목록 (우선순위 순서)
-                visited: 방문한 객체 ID 집합 (순환 참조 방지)
-            
-            Returns:
-                찾은 값의 문자열 변환 또는 None
-            """
-            if visited is None:
-                visited = set()
-            
-            # 순환 참조 방지 (dict와 list만 체크)
-            if isinstance(obj, (dict, list)):
-                obj_id = id(obj)
-                if obj_id in visited:
-                    return None
-                visited.add(obj_id)
-            
-            # 딕셔너리인 경우
-            if isinstance(obj, dict):
-                # 우선순위에 따라 키 확인 (_p_prod 우선)
-                for key in target_keys:
-                    if key in obj:
-                        value = obj[key]
-                        if value:
-                            return str(value)
-                
-                # 'parsed' 키가 있으면 우선적으로 탐색 (디코딩된 데이터 구조)
-                if 'parsed' in obj and isinstance(obj['parsed'], (dict, list)):
-                    result = find_value_recursive(obj['parsed'], target_keys, visited)
-                    if result:
-                        return result
-                
-                # 모든 값에 대해 재귀 탐색
-                for value in obj.values():
-                    result = find_value_recursive(value, target_keys, visited)
-                    if result:
-                        return result
-            
-            # 리스트인 경우
-            elif isinstance(obj, list):
-                for item in obj:
-                    result = find_value_recursive(item, target_keys, visited)
-                    if result:
-                        return result
-            
-            # 방문 기록 제거 (재귀 종료 시)
-            if isinstance(obj, (dict, list)):
-                visited.discard(id(obj))
-            
-            return None
         
         payload = log.get('payload')
         
@@ -664,12 +665,12 @@ class NetworkTracker:
         decoded_gokey = payload.get('decoded_gokey', {})
         if decoded_gokey:
             # _p_prod 우선 탐색
-            result = find_value_recursive(decoded_gokey, ['_p_prod'])
+            result = self._find_value_recursive(decoded_gokey, ['_p_prod'])
             if result:
                 return result
             
             # x_object_id 탐색
-            result = find_value_recursive(decoded_gokey, ['x_object_id'])
+            result = self._find_value_recursive(decoded_gokey, ['x_object_id'])
             if result:
                 return result
         
@@ -750,7 +751,32 @@ class NetworkTracker:
             if request_type and log.get('type') != request_type:
                 continue
             
-            # goodscode 추출 및 비교
+            # Product Exposure의 경우: expdata.parsed 배열의 모든 항목을 재귀적으로 확인
+            if request_type == 'Product Exposure':
+                payload = log.get('payload', {})
+                decoded_gokey = payload.get('decoded_gokey', {})
+                if isinstance(decoded_gokey, dict):
+                    params = decoded_gokey.get('params', {})
+                    if isinstance(params, dict):
+                        expdata = params.get('expdata', {})
+                        if isinstance(expdata, dict) and 'parsed' in expdata:
+                            parsed_list = expdata.get('parsed', [])
+                            if isinstance(parsed_list, list):
+                                # 배열의 모든 항목에서 재귀적으로 goodscode 확인
+                                found = False
+                                for item in parsed_list:
+                                    # 각 항목에서 재귀적으로 _p_prod 우선, 없으면 x_object_id 찾기
+                                    item_goodscode = self._find_value_recursive(item, ['_p_prod'])
+                                    if not item_goodscode:
+                                        item_goodscode = self._find_value_recursive(item, ['x_object_id'])
+                                    if item_goodscode and str(item_goodscode) == str(goodscode):
+                                        found = True
+                                        break
+                                if found:
+                                    filtered_logs.append(log)
+                                continue
+            
+            # 그 외의 경우: 기존 방식으로 goodscode 추출 및 비교
             log_goodscode = self._extract_goodscode_from_log(log)
             if log_goodscode and log_goodscode == goodscode:
                 filtered_logs.append(log)

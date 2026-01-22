@@ -187,7 +187,7 @@ price_info = srp_page.get_product_price_info(goodscode)
 - `tracking_product_exposure_{goodscode}_{timestamp}.json`: Product Exposure 로그
 - `tracking_product_click_{goodscode}_{timestamp}.json`: Product Click 로그
 - `tracking_pdp_pv_{goodscode}_{timestamp}.json`: PDP PV 로그
-- `tracking_all_{goodscode}_{timestamp}.json`: 전체 트래킹 로그
+- `tracking_all_{module_title}.json`: 전체 트래킹 로그 (모듈 타이틀 사용, 공백 등은 `_`로 치환)
 
 ## 🔍 정합성 검증 프로세스
 
