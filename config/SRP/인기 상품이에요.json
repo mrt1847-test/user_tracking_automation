@@ -171,8 +171,8 @@
               },
               "_p_prod": "<상품번호>",
               "_p_sku": "0",
-              "_p_catalog": "mandatory",
-              "_p_group": "mandatory"
+              "_p_catalog": "skip",
+              "_p_group": "skip"
             }
           }
         },
@@ -289,8 +289,8 @@
         },
         "_p_prod": "<상품번호>",
         "_p_sku": "0",
-        "_p_catalog": "mandatory",
-        "_p_group": "mandatory"
+        "_p_catalog": "skip",
+        "_p_group": "skip"
       }
     },
     "_is_auto_clk": "1",
@@ -417,8 +417,8 @@
               },
               "_p_prod": "<상품번호>",
               "_p_sku": "0",
-              "_p_catalog": "mandatory",
-              "_p_group": "mandatory"
+              "_p_catalog": "skip",
+              "_p_group": "skip"
             }
           },
           "_is_auto_clk": "1",
@@ -496,8 +496,8 @@
       "_p_typ": "pdp",
       "_p_ispdp": "1",
       "_p_prod": "<상품번호>",
-      "_p_catalog": "mandatory",
-      "_p_group": "mandatory",
+      "_p_catalog": "skip",
+      "_p_group": "skip",
       "origin_price": "<원가>",
       "promotion_price": "<할인가>",
       "coupon_price": "<쿠폰적용가>",

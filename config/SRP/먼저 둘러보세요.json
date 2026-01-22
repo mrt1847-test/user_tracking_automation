@@ -173,8 +173,8 @@
               },
               "_p_prod": "<상품번호>",
               "_p_sku": "0",
-              "_p_catalog": "mandatory",
-              "_p_group": "mandatory"
+              "_p_catalog": "skip",
+              "_p_group": "skip"
             }
           }
         },
@@ -293,8 +293,8 @@
         },
         "_p_prod": "<상품번호>",
         "_p_sku": "0",
-        "_p_catalog": "mandatory",
-        "_p_group": "mandatory"
+        "_p_catalog": "skip",
+        "_p_group": "skip"
       }
     },
     "_is_auto_clk": "1",
@@ -423,8 +423,8 @@
               },
               "_p_prod": "<상품번호>",
               "_p_sku": "0",
-              "_p_catalog": "mandatory",
-              "_p_group": "mandatory"
+              "_p_catalog": "skip",
+              "_p_group": "skip"
             }
           },
           "_is_auto_clk": "1",
@@ -502,8 +502,8 @@
       "_p_typ": "pdp",
       "_p_ispdp": "1",
       "_p_prod": "<상품번호>",
-      "_p_catalog": "mandatory",
-      "_p_group": "mandatory",
+      "_p_catalog": "skip",
+      "_p_group": "skip",
       "origin_price": "<원가>",
       "promotion_price": "<할인가>",
       "payment_price": "{\r\n  \"0\": {\r\n    \"payment_type\": \"B\",\r\n    \"payment_method_id\": \"13963294543\",\r\n    \"payment_method_name\": \"현대&스마일카드 10,000원 할인\",\r\n    \"price_threshold\": \"300000\",\r\n    \"discount_percent\": \"\",\r\n    \"discount_amount\": \"10000\",\r\n    \"price\": \"\",\r\n    \"max_discount_amount\": \"\"\r\n  },\r\n  \"1\": {\r\n    \"payment_type\": \"B\",\r\n    \"payment_method_id\": \"13927389360\",\r\n    \"payment_method_name\": \"G마켓 삼성카드 1만원 할인\",\r\n    \"price_threshold\": \"300000\",\r\n    \"discount_percent\": \"\",\r\n    \"discount_amount\": \"10000\",\r\n    \"price\": \"\",\r\n    \"max_discount_amount\": \"\"\r\n  },\r\n  \"2\": {\r\n    \"payment_type\": \"B\",\r\n    \"payment_method_id\": \"13963183692\",\r\n    \"payment_method_name\": \"현대&스마일카드 2,000원 할인\",\r\n    \"price_threshold\": \"100000\",\r\n    \"discount_percent\": \"\",\r\n    \"discount_amount\": \"2000\",\r\n    \"price\": \"\",\r\n    \"max_discount_amount\": \"\"\r\n  },\r\n  \"3\": {\r\n    \"payment_type\": \"B\",\r\n    \"payment_method_id\": \"13963127144\",\r\n    \"payment_method_name\": \"현대&스마일카드 1,500원 할인\",\r\n    \"price_threshold\": \"50000\",\r\n    \"discount_percent\": \"\",\r\n    \"discount_amount\": \"1500\",\r\n    \"price\": \"\",\r\n    \"max_discount_amount\": \"\"\r\n  },\r\n  \"4\": {\r\n    \"payment_type\": \"B\",\r\n    \"payment_method_id\": \"13963052861\",\r\n    \"payment_method_name\": \"현대&스마일카드 1,000원 할인\",\r\n    \"price_threshold\": \"20000\",\r\n    \"discount_percent\": \"\",\r\n    \"discount_amount\": \"1000\",\r\n    \"price\": \"\",\r\n    \"max_discount_amount\": \"\"\r\n  },\r\n  \"5\": {\r\n    \"payment_type\": \"B\",\r\n    \"payment_method_id\": \"13927380549\",\r\n    \"payment_method_name\": \"G마켓 삼성카드 1,000원 할인\",\r\n    \"price_threshold\": \"20000\",\r\n    \"discount_percent\": \"\",\r\n    \"discount_amount\": \"1000\",\r\n    \"price\": \"\",\r\n    \"max_discount_amount\": \"\"\r\n  }\r\n}",

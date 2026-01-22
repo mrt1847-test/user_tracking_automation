@@ -171,8 +171,8 @@
               },
               "_p_prod": "<상품번호>",
               "_p_sku": "0",
-              "_p_catalog": "mandatory",
-              "_p_group": "mandatory"
+              "_p_catalog": "skip",
+              "_p_group": "skip"
             }
           }
         },
@@ -183,7 +183,7 @@
     "_is_auto_exp": "1",
     "_eventType": "custom",
     "_method": "POST",
-    "_pkgSize": "4",
+    "_pkgSize": "skip",
     "_isCombine": "1",
     "cache": "mandatory",
     "jsver": "aplus.js",
@@ -289,8 +289,8 @@
         },
         "_p_prod": "<상품번호>",
         "_p_sku": "0",
-        "_p_catalog": "mandatory",
-        "_p_group": "mandatory"
+        "_p_catalog": "skip",
+        "_p_group": "skip"
       }
     },
     "_is_auto_clk": "1",
@@ -417,8 +417,8 @@
               },
               "_p_prod": "<상품번호>",
               "_p_sku": "0",
-              "_p_catalog": "mandatory",
-              "_p_group": "mandatory"
+              "_p_catalog": "skip",
+              "_p_group": "skip"
             }
           },
           "_is_auto_clk": "1",
