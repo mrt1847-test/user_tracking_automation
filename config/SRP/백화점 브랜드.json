@@ -49,7 +49,8 @@
               "module_index": "mandatory",
               "ab_buckets": [
                 "#108^4#B",
-                "#108^3#B"
+                "#108^3#B",
+                "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
               ]
             }
           },
@@ -135,7 +136,8 @@
               "is_ad": "N",
               "ab_buckets": [
                 "#108^4#B",
-                "#108^3#B"
+                "#108^3#B",
+                "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
               ],
               "is_airticket": "N",
               "utLogMap": {
@@ -155,13 +157,14 @@
                   "query": "<검색어>",
                   "pvid": "mandatory",
                   "pvid_sys": "gmarket server",
-                  "search_session_id": "095f0558-6bbb-48e3-ac6a-00e213025a47",
+                  "search_session_id": "mandatory",
                   "origin_price": "<원가>",
                   "promotion_price": "<할인가>",
                   "coupon_price": "<쿠폰적용가>",
                   "ab_buckets": [
                     "#108^4#B",
-                    "#108^3#B"
+                    "#108^3#B",
+                    "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
                   ],
                   "trafficType": "organic"
                 }
@@ -180,7 +183,7 @@
     "_is_auto_exp": "1",
     "_eventType": "custom",
     "_method": "POST",
-    "_pkgSize": "5",
+    "_pkgSize": "skip",
     "_isCombine": "1",
     "cache": "mandatory",
     "jsver": "aplus.js",
@@ -251,7 +254,8 @@
         "is_ad": "N",
         "ab_buckets": [
           "#108^4#B",
-          "#108^3#B"
+          "#108^3#B",
+          "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
         ],
         "is_airticket": "N",
         "utLogMap": {
@@ -271,13 +275,14 @@
             "query": "<검색어>",
             "pvid": "mandatory",
             "pvid_sys": "gmarket server",
-            "search_session_id": "095f0558-6bbb-48e3-ac6a-00e213025a47",
+            "search_session_id": "mandatory",
             "origin_price": "<원가>",
             "promotion_price": "<할인가>",
             "coupon_price": "<쿠폰적용가>",
             "ab_buckets": [
               "#108^4#B",
-              "#108^3#B"
+              "#108^3#B",
+              "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
             ],
             "trafficType": "organic"
           }
@@ -367,7 +372,8 @@
       "item_status": "1",
       "ab_buckets": [
         "#108^4#B",
-        "#108^3#B"
+        "#108^3#B",
+        "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
       ],
       "pageid": "qmh3ie8taa4caxcp19be33cef551f1fde1d7c489d1",
       "server_env": "<environment>",
@@ -445,7 +451,8 @@
       "searchScenario": "keyword",
       "ab_buckets": [
         "#108^4#B",
-        "#108^3#B"
+        "#108^3#B",
+        "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
       ],
       "pageid": "qmh3ie8taa4caxcp19be33cd27ec2ae497123024ce",
       "server_env": "<environment>",

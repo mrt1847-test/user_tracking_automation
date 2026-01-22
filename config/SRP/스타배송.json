@@ -49,7 +49,8 @@
               "module_index": "mandatory",
               "ab_buckets": [
                 "#108^4#B",
-                "#108^3#B"
+                "#108^3#B",
+                "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
               ]
             }
           },
@@ -135,7 +136,8 @@
               "is_ad": "N",
               "ab_buckets": [
                 "#108^4#B",
-                "#108^3#B"
+                "#108^3#B",
+                "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
               ],
               "is_airticket": "N",
               "utLogMap": {
@@ -155,13 +157,14 @@
                   "query": "<검색어>",
                   "pvid": "mandatory",
                   "pvid_sys": "gmarket server",
-                  "search_session_id": "a0abb3ed-7bd9-4bc3-b94b-c8cd2c4cc761",
+                  "search_session_id": "mandatory",
                   "origin_price": "<원가>",
                   "promotion_price": "<할인가>",
                   "coupon_price": "<쿠폰적용가>",
                   "ab_buckets": [
                     "#108^4#B",
-                    "#108^3#B"
+                    "#108^3#B",
+                    "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
                   ],
                   "trafficType": "organic"
                 }
@@ -180,7 +183,7 @@
     "_is_auto_exp": "1",
     "_eventType": "custom",
     "_method": "POST",
-    "_pkgSize": "4",
+    "_pkgSize": "skip",
     "_isCombine": "1",
     "cache": "mandatory",
     "jsver": "aplus.js",
@@ -251,7 +254,8 @@
         "is_ad": "N",
         "ab_buckets": [
           "#108^4#B",
-          "#108^3#B"
+          "#108^3#B",
+          "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
         ],
         "is_airticket": "N",
         "utLogMap": {
@@ -271,13 +275,14 @@
             "query": "<검색어>",
             "pvid": "mandatory",
             "pvid_sys": "gmarket server",
-            "search_session_id": "a0abb3ed-7bd9-4bc3-b94b-c8cd2c4cc761",
+            "search_session_id": "mandatory",
             "origin_price": "<원가>",
             "promotion_price": "<할인가>",
             "coupon_price": "<쿠폰적용가>",
             "ab_buckets": [
               "#108^4#B",
-              "#108^3#B"
+              "#108^3#B",
+              "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
             ],
             "trafficType": "organic"
           }
@@ -377,7 +382,8 @@
               "is_ad": "N",
               "ab_buckets": [
                 "#108^4#B",
-                "#108^3#B"
+                "#108^3#B",
+                "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
               ],
               "is_airticket": "N",
               "utLogMap": {
@@ -397,13 +403,14 @@
                   "query": "<검색어>",
                   "pvid": "mandatory",
                   "pvid_sys": "gmarket server",
-                  "search_session_id": "a0abb3ed-7bd9-4bc3-b94b-c8cd2c4cc761",
+                  "search_session_id": "mandatory",
                   "origin_price": "<원가>",
                   "promotion_price": "<할인가>",
                   "coupon_price": "<쿠폰적용가>",
                   "ab_buckets": [
                     "#108^4#B",
-                    "#108^3#B"
+                    "#108^3#B",
+                    "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
                   ],
                   "trafficType": "organic"
                 }
@@ -498,7 +505,8 @@
       "item_status": "1",
       "ab_buckets": [
         "#108^4#B",
-        "#108^3#B"
+        "#108^3#B",
+        "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
       ],
       "pageid": "qmh3ie8taa4caxcp19be33b6fb0abb3b539cc84a07",
       "server_env": "<environment>",
@@ -576,7 +584,8 @@
       "searchScenario": "keyword",
       "ab_buckets": [
         "#108^4#B",
-        "#108^3#B"
+        "#108^3#B",
+        "50256#108^4#B_#sp-common-rank-l1#536925_#sp-common-rank-l2#536929_#sp-common-rank-l3#539118_#sp-common-rank-l4#538042"
       ],
       "pageid": "qmh3ie8taa4caxcp19be33b386a105b22fc919f1d9",
       "server_env": "<environment>",
