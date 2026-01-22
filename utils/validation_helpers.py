@@ -40,6 +40,23 @@ EVENT_TYPE_CONFIG_KEY_MAP = {
 }
 
 
+def module_title_to_filename(module_title: str) -> str:
+    """
+    모듈 타이틀을 파일명에 사용 가능한 문자열로 변환.
+    공백, 따옴표, Windows에서 불가한 문자 등 치환.
+    """
+    if not module_title:
+        return "unknown"
+    s = str(module_title).strip()
+    for old, new in [
+        (" ", "_"), ("'", ""), ("/", "_"), ("\\", "_"),
+        (":", "_"), ("*", "_"), ("?", "_"), ('"', "_"),
+        ("<", "_"), (">", "_"), ("|", "_"),
+    ]:
+        s = s.replace(old, new)
+    return s or "unknown"
+
+
 def detect_area_from_feature_path(feature_path: Optional[str] = None) -> str:
     """
     Feature 파일 경로에서 영역(SRP, PDP, HOME, CART 등) 추론
@@ -98,78 +115,22 @@ def load_module_config(
     
     # module_title이 지정된 경우 해당 파일만 로드
     if module_title:
-        config_path = config_base_path / f"{module_title}.json"
-        try:
-            with open(config_path, 'r', encoding='utf-8') as f:
-                config = json.load(f)
-            return config
-        except FileNotFoundError:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.warning(f"모듈 설정 파일을 찾을 수 없습니다: {config_path}")
-            return {}
-        except json.JSONDecodeError as e:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"모듈 설정 JSON 파싱 실패: {e}")
+        config_file_path = config_base_path / f"{module_title}.json"
+        if config_file_path.exists():
+            with open(config_file_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        else:
             return {}
     
-    # module_title이 None인 경우 해당 영역의 모든 모듈 파일 로드
-    result = {}
+    # module_title이 None이면 전체 영역의 모든 모듈 로드
+    config_dict = {}
     if config_base_path.exists():
         for config_file in config_base_path.glob("*.json"):
             module_name = config_file.stem
-            try:
-                with open(config_file, 'r', encoding='utf-8') as f:
-                    result[module_name] = json.load(f)
-            except json.JSONDecodeError as e:
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.error(f"모듈 설정 JSON 파싱 실패 ({config_file}): {e}")
+            with open(config_file, 'r', encoding='utf-8') as f:
+                config_dict[module_name] = json.load(f)
     
-    return result
-
-
-def get_module_value(module_title: str, key: str, config: Optional[Dict[str, Any]] = None, event_type: Optional[str] = None) -> Optional[Any]:
-    """
-    모듈별 설정값 가져오기 (이벤트 타입별 섹션에서 검색)
-    
-    Args:
-        module_title: 모듈 타이틀
-        key: 가져올 키 이름 (예: 'spm', 'channel_code')
-        config: 모듈 설정 딕셔너리 (None이면 자동 로드)
-        event_type: 이벤트 타입 (이벤트 타입별 섹션에서 검색)
-    
-    Returns:
-        설정값 또는 None
-    """
-    if config is None:
-        config = load_module_config()
-    
-    # config가 {module_title: config} 형태인 경우 처리
-    if module_title in config and isinstance(config[module_title], dict):
-        module_config = config[module_title]
-    else:
-        # 이미 모듈 설정이 직접 전달된 경우
-        module_config = config if isinstance(config, dict) else {}
-    
-    # 이벤트 타입별 섹션에서 검색 (event_type이 제공된 경우)
-    if event_type:
-        event_config_key = EVENT_TYPE_CONFIG_KEY_MAP.get(event_type)
-        if event_config_key:
-            event_config = module_config.get(event_config_key, {})
-            # params-exp/clk.parsed 내부에서도 검색
-            for params_key in ['params-exp', 'params-clk']:
-                if params_key in event_config and isinstance(event_config[params_key], dict):
-                    parsed = event_config[params_key].get('parsed', {})
-                    if key in parsed:
-                        return parsed.get(key)
-            # 직접 검색 (이벤트 섹션 최상위에서)
-            if key in event_config:
-                return event_config.get(key)
-    
-    # 이전 호환성을 위해 최상위에서도 검색
-    return module_config.get(key)
+    return config_dict
 
 
 def extract_price_info_from_pdp_pv(tracker: NetworkTracker, goodscode: str) -> Optional[Dict[str, Any]]:
@@ -200,137 +161,205 @@ def extract_price_info_from_pdp_pv(tracker: NetworkTracker, goodscode: str) -> O
     if 'promotion_price' in payload:
         price_info['promotion_price'] = str(payload['promotion_price'])
     if 'coupon_price' in payload:
-        price_info['coupon_price'] = str(payload['coupon_price'])
+        # coupon_price가 빈 문자열이거나 None이어도 추가 (빈 값도 유효한 값)
+        coupon_price_value = payload['coupon_price']
+        price_info['coupon_price'] = str(coupon_price_value) if coupon_price_value is not None else ''
     
     return price_info if price_info else None
 
 
-def _load_global_config() -> Dict[str, Any]:
+def get_event_logs(tracker: NetworkTracker, event_type: str, goodscode: str, module_config_data: Dict[str, Any]) -> List[Dict[str, Any]]:
     """
-    config.json 파일 로드 (환경 설정 등)
-    
-    Returns:
-        config.json 내용 (없으면 빈 딕셔너리)
-    """
-    config_path = Path(__file__).parent.parent / 'config.json'
-    try:
-        with open(config_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return {}
-
-
-def _find_spm_recursive(obj: Any, visited: Optional[set] = None) -> Optional[str]:
-    """
-    재귀적으로 딕셔너리/리스트를 탐색하여 'spm' 키를 찾음
-    순환 참조 방지를 위해 visited set 사용
+    이벤트 타입별 로그 수집
     
     Args:
-        obj: 탐색할 객체 (dict, list, 또는 기타)
-        visited: 방문한 객체 ID 집합 (순환 참조 방지)
+        tracker: NetworkTracker 인스턴스
+        event_type: 이벤트 타입
+        goodscode: 상품 번호
+        module_config_data: 모듈 설정 데이터
     
     Returns:
-        찾은 spm 값의 문자열 변환 또는 None
+        로그 리스트
     """
-    if visited is None:
-        visited = set()
+    event_config_key = EVENT_TYPE_CONFIG_KEY_MAP.get(event_type)
     
-    # 순환 참조 방지 (dict와 list만 체크)
-    if isinstance(obj, (dict, list)):
-        obj_id = id(obj)
-        if obj_id in visited:
-            return None
-        visited.add(obj_id)
+    # 이벤트 타입별 섹션에서 spm 값 가져오기 (재귀적으로 탐색)
+    module_spm = None
+    if event_config_key:
+        event_config = module_config_data.get(event_config_key, {})
+        module_spm = _find_spm_recursive(event_config)
     
-    # 딕셔너리인 경우
-    if isinstance(obj, dict):
-        # 'spm' 키가 있고 값이 있으면 반환
-        if 'spm' in obj and obj['spm']:
-            return str(obj['spm'])
+    if event_type == 'PV':
+        logs = tracker.get_pv_logs()
+    elif event_type == 'PDP PV':
+        logs = tracker.get_pdp_pv_logs_by_goodscode(goodscode)
+    elif event_type == 'Module Exposure':
+        if module_spm:
+            logs = tracker.get_module_exposure_logs_by_spm(module_spm)
+        else:
+            logs = tracker.get_logs('Module Exposure')
+    elif event_type == 'Product Exposure':
+        if module_spm:
+            logs = tracker.get_product_exposure_logs_by_goodscode(goodscode, module_spm)
+        else:
+            logs = tracker.get_product_exposure_logs_by_goodscode(goodscode)
+    elif event_type == 'Product Click':
+        logs = tracker.get_product_click_logs_by_goodscode(goodscode)
+    elif event_type == 'Product ATC Click':
+        logs = tracker.get_product_atc_click_logs_by_goodscode(goodscode)
+    else:
+        logs = []
+    
+    return logs
+
+
+def _find_spm_recursive(config_section: Dict[str, Any]) -> Optional[str]:
+    """
+    config 섹션에서 spm 값을 재귀적으로 찾기
+    
+    Args:
+        config_section: 설정 섹션 딕셔너리
+    
+    Returns:
+        spm 값 또는 None
+    """
+    if isinstance(config_section, dict):
+        # 직접 'spm' 키가 있는지 확인
+        if 'spm' in config_section:
+            spm_value = config_section['spm']
+            if isinstance(spm_value, str) and spm_value:
+                return spm_value
         
-        # 모든 값에 대해 재귀적으로 탐색
-        for value in obj.values():
-            result = _find_spm_recursive(value, visited)
-            if result is not None:
-                return result
-    
-    # 리스트인 경우
-    elif isinstance(obj, list):
-        for item in obj:
-            result = _find_spm_recursive(item, visited)
-            if result is not None:
-                return result
-    
-    # 순환 참조 방지를 위해 방문 기록 제거
-    if isinstance(obj, (dict, list)):
-        visited.discard(id(obj))
+        # 재귀적으로 탐색
+        for value in config_section.values():
+            if isinstance(value, dict):
+                result = _find_spm_recursive(value)
+                if result:
+                    return result
     
     return None
 
 
-def replace_placeholders(value: Any, goodscode: str, frontend_data: Optional[Dict[str, Any]] = None) -> Any:
+def _process_config_section(
+    config_section: Dict[str, Any],
+    event_type: str,
+    goodscode: str,
+    frontend_data: Optional[Dict[str, Any]],
+    exclude_fields: List[str],
+    expected: Dict[str, Any],
+    is_common: bool = False,
+    parent_path: str = '',
+    is_utlogmap: bool = False
+):
     """
-    플레이스홀더를 실제 값으로 대체
+    config 섹션을 재귀적으로 처리하여 expected_values 딕셔너리 생성
     
     Args:
-        value: 대체할 값 (문자열 또는 다른 타입)
+        config_section: 처리할 config 섹션
+        event_type: 이벤트 타입
         goodscode: 상품 번호
-        frontend_data: 프론트에서 읽은 데이터 (price, keyword 등)
-                     또는 PDP PV 로그에서 추출한 가격 정보
+        frontend_data: 프론트에서 읽은 데이터
+        exclude_fields: 제외할 필드 목록
+        expected: 결과를 저장할 딕셔너리
+        is_common: 공통 필드인지 여부
+        parent_path: 부모 경로 (디버깅용)
+        is_utlogmap: utLogMap 섹션인지 여부
+    """
+    if not isinstance(config_section, dict):
+        return
+    
+    for key, value in config_section.items():
+        # exclude_fields에 포함된 필드는 제외
+        if key in exclude_fields:
+            continue
+        
+        # utLogMap은 특별 처리 (재귀적으로 처리하되 필드명만 저장)
+        if key == 'utLogMap' and isinstance(value, dict):
+            _process_config_section(value, event_type, goodscode, frontend_data, exclude_fields, expected, is_common, f"{parent_path}.{key}", is_utlogmap=True)
+            continue
+        
+        # 값이 딕셔너리인 경우 재귀 처리
+        if isinstance(value, dict):
+            _process_config_section(value, event_type, goodscode, frontend_data, exclude_fields, expected, is_common, f"{parent_path}.{key}", is_utlogmap)
+        else:
+            # 리프 노드: expected에 추가
+            # utLogMap 내부 필드는 그대로 사용, 그 외는 key만 사용
+            field_name = key if is_utlogmap else key
+            
+            # 값 처리 (placeholder 치환)
+            processed_value = replace_placeholders(value, goodscode, frontend_data)
+            
+            expected[field_name] = processed_value
+
+
+def _load_config() -> Dict[str, Any]:
+    """config.json 파일 로드"""
+    config_path = Path(__file__).parent.parent / 'config.json'
+    try:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        # config.json이 없으면 기본값 반환
+        return {'environment': 'prod'}
+
+
+def replace_placeholders(value: Any, goodscode: str, frontend_data: Optional[Dict[str, Any]] = None) -> Any:
+    """
+    값에서 placeholder를 실제 값으로 치환
+    
+    Args:
+        value: 치환할 값
+        goodscode: 상품 번호
+        frontend_data: 프론트에서 읽은 데이터 (keyword, origin_price, promotion_price, coupon_price 등)
     
     Returns:
-        플레이스홀더가 대체된 값
+        치환된 값
     """
-    if not isinstance(value, str):
-        return value
-    
-    # <상품번호> → goodscode
-    if '<상품번호>' in value:
-        value = value.replace('<상품번호>', goodscode)
-    
-    # <environment> → config.json의 environment 값
-    if '<environment>' in value:
-        global_config = _load_global_config()
-        environment = global_config.get('environment', '')
-        value = value.replace('<environment>', str(environment))
-    
-    # <cguid>는 실제 로그에서 가져와야 하므로 그대로 유지 (나중에 비교 시 처리)
-    
-    # <검색어>, <원가>, <할인가>, <쿠폰적용가>는 frontend_data에서 가져오기
-    # frontend_data는 이제 PDP PV 로그에서 추출한 가격 정보를 포함할 수 있음
-    if frontend_data:
-        if '<검색어>' in value and 'keyword' in frontend_data:
-            value = value.replace('<검색어>', str(frontend_data['keyword']))
-        if '<원가>' in value and 'origin_price' in frontend_data:
-            value = value.replace('<원가>', str(frontend_data['origin_price']))
-        if '<할인가>' in value and 'promotion_price' in frontend_data:
-            value = value.replace('<할인가>', str(frontend_data['promotion_price']))
-        if '<쿠폰적용가>' in value and 'coupon_price' in frontend_data:
-            value = value.replace('<쿠폰적용가>', str(frontend_data['coupon_price']))
-    
+    if isinstance(value, str):
+        # mandatory 값 처리: "mandatory" → "__MANDATORY__"
+        if value.strip() == "mandatory":
+            return "__MANDATORY__"
+        
+        # skip 값 처리: "skip" → "__SKIP__"
+        if value.strip() == "skip":
+            return "__SKIP__"
+        
+        # <상품번호> placeholder 치환
+        if '<상품번호>' in value:
+            value = value.replace('<상품번호>', goodscode)
+        
+        # {goodscode} placeholder 치환 (기존 형식 유지)
+        if '{goodscode}' in value:
+            value = value.replace('{goodscode}', goodscode)
+        
+        # <environment> placeholder 치환 (config.json에서 읽어옴)
+        if '<environment>' in value:
+            config = _load_config()
+            environment = config.get('environment', 'prod')
+            value = value.replace('<environment>', environment)
+        
+        # frontend_data에서 값 가져오기
+        if frontend_data:
+            # <검색어> placeholder 치환
+            if '<검색어>' in value and 'keyword' in frontend_data:
+                value = value.replace('<검색어>', str(frontend_data['keyword']))
+            
+            # <원가> placeholder 치환
+            if '<원가>' in value and 'origin_price' in frontend_data:
+                value = value.replace('<원가>', str(frontend_data['origin_price']))
+            
+            # <할인가> placeholder 치환
+            if '<할인가>' in value and 'promotion_price' in frontend_data:
+                value = value.replace('<할인가>', str(frontend_data['promotion_price']))
+            
+            # <쿠폰적용가> placeholder 치환
+            if '<쿠폰적용가>' in value:
+                # coupon_price가 frontend_data에 없거나 None이면 빈 문자열로 치환
+                coupon_price = frontend_data.get('coupon_price', '')
+                value = value.replace('<쿠폰적용가>', str(coupon_price) if coupon_price is not None else '')
+            
+
     return value
-
-
-# 더 이상 사용하지 않음: 재귀적 탐색으로 전환하여 경로 생성 불필요
-# def build_tracking_path(field_name: str, event_type: str) -> str:
-#     """
-#     필드명과 이벤트 타입을 기반으로 트래킹 로그 경로 생성
-#     
-#     Args:
-#         field_name: 필드명
-#         event_type: 이벤트 타입 ('Module Exposure', 'Product Exposure', 'Product Click' 등)
-#     
-#     Returns:
-#         트래킹 로그 경로 (예: 'gokey.params.channel_code' 또는 'gokey.params.params-exp.parsed.gmkt_area_code')
-#     """
-#     # 최상위 필드는 gokey.params.* 경로
-#     if field_name in TOP_LEVEL_FIELDS:
-#         return f'gokey.params.{field_name}'
-#     
-#     # 나머지 필드는 params-exp/clk.parsed.* 경로
-#     # (utLogMap은 build_expected_from_module_config에서 별도 처리)
-#     params_key = EVENT_TYPE_PARAMS_MAP.get(event_type, 'params-exp')
-#     return f'gokey.params.{params_key}.parsed.{field_name}'
 
 
 def build_expected_from_module_config(
@@ -369,94 +398,32 @@ def build_expected_from_module_config(
     return expected
 
 
-def _process_config_section(
-    config_section: Dict[str, Any],
-    event_type: str,
-    goodscode: str,
-    frontend_data: Optional[Dict[str, Any]],
-    exclude_fields: List[str],
-    expected: Dict[str, Any],
-    is_common: bool = False,
-    parent_path: str = '',
-    is_utlogmap: bool = False
-):
+def find_value_recursive(data: Dict[str, Any], target_key: str) -> Optional[Any]:
     """
-    config 섹션을 재귀적으로 처리하여 expected 값 생성
-    필드명만 저장하여 validate_payload에서 재귀 탐색으로 찾을 수 있도록 함
+    딕셔너리에서 재귀적으로 키를 찾아 값 반환
     
     Args:
-        config_section: 처리할 config 섹션
-        event_type: 이벤트 타입
-        goodscode: 상품 번호
-        frontend_data: 프론트 데이터
-        exclude_fields: 제외할 필드 목록
-        expected: 결과를 저장할 딕셔너리 (in-place 수정)
-        is_common: common 섹션인지 여부 (사용하지 않지만 호환성을 위해 유지)
-        parent_path: 부모 경로 (사용하지 않지만 호환성을 위해 유지)
-        is_utlogmap: utLogMap 내부인지 여부 (사용하지 않지만 호환성을 위해 유지)
+        data: 탐색할 딕셔너리
+        target_key: 찾을 키
+    
+    Returns:
+        찾은 값 또는 None
     """
-    for key, value in config_section.items():
-        if key in exclude_fields:
-            continue
-        
-        # PDP PV의 경우 payload 최상위에 직접 필드 존재 (pdp_pv 섹션인 경우)
-        if event_type == 'PDP PV' and not is_common:
-            # payload 키는 건너뛰고 내부 필드만 처리
-            if key == 'payload' and isinstance(value, dict):
-                # payload 내부 필드들을 재귀적으로 처리 (payload 키는 포함하지 않음)
-                _process_config_section(value, event_type, goodscode, frontend_data, exclude_fields, expected, is_common=False, parent_path='', is_utlogmap=is_utlogmap)
-            elif isinstance(value, dict):
-                # 다른 중첩된 딕셔너리: 재귀 처리
-                _process_config_section(value, event_type, goodscode, frontend_data, exclude_fields, expected, is_common=False, parent_path='', is_utlogmap=is_utlogmap)
-            else:
-                # 리프 노드: payload 최상위에 직접 필드 (validate_payload에서 payload.get(key)로 접근)
-                # mandatory/skip 변환 처리
-                if isinstance(value, list):
-                    # 리스트인 경우 각 요소에 대해 플레이스홀더 대체
-                    processed_value = [replace_placeholders(item, goodscode, frontend_data) for item in value]
-                elif isinstance(value, str) and value.lower() == "mandatory":
-                    processed_value = "__MANDATORY__"  # 특별한 마커
-                elif isinstance(value, str) and value.lower() == "skip":
-                    processed_value = "__SKIP__"  # 특별한 마커 (검증 스킵)
-                else:
-                    processed_value = replace_placeholders(value, goodscode, frontend_data)
-                expected[key] = processed_value
-            continue
-        
-        # params-exp/clk 구조 처리
-        if key in ['params-exp', 'params-clk'] and isinstance(value, dict):
-            parsed = value.get('parsed', {})
-            if parsed:
-                # params-exp.parsed 또는 params-clk.parsed 내부 처리
-                _process_config_section(parsed, event_type, goodscode, frontend_data, exclude_fields, expected, is_common=False, parent_path='', is_utlogmap=False)
-            continue
-        
-        # utLogMap 객체인 경우
-        if key == 'utLogMap' and isinstance(value, dict):
-            # utLogMap 내부 필드들을 재귀적으로 처리
-            _process_config_section(value, event_type, goodscode, frontend_data, exclude_fields, expected, is_common=False, parent_path='', is_utlogmap=True)
-            continue
-        
-        # 중첩된 딕셔너리 처리
+    if not isinstance(data, dict):
+        return None
+    
+    # 직접 키가 있는지 확인
+    if target_key in data:
+        return data[target_key]
+    
+    # 재귀적으로 탐색
+    for value in data.values():
         if isinstance(value, dict):
-            _process_config_section(value, event_type, goodscode, frontend_data, exclude_fields, expected, is_common=False, parent_path='', is_utlogmap=is_utlogmap)
-            continue
-        
-        # 리프 노드: 필드명만 저장 (경로 생성 제거)
-        # validate_payload에서 재귀 탐색으로 찾을 수 있도록 필드명만 키로 사용
-        if isinstance(value, list):
-            # 리스트인 경우 각 요소에 대해 플레이스홀더 대체
-            processed_value = [replace_placeholders(item, goodscode, frontend_data) for item in value]
-        else:
-            # "mandatory" 문자열인 경우 특별한 마커로 저장
-            if isinstance(value, str) and value.lower() == "mandatory":
-                processed_value = "__MANDATORY__"  # 특별한 마커
-            # "skip" 문자열인 경우 특별한 마커로 저장 (검증 스킵)
-            elif isinstance(value, str) and value.lower() == "skip":
-                processed_value = "__SKIP__"  # 특별한 마커 (검증 스킵)
-            else:
-                processed_value = replace_placeholders(value, goodscode, frontend_data)
-        expected[key] = processed_value
+            result = find_value_recursive(value, target_key)
+            if result is not None:
+                return result
+    
+    return None
 
 
 def validate_event_type_logs(
@@ -467,7 +434,7 @@ def validate_event_type_logs(
     frontend_data: Optional[Dict[str, Any]] = None,
     module_config: Optional[Dict[str, Any]] = None,
     exclude_fields: Optional[List[str]] = None
-) -> Tuple[bool, List[str]]:
+) -> Tuple[bool, List[str], Dict[str, Any]]:
     """
     특정 이벤트 타입의 트래킹 로그 정합성 검증 (module_config.json만 사용)
     
@@ -481,9 +448,10 @@ def validate_event_type_logs(
         exclude_fields: 검증에서 제외할 필드 목록
     
     Returns:
-        (성공 여부, 에러 메시지 리스트)
+        (성공 여부, 에러 메시지 리스트, 통과한 필드와 기대값 딕셔너리)
     """
     errors = []
+    all_passed_fields = {}  # 모든 로그에서 통과한 필드와 값 딕셔너리
     
     # 모듈 설정 로드
     if module_config is None:
@@ -502,55 +470,18 @@ def validate_event_type_logs(
     if not event_config_key:
         # PV는 특별한 구조가 없을 수 있음
         if event_type != 'PV':
-            return True, []  # 알 수 없는 이벤트 타입은 스킵
+            return True, [], {}  # 알 수 없는 이벤트 타입은 스킵
     
     # module_config.json에 이벤트 타입별 섹션이 없으면 검증 스킵
     if event_config_key and event_config_key not in module_config_data:
-        return True, []  # config에 정의되지 않은 이벤트는 검증하지 않음
+        return True, [], {}  # config에 정의되지 않은 이벤트는 검증하지 않음
     
     # 로그 가져오기
-    # 이벤트 타입별 섹션에서 spm 값 가져오기 (재귀적으로 탐색)
-    module_spm = None
-    if event_config_key:
-        event_config = module_config_data.get(event_config_key, {})
-        module_spm = _find_spm_recursive(event_config)
-    
-    if event_type == 'PV':
-        logs = tracker.get_pv_logs()
-    elif event_type == 'PDP PV':
-        logs = tracker.get_pdp_pv_logs_by_goodscode(goodscode)
-    elif event_type == 'Module Exposure':
-        if module_spm:
-            logs = tracker.get_module_exposure_logs_by_spm(module_spm)
-        else:
-            logs = tracker.get_logs('Module Exposure')
-    elif event_type == 'Product Exposure':
-        if module_spm:
-            logs = tracker.get_product_exposure_logs_by_goodscode(goodscode, module_spm)
-        else:
-            logs = tracker.get_product_exposure_logs_by_goodscode(goodscode)
-    elif event_type == 'Product Click':
-        logs = tracker.get_product_click_logs_by_goodscode(goodscode)
-    elif event_type == 'Product ATC Click':
-        logs = tracker.get_product_atc_click_logs_by_goodscode(goodscode)
-    else:
-        return True, []  # 알 수 없는 이벤트 타입
-    
-    # module_config.json에 이벤트가 정의되어 있는데 로그가 없으면 실패
-    # (프론트엔드 동작 실패로 인한 이벤트 수집 실패)
-    if event_config_key and event_config_key in module_config_data:
-        if len(logs) == 0:
-            error_msg = (
-                f"{event_type} 이벤트가 module_config.json에 정의되어 있으나, "
-                f"실제 로그가 수집되지 않았습니다. "
-                f"프론트엔드 동작이 실패했을 가능성이 있습니다. "
-                f"(모듈: {module_title}, goodscode: {goodscode})"
-            )
-            return False, [error_msg]
+    logs = get_event_logs(tracker, event_type, goodscode, module_config_data)
     
     # 로그가 없고 config에도 정의되지 않은 경우는 스킵 (정상)
     if len(logs) == 0:
-        return True, []
+        return True, [], {}
     
     # module_config.json에서 expected 값 생성
     expected = build_expected_from_module_config(
@@ -561,17 +492,23 @@ def validate_event_type_logs(
         exclude_fields
     )
     
-    # expected 값이 없으면 검증 스킵
-    if not expected:
-        return True, []
-    
     # 각 로그에 대해 검증
     for log in logs:
+        # expected 값 검증 (AssertionError를 잡아서 에러 리스트에 추가)
+        # validate_payload는 전체 로그 객체를 받아 내부에서 log.get('payload')로 추출함
         try:
-            tracker.validate_payload(log, expected, goodscode, event_type)
+            result = tracker.validate_payload(log, expected, goodscode, event_type)
+            # result가 튜플인 경우 (성공 여부, 통과한 필드와 값 딕셔너리)
+            if isinstance(result, tuple) and len(result) == 2:
+                _, passed_fields_dict = result
+                # 통과한 필드와 값 딕셔너리에 병합 (나중 로그의 값이 우선)
+                if isinstance(passed_fields_dict, dict):
+                    all_passed_fields.update(passed_fields_dict)
         except AssertionError as e:
-            errors.append(f"{event_type} 로그 검증 실패: {e}")
+            errors.append(str(e))
     
-    return len(errors) == 0, errors
-
-
+    # 에러가 있으면 실패
+    if errors:
+        return False, errors, all_passed_fields
+    
+    return True, [], all_passed_fields

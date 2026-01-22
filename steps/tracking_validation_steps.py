@@ -7,9 +7,118 @@ import json
 from datetime import datetime
 from pathlib import Path
 from pytest_bdd import then, parsers
-from utils.validation_helpers import validate_event_type_logs, load_module_config, _find_spm_recursive
+from utils.validation_helpers import (
+    validate_event_type_logs,
+    load_module_config,
+    _find_spm_recursive,
+    get_event_logs,
+    module_title_to_filename,
+)
 
 logger = logging.getLogger(__name__)
+
+
+def _check_and_validate_event_logs(
+    tc_id: str,
+    event_type: str,
+    event_config_key: str,
+    tracker,
+    goodscode: str,
+    module_title: str,
+    frontend_data,
+    area: str,
+    bdd_context
+) -> bool:
+    """
+    이벤트 로그 수집 확인 및 정합성 검증 (단순화된 로직)
+    
+    Returns:
+        True: 성공 또는 스킵, False: 실패
+    """
+    # skip_reason 확인
+    skip_reason = None
+    if hasattr(bdd_context, 'get'):
+        skip_reason = bdd_context.get('skip_reason')
+    elif hasattr(bdd_context, 'store'):
+        skip_reason = bdd_context.store.get('skip_reason')
+    
+    if skip_reason:
+        logger.warning(f"[TestRail TC: {tc_id}] Skip: {skip_reason}")
+        return True
+    
+    # module_config 확인
+    module_config = load_module_config(area=area, module_title=module_title)
+    module_config_data = module_config if isinstance(module_config, dict) else {}
+    
+    if event_config_key not in module_config_data:
+        logger.info(f"[TestRail TC: {tc_id}] 모듈 '{module_title}'에 {event_type}이 정의되어 있지 않아 검증을 스킵합니다.")
+        return True
+    
+    # 1. 로그 수집 확인
+    logs = get_event_logs(tracker, event_type, goodscode, module_config_data)
+    
+    # 2. 프론트 실패 여부 확인 (로그 유무와 관계없이 확인)
+    frontend_failed = False
+    frontend_error = None
+    if hasattr(bdd_context, 'get'):
+        frontend_failed = bdd_context.get('frontend_action_failed', False)
+        frontend_error = bdd_context.get('frontend_error_message')
+    elif hasattr(bdd_context, 'store'):
+        frontend_failed = bdd_context.store.get('frontend_action_failed', False)
+        frontend_error = bdd_context.store.get('frontend_error_message')
+    
+    # 3. 로그가 없으면 실패 처리
+    if len(logs) == 0:
+        if frontend_failed:
+            # 프론트 실패로 인한 로그 수집 실패
+            error_message = f"[TestRail TC: {tc_id}] {event_type} 로그가 수집되지 않았습니다.\n[프론트 실패 사유]\n{frontend_error or '프론트 동작 실패'}"
+            logger.error(error_message)
+        else:
+            # 이벤트 수집 오류
+            error_message = f"[TestRail TC: {tc_id}] {event_type} 로그가 수집되지 않았습니다.\n[이벤트 수집 오류]"
+            logger.error(error_message)
+        
+        # TestRail 기록을 위해 실패 플래그 설정
+        bdd_context['validation_failed'] = True
+        bdd_context['validation_error_message'] = error_message
+        return False
+    
+    # 4. 로그가 있으면 정합성 검증 수행 (프론트 실패 여부와 관계없이 검증 진행)
+    logger.info(f"[TestRail TC: {tc_id}] {event_type} 로그 정합성 검증 시작")
+    success, errors, passed_fields = validate_event_type_logs(
+        tracker=tracker,
+        event_type=event_type,
+        goodscode=goodscode,
+        module_title=module_title,
+        frontend_data=frontend_data,
+        module_config=module_config
+    )
+    
+    # 통과한 필드 목록을 bdd_context에 저장 (TestRail 로그에 표시하기 위해)
+    bdd_context['validation_passed_fields'] = passed_fields
+    
+    if not success:
+        # 검증 실패 시 실패 처리 (프론트 실패 여부와 관계없이)
+        error_message = f"[TestRail TC: {tc_id}] {event_type} 로그 정합성 검증 실패:\n[필드값 정합성 오류]\n" + "\n".join(errors)
+        # 통과한 필드가 있으면 표시
+        if passed_fields and isinstance(passed_fields, dict):
+            error_message += f"\n\n[통과한 필드]\n"
+            for field, value in passed_fields.items():
+                error_message += f"{field}: {value}\n"
+        logger.error(error_message)
+        
+        # TestRail 기록을 위해 실패 플래그 설정
+        bdd_context['validation_failed'] = True
+        bdd_context['validation_error_message'] = error_message
+        return False
+    
+    # 5. 검증 통과 시 pass 처리 (프론트 실패가 있어도 로그가 있고 검증이 통과하면 pass)
+    bdd_context['validation_failed'] = False
+    if frontend_failed:
+        logger.info(f"[TestRail TC: {tc_id}] {event_type} 로그 정합성 검증 통과 (프론트 실패가 있었지만 이벤트 로그 검증 통과)")
+    else:
+        logger.info(f"[TestRail TC: {tc_id}] {event_type} 로그 정합성 검증 통과")
+    return True
 
 
 def _get_common_context(bdd_context):
@@ -47,302 +156,242 @@ def _get_common_context(bdd_context):
 @then("PV 로그가 정합성 검증을 통과해야 함")
 def then_pv_logs_should_pass_validation(bdd_context):
     """PV 로그 정합성 검증 (module_config.json에 정의된 경우만)"""
-    tracker, goodscode, module_title, frontend_data, area = _get_common_context(bdd_context)
-    
-    # module_config.json에서 PV가 정의되어 있는지 확인
-    module_config = load_module_config(area=area, module_title=module_title)
-    module_config_data = module_config if isinstance(module_config, dict) else {}
-    event_config_key = 'pv'
-    
-    if event_config_key not in module_config_data:
-        logger.info(f"모듈 '{module_title}'에 PV가 정의되어 있지 않아 검증을 스킵합니다.")
-        return
-    
-    logger.info("PV 로그 정합성 검증 시작")
-    success, errors = validate_event_type_logs(
-        tracker=tracker,
-        event_type='PV',
-        goodscode=goodscode,
-        module_title=module_title,
-        frontend_data=frontend_data,
-        module_config=module_config
-    )
-    
-    if not success:
-        error_message = "PV 로그 정합성 검증 실패:\n" + "\n".join(errors)
-        logger.error(error_message)
-        raise AssertionError(error_message)
-    
-    logger.info("PV 로그 정합성 검증 통과")
+    try:
+        tracker, goodscode, module_title, frontend_data, area = _get_common_context(bdd_context)
+        
+        # module_config.json에서 PV가 정의되어 있는지 확인
+        module_config = load_module_config(area=area, module_title=module_title)
+        module_config_data = module_config if isinstance(module_config, dict) else {}
+        event_config_key = 'pv'
+        
+        if event_config_key not in module_config_data:
+            logger.info(f"모듈 '{module_title}'에 PV가 정의되어 있지 않아 검증을 스킵합니다.")
+            return
+        
+        logger.info("PV 로그 정합성 검증 시작")
+        success, errors, passed_fields = validate_event_type_logs(
+            tracker=tracker,
+            event_type='PV',
+            goodscode=goodscode,
+            module_title=module_title,
+            frontend_data=frontend_data,
+            module_config=module_config
+        )
+        
+        # 통과한 필드 목록을 bdd_context에 저장
+        bdd_context['validation_passed_fields'] = passed_fields
+        
+        if not success:
+            error_message = "PV 로그 정합성 검증 실패:\n" + "\n".join(errors)
+            # 통과한 필드가 있으면 표시
+            if passed_fields and isinstance(passed_fields, dict):
+                error_message += f"\n\n[통과한 필드]\n"
+                for field, value in passed_fields.items():
+                    error_message += f"{field}: {value}\n"
+            logger.error(error_message)
+            # TestRail 기록을 위해 실패 플래그 설정 (TC 번호는 없지만)
+            bdd_context['validation_failed'] = True
+            bdd_context['validation_error_message'] = error_message
+            # 예외를 다시 발생시키지 않음 (다음 스텝 계속 실행)
+        else:
+            logger.info("PV 로그 정합성 검증 통과")
+    except Exception as e:
+        # 예외 발생 시 bdd_context에 실패 정보 저장하고 계속 진행
+        error_message = f"PV 로그 검증 중 예외 발생: {str(e)}"
+        logger.error(error_message, exc_info=True)
+        bdd_context['validation_failed'] = True
+        bdd_context['validation_error_message'] = error_message
+        # 예외를 다시 발생시키지 않음 (다음 스텝 계속 실행)
 
 
 @then(parsers.parse('PDP PV 로그가 정합성 검증을 통과해야 함 (TC: {tc_id})'))
 def then_pdp_pv_logs_should_pass_validation(tc_id, bdd_context):
     """PDP PV 로그 정합성 검증 (module_config.json에 정의된 경우만)"""
+    logger.debug(f"then_pdp_pv_logs_should_pass_validation 실행: tc_id={tc_id}")
     # TC 번호가 비어있으면 검증 건너뛰기
     if not tc_id or tc_id.strip() == '':
         logger.info("TC 번호가 비어있어 PDP PV 로그 검증을 건너뜁니다.")
         return
     
-    logger.info(f"[TestRail TC: {tc_id}] PDP PV 로그 정합성 검증 시작")
-    tracker, goodscode, module_title, frontend_data, area = _get_common_context(bdd_context)
-    
-    # TestRail TC 번호를 context에 저장
-    bdd_context['testrail_tc_id'] = tc_id
-    
-    # module_config.json에서 pdp_pv가 정의되어 있는지 확인
-    module_config = load_module_config(area=area, module_title=module_title)
-    module_config_data = module_config if isinstance(module_config, dict) else {}
-    event_config_key = 'pdp_pv'
-    
-    if event_config_key not in module_config_data:
-        logger.info(f"[TestRail TC: {tc_id}] 모듈 '{module_title}'에 PDP PV가 정의되어 있지 않아 검증을 스킵합니다.")
-        return
-    
-    logger.info(f"[TestRail TC: {tc_id}] PDP PV 로그 정합성 검증 시작")
-    success, errors = validate_event_type_logs(
-        tracker=tracker,
-        event_type='PDP PV',
-        goodscode=goodscode,
-        module_title=module_title,
-        frontend_data=frontend_data,
-        module_config=module_config
-    )
-    
-    if not success:
-        error_message = f"[TestRail TC: {tc_id}] PDP PV 로그 정합성 검증 실패:\n" + "\n".join(errors)
-        logger.error(error_message)
+    try:
+        tracker, goodscode, module_title, frontend_data, area = _get_common_context(bdd_context)
         
-        # Soft Assertion: 실패 정보를 bdd_context에 저장 (다음 step 계속 실행)
-        if 'validation_errors' not in bdd_context.store:
-            bdd_context.store['validation_errors'] = []
-        bdd_context.store['validation_errors'].append(error_message)
+        # TestRail TC 번호를 context에 저장
+        logger.debug(f"bdd_context['testrail_tc_id']에 {tc_id} 저장")
+        bdd_context['testrail_tc_id'] = tc_id
         
-        # TestRail 기록을 위해 실패 플래그 설정
+        # 단순화된 검증 로직 사용
+        _check_and_validate_event_logs(
+            tc_id=tc_id,
+            event_type='PDP PV',
+            event_config_key='pdp_pv',
+            tracker=tracker,
+            goodscode=goodscode,
+            module_title=module_title,
+            frontend_data=frontend_data,
+            area=area,
+            bdd_context=bdd_context
+        )
+    except Exception as e:
+        # 예외 발생 시 bdd_context에 실패 정보 저장하고 계속 진행
+        error_message = f"[TestRail TC: {tc_id}] PDP PV 로그 검증 중 예외 발생: {str(e)}"
+        logger.error(error_message, exc_info=True)
+        bdd_context['testrail_tc_id'] = tc_id
         bdd_context['validation_failed'] = True
         bdd_context['validation_error_message'] = error_message
-        
-        # AssertionError를 발생시키지 않음 (다음 step 계속 실행)
-        return
-    
-    # 성공 시 실패 플래그 제거
-    bdd_context['validation_failed'] = False
-    logger.info(f"[TestRail TC: {tc_id}] PDP PV 로그 정합성 검증 통과")
+        # 예외를 다시 발생시키지 않음 (다음 스텝 계속 실행)
 
 
 @then(parsers.parse('Module Exposure 로그가 정합성 검증을 통과해야 함 (TC: {tc_id})'))
 def then_module_exposure_logs_should_pass_validation(tc_id, bdd_context):
     """Module Exposure 로그 정합성 검증 (module_config.json에 정의된 경우만)"""
+    logger.debug(f"then_module_exposure_logs_should_pass_validation 실행: tc_id={tc_id}")
     # TC 번호가 비어있으면 검증 건너뛰기
     if not tc_id or tc_id.strip() == '':
         logger.info("TC 번호가 비어있어 Module Exposure 로그 검증을 건너뜁니다.")
         return
     
-    logger.info(f"[TestRail TC: {tc_id}] Module Exposure 로그 정합성 검증 시작")
-    tracker, goodscode, module_title, frontend_data, area = _get_common_context(bdd_context)
-    
-    # TestRail TC 번호를 context에 저장
-    bdd_context['testrail_tc_id'] = tc_id
-    
-    # module_config.json에서 module_exposure가 정의되어 있는지 확인
-    module_config = load_module_config(area=area, module_title=module_title)
-    module_config_data = module_config if isinstance(module_config, dict) else {}
-    event_config_key = 'module_exposure'
-    
-    if event_config_key not in module_config_data:
-        logger.info(f"[TestRail TC: {tc_id}] 모듈 '{module_title}'에 Module Exposure가 정의되어 있지 않아 검증을 스킵합니다.")
-        return
-    
-    logger.info(f"[TestRail TC: {tc_id}] Module Exposure 로그 정합성 검증 시작")
-    success, errors = validate_event_type_logs(
-        tracker=tracker,
-        event_type='Module Exposure',
-        goodscode=goodscode,
-        module_title=module_title,
-        frontend_data=frontend_data,
-        module_config=module_config
-    )
-    
-    if not success:
-        error_message = f"[TestRail TC: {tc_id}] Module Exposure 로그 정합성 검증 실패:\n" + "\n".join(errors)
-        logger.error(error_message)
+    try:
+        tracker, goodscode, module_title, frontend_data, area = _get_common_context(bdd_context)
         
-        # Soft Assertion: 실패 정보를 bdd_context에 저장 (다음 step 계속 실행)
-        if 'validation_errors' not in bdd_context.store:
-            bdd_context.store['validation_errors'] = []
-        bdd_context.store['validation_errors'].append(error_message)
+        # TestRail TC 번호를 context에 저장
+        logger.debug(f"bdd_context['testrail_tc_id']에 {tc_id} 저장")
+        bdd_context['testrail_tc_id'] = tc_id
         
-        # TestRail 기록을 위해 실패 플래그 설정
+        # 단순화된 검증 로직 사용
+        _check_and_validate_event_logs(
+            tc_id=tc_id,
+            event_type='Module Exposure',
+            event_config_key='module_exposure',
+            tracker=tracker,
+            goodscode=goodscode,
+            module_title=module_title,
+            frontend_data=frontend_data,
+            area=area,
+            bdd_context=bdd_context
+        )
+    except Exception as e:
+        # 예외 발생 시 bdd_context에 실패 정보 저장하고 계속 진행
+        error_message = f"[TestRail TC: {tc_id}] Module Exposure 로그 검증 중 예외 발생: {str(e)}"
+        logger.error(error_message, exc_info=True)
+        bdd_context['testrail_tc_id'] = tc_id
         bdd_context['validation_failed'] = True
         bdd_context['validation_error_message'] = error_message
-        
-        # AssertionError를 발생시키지 않음 (다음 step 계속 실행)
-        return
-    
-    # 성공 시 실패 플래그 제거
-    bdd_context['validation_failed'] = False
-    logger.info(f"[TestRail TC: {tc_id}] Module Exposure 로그 정합성 검증 통과")
+        # 예외를 다시 발생시키지 않음 (다음 스텝 계속 실행)
 
 
 @then(parsers.parse('Product Exposure 로그가 정합성 검증을 통과해야 함 (TC: {tc_id})'))
 def then_product_exposure_logs_should_pass_validation(tc_id, bdd_context):
     """Product Exposure 로그 정합성 검증 (module_config.json에 정의된 경우만)"""
+    logger.debug(f"then_product_exposure_logs_should_pass_validation 실행: tc_id={tc_id}")
     # TC 번호가 비어있으면 검증 건너뛰기
     if not tc_id or tc_id.strip() == '':
         logger.info("TC 번호가 비어있어 Product Exposure 로그 검증을 건너뜁니다.")
         return
     
-    logger.info(f"[TestRail TC: {tc_id}] Product Exposure 로그 정합성 검증 시작")
-    tracker, goodscode, module_title, frontend_data, area = _get_common_context(bdd_context)
-    
-    # TestRail TC 번호를 context에 저장
-    bdd_context['testrail_tc_id'] = tc_id
-    
-    # module_config.json에서 product_exposure가 정의되어 있는지 확인
-    module_config = load_module_config(area=area, module_title=module_title)
-    module_config_data = module_config if isinstance(module_config, dict) else {}
-    event_config_key = 'product_exposure'
-    
-    if event_config_key not in module_config_data:
-        logger.info(f"[TestRail TC: {tc_id}] 모듈 '{module_title}'에 Product Exposure가 정의되어 있지 않아 검증을 스킵합니다.")
-        return
-    
-    logger.info(f"[TestRail TC: {tc_id}] Product Exposure 로그 정합성 검증 시작")
-    success, errors = validate_event_type_logs(
-        tracker=tracker,
-        event_type='Product Exposure',
-        goodscode=goodscode,
-        module_title=module_title,
-        frontend_data=frontend_data,
-        module_config=module_config
-    )
-    
-    if not success:
-        error_message = f"[TestRail TC: {tc_id}] Product Exposure 로그 정합성 검증 실패:\n" + "\n".join(errors)
-        logger.error(error_message)
+    try:
+        tracker, goodscode, module_title, frontend_data, area = _get_common_context(bdd_context)
         
-        # Soft Assertion: 실패 정보를 bdd_context에 저장 (다음 step 계속 실행)
-        if 'validation_errors' not in bdd_context.store:
-            bdd_context.store['validation_errors'] = []
-        bdd_context.store['validation_errors'].append(error_message)
+        # TestRail TC 번호를 context에 저장
+        logger.debug(f"bdd_context['testrail_tc_id']에 {tc_id} 저장")
+        bdd_context['testrail_tc_id'] = tc_id
         
-        # TestRail 기록을 위해 실패 플래그 설정
+        # 단순화된 검증 로직 사용
+        _check_and_validate_event_logs(
+            tc_id=tc_id,
+            event_type='Product Exposure',
+            event_config_key='product_exposure',
+            tracker=tracker,
+            goodscode=goodscode,
+            module_title=module_title,
+            frontend_data=frontend_data,
+            area=area,
+            bdd_context=bdd_context
+        )
+    except Exception as e:
+        # 예외 발생 시 bdd_context에 실패 정보 저장하고 계속 진행
+        error_message = f"[TestRail TC: {tc_id}] Product Exposure 로그 검증 중 예외 발생: {str(e)}"
+        logger.error(error_message, exc_info=True)
+        bdd_context['testrail_tc_id'] = tc_id
         bdd_context['validation_failed'] = True
         bdd_context['validation_error_message'] = error_message
-        
-        # AssertionError를 발생시키지 않음 (다음 step 계속 실행)
-        return
-    
-    # 성공 시 실패 플래그 제거
-    bdd_context['validation_failed'] = False
-    logger.info(f"[TestRail TC: {tc_id}] Product Exposure 로그 정합성 검증 통과")
+        # 예외를 다시 발생시키지 않음 (다음 스텝 계속 실행)
 
 
 @then(parsers.parse('Product Click 로그가 정합성 검증을 통과해야 함 (TC: {tc_id})'))
 def then_product_click_logs_should_pass_validation(tc_id, bdd_context):
     """Product Click 로그 정합성 검증 (module_config.json에 정의된 경우만)"""
+    logger.debug(f"then_product_click_logs_should_pass_validation 실행: tc_id={tc_id}")
     # TC 번호가 비어있으면 검증 건너뛰기
     if not tc_id or tc_id.strip() == '':
         logger.info("TC 번호가 비어있어 Product Click 로그 검증을 건너뜁니다.")
         return
     
-    logger.info(f"[TestRail TC: {tc_id}] Product Click 로그 정합성 검증 시작")
-    tracker, goodscode, module_title, frontend_data, area = _get_common_context(bdd_context)
-    
-    # TestRail TC 번호를 context에 저장
-    bdd_context['testrail_tc_id'] = tc_id
-    
-    # module_config.json에서 product_click이 정의되어 있는지 확인
-    module_config = load_module_config(area=area, module_title=module_title)
-    module_config_data = module_config if isinstance(module_config, dict) else {}
-    event_config_key = 'product_click'
-    
-    if event_config_key not in module_config_data:
-        logger.info(f"[TestRail TC: {tc_id}] 모듈 '{module_title}'에 Product Click이 정의되어 있지 않아 검증을 스킵합니다.")
-        return
-    
-    logger.info(f"[TestRail TC: {tc_id}] Product Click 로그 정합성 검증 시작")
-    success, errors = validate_event_type_logs(
-        tracker=tracker,
-        event_type='Product Click',
-        goodscode=goodscode,
-        module_title=module_title,
-        frontend_data=frontend_data,
-        module_config=module_config
-    )
-    
-    if not success:
-        error_message = f"[TestRail TC: {tc_id}] Product Click 로그 정합성 검증 실패:\n" + "\n".join(errors)
-        logger.error(error_message)
+    try:
+        tracker, goodscode, module_title, frontend_data, area = _get_common_context(bdd_context)
         
-        # Soft Assertion: 실패 정보를 bdd_context에 저장 (다음 step 계속 실행)
-        if 'validation_errors' not in bdd_context.store:
-            bdd_context.store['validation_errors'] = []
-        bdd_context.store['validation_errors'].append(error_message)
+        # TestRail TC 번호를 context에 저장
+        logger.debug(f"bdd_context['testrail_tc_id']에 {tc_id} 저장")
+        bdd_context['testrail_tc_id'] = tc_id
         
-        # TestRail 기록을 위해 실패 플래그 설정
+        # 단순화된 검증 로직 사용
+        _check_and_validate_event_logs(
+            tc_id=tc_id,
+            event_type='Product Click',
+            event_config_key='product_click',
+            tracker=tracker,
+            goodscode=goodscode,
+            module_title=module_title,
+            frontend_data=frontend_data,
+            area=area,
+            bdd_context=bdd_context
+        )
+    except Exception as e:
+        # 예외 발생 시 bdd_context에 실패 정보 저장하고 계속 진행
+        error_message = f"[TestRail TC: {tc_id}] Product Click 로그 검증 중 예외 발생: {str(e)}"
+        logger.error(error_message, exc_info=True)
+        bdd_context['testrail_tc_id'] = tc_id
         bdd_context['validation_failed'] = True
         bdd_context['validation_error_message'] = error_message
-        
-        # AssertionError를 발생시키지 않음 (다음 step 계속 실행)
-        return
-    
-    # 성공 시 실패 플래그 제거
-    bdd_context['validation_failed'] = False
-    logger.info(f"[TestRail TC: {tc_id}] Product Click 로그 정합성 검증 통과")
+        # 예외를 다시 발생시키지 않음 (다음 스텝 계속 실행)
 
 
 @then(parsers.re(r'Product ATC Click 로그가 정합성 검증을 통과해야 함 \(TC: (?P<tc_id>.*)\)'))
 def then_product_atc_click_logs_should_pass_validation(tc_id, bdd_context):
     """Product ATC Click 로그 정합성 검증 (module_config.json에 정의된 경우만)"""
+    logger.debug(f"then_product_atc_click_logs_should_pass_validation 실행: tc_id={tc_id}")
     # TC 번호가 비어있으면 검증 건너뛰기
     if not tc_id or tc_id.strip() == '':
         logger.info("TC 번호가 비어있어 Product ATC Click 로그 검증을 건너뜁니다.")
         return
     
-    logger.info(f"[TestRail TC: {tc_id}] Product ATC Click 로그 정합성 검증 시작")
-    tracker, goodscode, module_title, frontend_data, area = _get_common_context(bdd_context)
-    
-    # TestRail TC 번호를 context에 저장
-    bdd_context['testrail_tc_id'] = tc_id
-    
-    # module_config.json에서 product_atc_click이 정의되어 있는지 확인 (별도 섹션)
-    module_config = load_module_config(area=area, module_title=module_title)
-    module_config_data = module_config if isinstance(module_config, dict) else {}
-    event_config_key = 'product_atc_click'
-    
-    if event_config_key not in module_config_data:
-        logger.info(f"[TestRail TC: {tc_id}] 모듈 '{module_title}'에 Product ATC Click이 정의되어 있지 않아 검증을 스킵합니다.")
-        return
-    
-    success, errors = validate_event_type_logs(
-        tracker=tracker,
-        event_type='Product ATC Click',
-        goodscode=goodscode,
-        module_title=module_title,
-        frontend_data=frontend_data,
-        module_config=module_config
-    )
-    
-    if not success:
-        error_message = f"[TestRail TC: {tc_id}] Product ATC Click 로그 정합성 검증 실패:\n" + "\n".join(errors)
-        logger.error(error_message)
+    try:
+        tracker, goodscode, module_title, frontend_data, area = _get_common_context(bdd_context)
         
-        # Soft Assertion: 실패 정보를 bdd_context에 저장 (다음 step 계속 실행)
-        if 'validation_errors' not in bdd_context.store:
-            bdd_context.store['validation_errors'] = []
-        bdd_context.store['validation_errors'].append(error_message)
+        # TestRail TC 번호를 context에 저장
+        logger.debug(f"bdd_context['testrail_tc_id']에 {tc_id} 저장")
+        bdd_context['testrail_tc_id'] = tc_id
         
-        # TestRail 기록을 위해 실패 플래그 설정
+        # 단순화된 검증 로직 사용
+        _check_and_validate_event_logs(
+            tc_id=tc_id,
+            event_type='Product ATC Click',
+            event_config_key='product_atc_click',
+            tracker=tracker,
+            goodscode=goodscode,
+            module_title=module_title,
+            frontend_data=frontend_data,
+            area=area,
+            bdd_context=bdd_context
+        )
+    except Exception as e:
+        # 예외 발생 시 bdd_context에 실패 정보 저장하고 계속 진행
+        error_message = f"[TestRail TC: {tc_id}] Product ATC Click 로그 검증 중 예외 발생: {str(e)}"
+        logger.error(error_message, exc_info=True)
+        bdd_context['testrail_tc_id'] = tc_id
         bdd_context['validation_failed'] = True
         bdd_context['validation_error_message'] = error_message
-        
-        # AssertionError를 발생시키지 않음 (다음 step 계속 실행)
-        return
-    
-    # 성공 시 실패 플래그 제거
-    bdd_context['validation_failed'] = False
-    logger.info(f"[TestRail TC: {tc_id}] Product ATC Click 로그 정합성 검증 통과")
+        # 예외를 다시 발생시키지 않음 (다음 스텝 계속 실행)
 
 
 @then("모든 트래킹 로그를 JSON 파일로 저장함")
@@ -454,14 +503,16 @@ def _save_tracking_logs(bdd_context, tracker, goodscode, module_title):
         
         all_logs.extend(tracker.get_pdp_pv_logs_by_goodscode(goodscode))
         if module_spm:
-            all_logs.extend(tracker.get_product_exposure_logs_by_goodscode(goodscode, module_spm))
+            product_exposure_logs = tracker.get_product_exposure_logs_by_goodscode(goodscode, module_spm)
         else:
-            all_logs.extend(tracker.get_product_exposure_logs_by_goodscode(goodscode))
+            product_exposure_logs = tracker.get_product_exposure_logs_by_goodscode(goodscode)
+        all_logs.extend(product_exposure_logs)
         all_logs.extend(tracker.get_product_click_logs_by_goodscode(goodscode))
         all_logs.extend(tracker.get_product_atc_click_logs_by_goodscode(goodscode))
         
         if len(all_logs) > 0:
-            all_filepath = Path(f'json/tracking_all_{goodscode}_{timestamp}.json')
+            module_safe = module_title_to_filename(module_title)
+            all_filepath = Path(f'json/tracking_all_{module_safe}.json')
             all_filepath.parent.mkdir(parents=True, exist_ok=True)
             with open(all_filepath, 'w', encoding='utf-8') as f:
                 json.dump(all_logs, f, ensure_ascii=False, indent=2, default=str)

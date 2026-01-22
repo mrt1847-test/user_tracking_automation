@@ -3,7 +3,7 @@ import logging
 import json
 from pages.base_page import BasePage
 from playwright.sync_api import Page, Locator, expect
-from utils.urls import item_base_url
+from utils.urls import item_base_url, search_url
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -347,25 +347,21 @@ class SearchPage(BasePage):
         logger.debug(f"모듈 찾기: {module_title}")
         if module_title == "오늘의 슈퍼딜":
             return self.page.get_by_text("오늘의", exact=True)
-        return self.page.get_by_text(module_title, exact=True)
-
-    def get_module_by_title_type2(self, module_title: str) -> Locator:
-        """
-        모듈 타이틀로 모듈 요소 찾기
-        
-        Args:
-            module_title: 모듈 타이틀 텍스트
-            
-        Returns:
-            Locator 객체
-        """
-        logger.debug(f"모듈 찾기: {module_title}")
-        if module_title == "4.5 이상":
+        elif module_title == "최상단 클릭아이템":
+            return self.page.get_by_text("보고 오셨어요?").locator("xpath=..")
+        elif module_title == "스타배송":
+            return self.page.locator(".image__title[alt='스타배송']").locator("xpath=..")
+        elif module_title == "4.5 이상":
             return self.page.locator(".text__title", has_text="이상 만족도 높은 상품이에요")
         elif module_title == "백화점 브랜드":
             return self.page.locator(".text__title", has_text="의 비슷한 인기브랜드에요")
         elif module_title == "브랜드 인기상품":
             return self.page.locator(".text__title", has_text="인기상품")
+        elif module_title == "대체검색어":
+            return self.page.locator(".text__title", has_text="도 보시겠어요")
+        elif module_title == "MD's Pick":
+            return self.page.get_by_text("믿고 사는 MD's Pick")
+        return self.page.locator(".text__title", has_text=module_title)
     
     def scroll_module_into_view(self, module_locator: Locator) -> None:
         """
@@ -375,7 +371,13 @@ class SearchPage(BasePage):
             module_locator: 모듈 Locator 객체
         """
         logger.debug("모듈 스크롤")
-        module_locator.scroll_into_view_if_needed()
+        try:
+            module_locator.scroll_into_view_if_needed()
+        except Exception as e:
+            logger.warning(f"scroll_into_view_if_needed 실패, 강제 스크롤 시도: {e}")
+            # 강제 스크롤
+            module_locator.evaluate("el => el.scrollIntoView({behavior: 'smooth', block: 'center'})")
+
     
     def get_module_parent(self, module_locator: Locator, n: int) -> Locator:
         """
@@ -433,7 +435,7 @@ class SearchPage(BasePage):
             상품 Locator 객체
         """
         logger.debug("모듈 내 상품 요소 찾기")
-        return parent_locator.locator("span.box__itemcard-img > a").first
+        return parent_locator.locator(".box__itemcard-info > a").first
     
     def scroll_product_into_view(self, product_locator: Locator) -> None:
         """
@@ -443,9 +445,13 @@ class SearchPage(BasePage):
             product_locator: 상품 Locator 객체
         """
         logger.debug("상품 요소 스크롤")
-        product_locator.scroll_into_view_if_needed()
+        try:
+            product_locator.scroll_into_view_if_needed()
+        except Exception as e:
+            logger.warning(f"scroll_into_view_if_needed 실패, 강제 스크롤 시도: {e}")
+            # 강제 스크롤
+            product_locator.evaluate("el => el.scrollIntoView({behavior: 'smooth', block: 'center'})")
 
-    
     def get_product_code(self, product_locator: Locator) -> Optional[str]:
         """
         상품 코드 가져오기
@@ -482,18 +488,19 @@ class SearchPage(BasePage):
         logger.debug("새 페이지 대기")
         return self.page.context.expect_page()
 
-    def click_add_to_cart_button(self, goodscode: str):
+    def click_add_to_cart_button(self, module_locator: Locator, goodscode: str):
         """
         상품 번호로 장바구니 담기 클릭
         
         Args:
             goodscode: 상품 번호
         """
-        logger.debug(f"상품 번호로 상품 찾기: {goodscode}")
-        self.page.locator(f'.button__cart[data-montelena-goodscode="{goodscode}"]').nth(0).click()
-        logger.debug(f"장바구니 담기 클릭 완료: {goodscode}")
+        module_locator.locator(f'.button__cart[data-montelena-goodscode="{goodscode}"]').nth(0).click()
+        logger.debug(f"장바구니 담기 클릭: {goodscode}")
+        self.page.locator('strong.text__button:has-text("계속 쇼핑")').click()
+        logger.debug(f"계속 쇼핑 클릭 완료: {goodscode}")
 
-    def is_add_to_cart_button_visible(self, goodscode: str) -> bool:
+    def is_add_to_cart_button_visible(self, module_locator: Locator, goodscode: str) -> bool:
         """
         상품 번호로 장바구니 담기 버튼 클릭 가능 여부 확인
         
@@ -504,7 +511,7 @@ class SearchPage(BasePage):
             장바구니 담기 버튼이 존재하고 클릭 가능하면 True
         """
         logger.debug(f"장바구니 담기 버튼 클릭 가능 여부 확인: {goodscode}")
-        button = self.page.locator(f'.button__cart[data-montelena-goodscode="{goodscode}"]')
+        button = module_locator.locator(f'.button__cart[data-montelena-goodscode="{goodscode}"]')
         if button.count() == 0:
             logger.debug(f"장바구니 담기 버튼 없음: {goodscode}")
             return False
@@ -529,28 +536,40 @@ class SearchPage(BasePage):
             새 탭의 Page 객체
         """
         logger.debug("상품 클릭 및 새 탭 대기")
+
+        time.sleep(3)
         
-        # href 속성을 먼저 읽어서 백업 URL 확보
-        href = product_locator.get_attribute("href")
-        logger.debug(f"상품 링크 href: {href}")
-        
-        # force 클릭만 시도
+        # 일반 클릭 시도
         try:
-            with self.page.context.expect_page(timeout=10000) as new_page_info:
+            with self.page.context.expect_page(timeout=5000) as new_page_info:
                 product_locator.click(force=True, timeout=3000)
             
             new_page = new_page_info.value
             logger.debug(f"새 탭 생성됨: {new_page.url}")
         except Exception as e:
-            logger.warning(f"force 클릭 실패, href로 직접 이동: {e}")
-            # 새 탭이 열리지 않으면 href로 직접 이동
-            if href:
-                new_page = self.page.context.new_page()
-                new_page.goto(href, wait_until="domcontentloaded", timeout=30000)
-                logger.debug(f"href로 직접 이동: {href}")
-            else:
-                raise Exception(f"클릭 실패 및 href 없음: {e}")
-        
+            logger.warning(f"일반 클릭 실패, 팝업 닫기 후 재시도: {e}")
+            # 팝업이 있을 수 있으므로 닫기 버튼 클릭 후 다시 시도
+            try:
+                popup_close_button = self.page.locator(".button__popup-close")
+                if popup_close_button.count() > 0:
+                    try:
+                        popup_close_button.first.click(force=True, timeout=2000)
+                    except Exception as e:
+                        logger.warning(f"팝업 닫기 버튼 클릭 실패: {e}")
+
+                    logger.debug("팝업 닫기 버튼 클릭 완료")
+                    # 잠시 대기 (팝업이 닫히는 시간)
+                    time.sleep(2)
+            
+                # 다시 일반 클릭 시도
+                with self.page.context.expect_page(timeout=10000) as new_page_info:
+                    product_locator.click(force=True, timeout=3000)
+                
+                new_page = new_page_info.value
+                logger.debug(f"팝업 닫기 후 새 탭 생성됨: {new_page.url}")
+            except Exception as e2:
+                logger.error(f"팝업 닫기 후 클릭도 실패: {e2}")
+                raise Exception(f"클릭 실패 (일반 클릭: {e}, 팝업 닫기 후 재시도: {e2})")
         # 새 탭을 포커스로 가져오기 (제어 가능하도록)
         new_page.bring_to_front()
         logger.debug("새 탭을 포커스로 가져옴")
@@ -589,3 +608,12 @@ class SearchPage(BasePage):
         logger.debug(f"URL에 상품 번호 포함 확인: {goodscode}")
         assert goodscode in url, f"상품 번호 {goodscode}가 URL에 포함되어야 합니다"
 
+    def go_to_top_search_module_page(self, keyword: str, goodscode: str):
+        """
+        최상단 클릭아이템 모듈 페이지로 이동동
+        
+        Args:
+            keyword: 검색어
+        """
+        top_search_module_url = search_url(keyword)+ f"&jaehuid=200018252&itemno={goodscode}"
+        self.page.goto(top_search_module_url, wait_until="domcontentloaded", timeout=30000)

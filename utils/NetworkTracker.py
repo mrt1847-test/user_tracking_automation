@@ -2,8 +2,9 @@ import re
 import json
 import time
 import logging
+import copy
 from urllib.parse import unquote
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Tuple
 from playwright.sync_api import Page, Request, BrowserContext
 
 # 로거 설정
@@ -569,6 +570,63 @@ class NetworkTracker:
         """
         return self.get_logs('Click')
     
+    def _find_value_recursive(self, obj: Any, target_keys: List[str], visited: Optional[set] = None) -> Optional[str]:
+        """
+        재귀적으로 딕셔너리/리스트를 탐색하여 target_keys 중 하나를 찾음
+        순환 참조 방지를 위해 visited set 사용
+        
+        Args:
+            obj: 탐색할 객체 (dict, list, 또는 기타)
+            target_keys: 찾을 키 목록 (우선순위 순서)
+            visited: 방문한 객체 ID 집합 (순환 참조 방지)
+        
+        Returns:
+            찾은 값의 문자열 변환 또는 None
+        """
+        if visited is None:
+            visited = set()
+        
+        # 순환 참조 방지 (dict와 list만 체크)
+        if isinstance(obj, (dict, list)):
+            obj_id = id(obj)
+            if obj_id in visited:
+                return None
+            visited.add(obj_id)
+        
+        # 딕셔너리인 경우
+        if isinstance(obj, dict):
+            # 우선순위에 따라 키 확인 (_p_prod 우선)
+            for key in target_keys:
+                if key in obj:
+                    value = obj[key]
+                    if value:
+                        return str(value)
+            
+            # 'parsed' 키가 있으면 우선적으로 탐색 (디코딩된 데이터 구조)
+            if 'parsed' in obj and isinstance(obj['parsed'], (dict, list)):
+                result = self._find_value_recursive(obj['parsed'], target_keys, visited)
+                if result:
+                    return result
+            
+            # 모든 값에 대해 재귀 탐색
+            for value in obj.values():
+                result = self._find_value_recursive(value, target_keys, visited)
+                if result:
+                    return result
+        
+        # 리스트인 경우
+        elif isinstance(obj, list):
+            for item in obj:
+                result = self._find_value_recursive(item, target_keys, visited)
+                if result:
+                    return result
+        
+        # 방문 기록 제거 (재귀 종료 시)
+        if isinstance(obj, (dict, list)):
+            visited.discard(id(obj))
+        
+        return None
+    
     def _extract_goodscode_from_log(self, log: Dict[str, Any]) -> Optional[str]:
         """
         로그에서 goodscode 추출 (다단계 중첩 구조 지원)
@@ -583,62 +641,6 @@ class NetworkTracker:
         Returns:
             추출된 goodscode (_p_prod 우선, 없으면 x_object_id) 또는 None
         """
-        def find_value_recursive(obj: Any, target_keys: List[str], visited: Optional[set] = None) -> Optional[str]:
-            """
-            재귀적으로 딕셔너리/리스트를 탐색하여 target_keys 중 하나를 찾음
-            순환 참조 방지를 위해 visited set 사용
-            
-            Args:
-                obj: 탐색할 객체 (dict, list, 또는 기타)
-                target_keys: 찾을 키 목록 (우선순위 순서)
-                visited: 방문한 객체 ID 집합 (순환 참조 방지)
-            
-            Returns:
-                찾은 값의 문자열 변환 또는 None
-            """
-            if visited is None:
-                visited = set()
-            
-            # 순환 참조 방지 (dict와 list만 체크)
-            if isinstance(obj, (dict, list)):
-                obj_id = id(obj)
-                if obj_id in visited:
-                    return None
-                visited.add(obj_id)
-            
-            # 딕셔너리인 경우
-            if isinstance(obj, dict):
-                # 우선순위에 따라 키 확인 (_p_prod 우선)
-                for key in target_keys:
-                    if key in obj:
-                        value = obj[key]
-                        if value:
-                            return str(value)
-                
-                # 'parsed' 키가 있으면 우선적으로 탐색 (디코딩된 데이터 구조)
-                if 'parsed' in obj and isinstance(obj['parsed'], (dict, list)):
-                    result = find_value_recursive(obj['parsed'], target_keys, visited)
-                    if result:
-                        return result
-                
-                # 모든 값에 대해 재귀 탐색
-                for value in obj.values():
-                    result = find_value_recursive(value, target_keys, visited)
-                    if result:
-                        return result
-            
-            # 리스트인 경우
-            elif isinstance(obj, list):
-                for item in obj:
-                    result = find_value_recursive(item, target_keys, visited)
-                    if result:
-                        return result
-            
-            # 방문 기록 제거 (재귀 종료 시)
-            if isinstance(obj, (dict, list)):
-                visited.discard(id(obj))
-            
-            return None
         
         payload = log.get('payload')
         
@@ -663,12 +665,12 @@ class NetworkTracker:
         decoded_gokey = payload.get('decoded_gokey', {})
         if decoded_gokey:
             # _p_prod 우선 탐색
-            result = find_value_recursive(decoded_gokey, ['_p_prod'])
+            result = self._find_value_recursive(decoded_gokey, ['_p_prod'])
             if result:
                 return result
             
             # x_object_id 탐색
-            result = find_value_recursive(decoded_gokey, ['x_object_id'])
+            result = self._find_value_recursive(decoded_gokey, ['x_object_id'])
             if result:
                 return result
         
@@ -749,7 +751,32 @@ class NetworkTracker:
             if request_type and log.get('type') != request_type:
                 continue
             
-            # goodscode 추출 및 비교
+            # Product Exposure의 경우: expdata.parsed 배열의 모든 항목을 재귀적으로 확인
+            if request_type == 'Product Exposure':
+                payload = log.get('payload', {})
+                decoded_gokey = payload.get('decoded_gokey', {})
+                if isinstance(decoded_gokey, dict):
+                    params = decoded_gokey.get('params', {})
+                    if isinstance(params, dict):
+                        expdata = params.get('expdata', {})
+                        if isinstance(expdata, dict) and 'parsed' in expdata:
+                            parsed_list = expdata.get('parsed', [])
+                            if isinstance(parsed_list, list):
+                                # 배열의 모든 항목에서 재귀적으로 goodscode 확인
+                                found = False
+                                for item in parsed_list:
+                                    # 각 항목에서 재귀적으로 _p_prod 우선, 없으면 x_object_id 찾기
+                                    item_goodscode = self._find_value_recursive(item, ['_p_prod'])
+                                    if not item_goodscode:
+                                        item_goodscode = self._find_value_recursive(item, ['x_object_id'])
+                                    if item_goodscode and str(item_goodscode) == str(goodscode):
+                                        found = True
+                                        break
+                                if found:
+                                    filtered_logs.append(log)
+                                continue
+            
+            # 그 외의 경우: 기존 방식으로 goodscode 추출 및 비교
             log_goodscode = self._extract_goodscode_from_log(log)
             if log_goodscode and log_goodscode == goodscode:
                 filtered_logs.append(log)
@@ -819,6 +846,53 @@ class NetworkTracker:
         """
         return self.get_logs_by_goodscode(goodscode, 'Module Exposure')
     
+    def _find_spm_recursive(self, obj: Any, visited: Optional[set] = None) -> Optional[str]:
+        """
+        재귀적으로 딕셔너리/리스트를 탐색하여 'spm' 키를 찾음
+        순환 참조 방지를 위해 visited set 사용
+        
+        Args:
+            obj: 탐색할 객체 (dict, list, 또는 기타)
+            visited: 방문한 객체 ID 집합 (순환 참조 방지)
+        
+        Returns:
+            찾은 spm 값의 문자열 변환 또는 None
+        """
+        if visited is None:
+            visited = set()
+        
+        # 순환 참조 방지 (dict와 list만 체크)
+        if isinstance(obj, (dict, list)):
+            obj_id = id(obj)
+            if obj_id in visited:
+                return None
+            visited.add(obj_id)
+        
+        # 딕셔너리인 경우
+        if isinstance(obj, dict):
+            # 'spm' 키가 있고 값이 있으면 반환
+            if 'spm' in obj and obj['spm']:
+                return str(obj['spm'])
+            
+            # 모든 값에 대해 재귀적으로 탐색
+            for value in obj.values():
+                result = self._find_spm_recursive(value, visited)
+                if result is not None:
+                    return result
+        
+        # 리스트인 경우
+        elif isinstance(obj, list):
+            for item in obj:
+                result = self._find_spm_recursive(item, visited)
+                if result is not None:
+                    return result
+        
+        # 순환 참조 방지를 위해 방문 기록 제거
+        if isinstance(obj, (dict, list)):
+            visited.discard(id(obj))
+        
+        return None
+    
     def _extract_spm_from_log(self, log: Dict[str, Any]) -> Optional[str]:
         """
         로그에서 spm 값 추출 (우선순위 기반 탐색)
@@ -845,55 +919,7 @@ class NetworkTracker:
                 return str(params['spm'])
         
         # 우선 경로에서 못 찾았으면 재귀적으로 탐색
-        def find_spm_recursive(obj: Any, visited: Optional[set] = None) -> Optional[str]:
-            """
-            재귀적으로 딕셔너리/리스트를 탐색하여 'spm' 키를 찾음
-            순환 참조 방지를 위해 visited set 사용
-            
-            Args:
-                obj: 탐색할 객체 (dict, list, 또는 기타)
-                visited: 방문한 객체 ID 집합 (순환 참조 방지)
-            
-            Returns:
-                찾은 spm 값의 문자열 변환 또는 None
-            """
-            if visited is None:
-                visited = set()
-            
-            # 순환 참조 방지 (dict와 list만 체크)
-            if isinstance(obj, (dict, list)):
-                obj_id = id(obj)
-                if obj_id in visited:
-                    return None
-                visited.add(obj_id)
-            
-            # 딕셔너리인 경우
-            if isinstance(obj, dict):
-                # 'spm' 키가 있고 값이 있으면 반환
-                if 'spm' in obj and obj['spm']:
-                    return str(obj['spm'])
-                
-                # 모든 값에 대해 재귀적으로 탐색
-                for value in obj.values():
-                    result = find_spm_recursive(value, visited)
-                    if result is not None:
-                        return result
-            
-            # 리스트인 경우
-            elif isinstance(obj, list):
-                for item in obj:
-                    result = find_spm_recursive(item, visited)
-                    if result is not None:
-                        return result
-            
-            # 순환 참조 방지를 위해 방문 기록 제거
-            if isinstance(obj, (dict, list)):
-                visited.discard(id(obj))
-            
-            return None
-        
-        # payload 전체에서 재귀적으로 spm 찾기
-        return find_spm_recursive(payload)
+        return self._find_spm_recursive(payload)
     
     def _check_spm_match(self, log_spm: str, target_spm: str) -> bool:
         """
@@ -961,7 +987,10 @@ class NetworkTracker:
     
     def _extract_spm_from_product_exposure_item(self, item: Dict[str, Any]) -> Optional[str]:
         """
-        Product Exposure의 expdata.parsed 배열 항목에서 spm 추출
+        Product Exposure의 expdata.parsed 배열 항목에서 spm 추출 (재귀적 탐색)
+        
+        Module Exposure와 동일하게 우선 최상위에서 직접 확인하고,
+        없으면 재귀적으로 탐색하여 spm 필드를 찾음
         
         Args:
             item: expdata.parsed 배열의 항목
@@ -969,11 +998,15 @@ class NetworkTracker:
         Returns:
             추출된 spm 값 또는 None
         """
-        if isinstance(item, dict):
-            # 직접 spm 필드 확인
-            if 'spm' in item and item['spm']:
-                return str(item['spm'])
-        return None
+        if not isinstance(item, dict):
+            return None
+        
+        # 우선 최상위에서 직접 spm 필드 확인
+        if 'spm' in item and item['spm']:
+            return str(item['spm'])
+        
+        # 없으면 재귀적으로 탐색 (Module Exposure와 동일한 방식)
+        return self._find_spm_recursive(item)
     
     def get_product_exposure_logs_by_goodscode(self, goodscode: str, spm: Optional[str] = None) -> List[Dict[str, Any]]:
         """
@@ -998,13 +1031,16 @@ class NetworkTracker:
         matched_items = 0
         
         for log in logs:
-            # expdata.parsed 배열에서 goodscode와 spm이 모두 매칭되는 항목이 있는지 확인
-            payload = log.get('payload', {})
+            # 로그 복사 (원본 수정 방지)
+            filtered_log = copy.deepcopy(log)
+            
+            # expdata.parsed 배열에서 goodscode와 spm이 모두 매칭되는 항목만 필터링
+            payload = filtered_log.get('payload', {})
             decoded_gokey = payload.get('decoded_gokey', {})
             params = decoded_gokey.get('params', {}) if isinstance(decoded_gokey, dict) else {}
             expdata = params.get('expdata', {}) if isinstance(params, dict) else {}
             
-            matched = False
+            filtered_items = []
             if isinstance(expdata, dict) and 'parsed' in expdata:
                 parsed_list = expdata.get('parsed', [])
                 if isinstance(parsed_list, list):
@@ -1039,7 +1075,7 @@ class NetworkTracker:
                         item_spm = self._extract_spm_from_product_exposure_item(item)
                         if item_spm:
                             if self._check_spm_match(item_spm, spm):
-                                matched = True
+                                filtered_items.append(item)
                                 matched_items += 1
                                 logger.debug(f"Product Exposure 매칭: goodscode={item_goodscode}, spm={item_spm}, target_spm={spm}")
                             else:
@@ -1047,8 +1083,10 @@ class NetworkTracker:
                         else:
                             logger.debug(f"Product Exposure SPM 추출 실패: goodscode={item_goodscode}")
             
-            if matched:
-                filtered_logs.append(log)
+            # 필터링된 항목이 있으면 로그에 반영
+            if filtered_items:
+                expdata['parsed'] = filtered_items
+                filtered_logs.append(filtered_log)
             else:
                 logger.debug(f"Product Exposure 로그 필터링 제외: goodscode={goodscode}, spm={spm}와 매칭되는 항목 없음")
         
@@ -1104,7 +1142,7 @@ class NetworkTracker:
         
         return params
     
-    def validate_payload(self, log: Dict[str, Any], expected_data: Dict[str, Any], goodscode: Optional[str] = None, event_type: Optional[str] = None) -> bool:
+    def validate_payload(self, log: Dict[str, Any], expected_data: Dict[str, Any], goodscode: Optional[str] = None, event_type: Optional[str] = None) -> Tuple[bool, Dict[str, Any]]:
         """
         로그의 payload 정합성 검증 (재귀적 탐색 방식)
         
@@ -1117,7 +1155,9 @@ class NetworkTracker:
             event_type: 이벤트 타입 ('Product Exposure', 'Product Click' 등)
         
         Returns:
-            검증 성공 시 True, 실패 시 AssertionError 발생
+            (검증 성공 여부, 통과한 필드와 기대값 딕셔너리) 튜플
+            - 검증 성공 시: (True, {필드명: 기대값} 딕셔너리)
+            - 검증 실패 시: AssertionError 발생
         
         Raises:
             AssertionError: 검증 실패 시
@@ -1211,6 +1251,7 @@ class NetworkTracker:
         
         # 기대 데이터 검증 (재귀적 탐색 사용)
         errors = []
+        passed_fields = {}  # 통과한 필드와 기대값 딕셔너리 {필드명: 기대값}
         for key, expected_value in expected_data.items():
             actual_value = None
             
@@ -1225,17 +1266,20 @@ class NetworkTracker:
                 actual_value = find_value_recursive(payload, key)
             
             # 값 검증
+            field_passed = False
             if actual_value is None:
                 errors.append(f"키 '{key}'에 해당하는 값이 없습니다.")
             elif isinstance(expected_value, str) and expected_value == "__SKIP__":
                 # skip 필드: 어떤 값이든 통과 (검증 스킵)
+                passed_fields[key] = expected_value  # skip 필드도 통과한 것으로 간주 (기대값 저장)
                 continue  # 검증 스킵, 다음 필드로
             elif isinstance(expected_value, str) and expected_value == "__MANDATORY__":
                 # mandatory 필드: 빈 값만 아니면 통과
                 # 빈 값 체크: None, 빈 문자열, 공백만 있는 문자열
                 if actual_value is None or (isinstance(actual_value, str) and actual_value.strip() == ""):
                     errors.append(f"키 '{key}'는 mandatory 필드이지만 값이 비어있습니다.")
-                # 빈 값이 아니면 통과 (다음 필드로)
+                else:
+                    field_passed = True  # 빈 값이 아니면 통과
             elif isinstance(expected_value, list):
                 # expected_value가 리스트인 경우: actual_value가 리스트에 포함되어 있으면 통과
                 if actual_value not in expected_value:
@@ -1243,6 +1287,8 @@ class NetworkTracker:
                         f"키 '{key}'의 값이 일치하지 않습니다. "
                         f"기대값 (리스트 중 하나): {expected_value}, 실제값: {actual_value}"
                     )
+                else:
+                    field_passed = True
             else:
                 # 포함 여부 매칭이 필요한 필드들 (spm, spm-url, spm-pre, spm-cnt)
                 contains_match_fields = {'spm', 'spm-url', 'spm-pre', 'spm-cnt'}
@@ -1252,7 +1298,8 @@ class NetworkTracker:
                     # 예: expected="gmktpc.home.searchtop", actual="gmktpc.home.searchtop.dsearchbox.1fbf486arWCtiZ" → 통과
                     # 예: expected="gmktpc.searchlist", actual="gmktpc.searchlist.0.0.28e22ebayJdnYA" → 통과
                     if expected_value in actual_value:
-                        continue  # 포함 매칭 성공, 다음 필드로
+                        field_passed = True
+                        # 포함 매칭 성공, 다음 필드로 (값 저장은 아래에서)
                     else:
                         errors.append(
                             f"키 '{key}'의 값이 일치하지 않습니다. "
@@ -1263,6 +1310,12 @@ class NetworkTracker:
                         f"키 '{key}'의 값이 일치하지 않습니다. "
                         f"기대값: {expected_value}, 실제값: {actual_value}"
                     )
+                else:
+                    field_passed = True
+            
+            # 필드가 통과했으면 딕셔너리에 추가 (필드명: 기대값)
+            if field_passed:
+                passed_fields[key] = expected_value
         
         if errors:
             error_msg = "\n".join(errors)
@@ -1273,7 +1326,7 @@ class NetworkTracker:
                 f"디코딩된 gokey 파라미터: {json.dumps(decoded_info.get('params', {}), ensure_ascii=False, indent=2)}"
             )
         
-        return True
+        return True, passed_fields
     
     def clear_logs(self):
         """
