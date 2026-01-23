@@ -2,14 +2,11 @@
 BDD Step Definitions for SRP Tracking Tests
 """
 import logging
-import pytest
-from pathlib import Path
 from pytest_bdd import given, when, then, parsers
 from playwright.sync_api import expect
 from pages.search_page import SearchPage
 from pages.home_page import HomePage
 from pages.list_page import ListPage
-from pages.Etc import Etc
 
 # 프론트 실패 처리 헬퍼 함수 import
 from utils.frontend_helpers import record_frontend_failure
