@@ -5,11 +5,16 @@ config.json의 환경 설정에 따라 dev와 stg/prod로 분기
 """
 import os
 import json
-from dotenv import load_dotenv
+from pathlib import Path
+from dotenv import load_dotenv  # type: ignore
 from typing import Dict
 
-# .env 파일 로드
-load_dotenv()
+# .env 파일 로드 (프로젝트 루트 기준)
+project_root = Path(__file__).parent.parent
+env_path = project_root / '.env'
+# override=True: 기존 환경 변수를 .env 파일의 값으로 덮어씀
+# verbose=True: 로드된 변수 정보 출력 (디버깅용)
+load_dotenv(dotenv_path=env_path, override=True)
 
 
 class MemberType:
@@ -96,13 +101,21 @@ def get_credentials(member_type: str) -> Dict[str, str]:
     id_key = f"{env_prefix}{config['base_id_key']}" if env_prefix else config['base_id_key']
     password_key = f"{env_prefix}{config['base_password_key']}" if env_prefix else config['base_password_key']
     
+    # 환경 변수 다시 로드 (함수 호출 시점에 확실히 로드되도록)
+    load_dotenv(dotenv_path=env_path, override=True)
+    
     username = os.getenv(id_key)
     password = os.getenv(password_key)
     
     if not username or not password:
+        # 디버깅: 실제로 어떤 키들이 있는지 확인
+        all_env_keys = [k for k in os.environ.keys() if 'MEMBER' in k or 'NORMAL' in k]
         raise ValueError(
             f"{config['name']} 계정 정보가 .env 파일에 설정되지 않았습니다. "
-            f"환경: {environment}, 키: {id_key}, {password_key}"
+            f"환경: {environment}, 키: {id_key}, {password_key}\n"
+            f".env 파일 경로: {env_path}\n"
+            f".env 파일 존재 여부: {env_path.exists()}\n"
+            f"관련 환경 변수 키 목록: {all_env_keys}"
         )
     
     return {
