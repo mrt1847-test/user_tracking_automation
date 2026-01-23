@@ -1,0 +1,621 @@
+{
+  "module_exposure": {
+    "payload": {
+      "gmkey": "EXP",
+      "ts": "mandatory",
+      "rd": "mandatory",
+      "gokey": "mandatory",
+      "cna": "mandatory",
+      "spm-cnt": "gmktpc.searchlistcategory.0",
+      "_gr_uid_": "11758850530814005372000000",
+      "uidaplus": "11758850530814005372000000",
+      "logtype": "2",
+      "scr": "mandatory",
+      "_p_url": "mandatory",
+      "decoded_gokey": {
+        "decoded_gokey": "mandatory",
+        "params": {
+          "uidaplus": "11758850530814005372000000",
+          "spm-url": "",
+          "spm-pre": "",
+          "spm-cnt": "gmktpc.searchlistcategory.0",
+          "_f_t": "false",
+          "pid": "www_gmarket_co_kr",
+          "cguid": "11758850530814005372000000",
+          "pguid": "skip",
+          "sguid": "skip",
+          "channel_code": "200003514",
+          "st_page_id": "mandatory",
+          "server_env": "<environment>",
+          "_is_auto_exp": "1",
+          "_eventType": "IObserver",
+          "_method": "POST",
+          "is_auto": "1",
+          "scm": "",
+          "spm": "gmktpc.searchlistcategory.cpc",
+          "_w": "mandatory",
+          "_h": "mandatory",
+          "_x": "mandatory",
+          "_y": "mandatory",
+          "_rate": "mandatory",
+          "_viewability": "intersection",
+          "params-exp": {
+            "raw": "mandatory",
+            "parsed": {
+              "gmkt_page_id": "",
+              "gmkt_area_code": "",
+              "section_index": "",
+              "module_index": "mandatory",
+              "ab_buckets": "skip"
+            }
+          },
+          "cache": "mandatory",
+          "jsver": "aplus.js",
+          "lver": "1.13.26-1",
+          "customSdkId": "",
+          "platformType": [
+            "pc",
+            "mac"
+          ],
+          "device_model": [
+            "Windows",
+            "Macintosh"
+          ],
+          "os": [
+            "Windows",
+            "Mac OS X"
+          ],
+          "os_version": [
+            "win10",
+            "10.15.7"
+          ],
+          "language": [
+            "ko-KR",
+            "en-US"
+          ],
+          "o": [
+            "win10",
+            "mac"
+          ],
+          "w": [
+            "webkit",
+            "chrome"
+          ],
+          "s": "1280x720",
+          "scr": "mandatory",
+          "m": "360ee",
+          "ism": [
+            "pc",
+            "mac"
+          ],
+          "p": "1",
+          "b": "mandatory",
+          "tag": "1",
+          "stag": "-1",
+          "lstag": "-1",
+          "_g_encode": "utf-8"
+        }
+      }
+    }
+  },
+  "product_exposure": {
+    "gmkey": "EXP",
+    "ts": "mandatory",
+    "rd": "mandatory",
+    "gokey": "mandatory",
+    "cna": "mandatory",
+    "spm-cnt": "gmktpc.searchlistcategory.0",
+    "_gr_uid_": "11758850530814005372000000",
+    "uidaplus": "11758850530814005372000000",
+    "logtype": "2",
+    "scr": "mandatory",
+    "_isCombine": "1",
+    "_p_url": "mandatory",
+    "spm-url": "",
+    "spm-pre": "",
+    "_f_t": "false",
+    "pid": "www_gmarket_co_kr",
+    "cguid": "11758850530814005372000000",
+    "pguid": "skip",
+    "sguid": "skip",
+    "channel_code": "200003514",
+    "st_page_id": "mandatory",
+    "server_env": "<environment>",
+    "expdata": {
+      "raw": "mandatory",
+      "parsed[0]": {
+        "exargs": {
+          "_w": "mandatory",
+          "_h": "mandatory",
+          "_x": "mandatory",
+          "_y": "mandatory",
+          "_rate": "mandatory",
+          "_viewability": "intersection",
+          "params-exp": {
+            "raw": "mandatory",
+            "parsed": {
+              "gmkt_page_id": "",
+              "gmkt_area_code": "200011627",
+              "section_index": "",
+              "module_index": "mandatory",
+              "is_ad": "Y",
+              "ab_buckets": "skip",
+              "is_airticket": "N",
+              "utLogMap": {
+                "raw": "mandatory",
+                "parsed": {
+                  "scene": "search",
+                  "sub_scene": "main_srp",
+                  "x_object_id": "<상품번호>",
+                  "x_object_type": "item",
+                  "x_sku_id": "0",
+                  "pageIndex": "0",
+                  "pagePos": "0",
+                  "pageSize": "8",
+                  "listno": "0",
+                  "sort": "popularity",
+                  "searchScenario": "category",
+                  "query": "<검색어>",
+                  "pvid": "mandatory",
+                  "pvid_sys": "gmarket server",
+                  "search_session_id": "mandatory",
+                  "origin_price": "<원가>",
+                  "promotion_price": "<할인가>",
+                  "coupon_price": "<쿠폰적용가>",
+                  "ab_buckets": "skip",
+                  "trafficType": "ad",
+                  "adProduct": "N",
+                  "adSubProduct": "A"
+                }
+              },
+              "_p_prod": "<상품번호>",
+              "_p_sku": "0",
+              "_p_catalog": "skip",
+              "_p_group": "skip"
+            }
+          }
+        },
+        "scm": "",
+        "spm": "gmktpc.searchlistcategory.cpc.d0_0"
+      }
+    },
+    "_is_auto_exp": "1",
+    "_eventType": "custom",
+    "_method": "POST",
+    "_pkgSize": "skip",
+    "cache": "mandatory",
+    "jsver": "aplus.js",
+    "lver": "1.13.26-1",
+    "customSdkId": "",
+    "platformType": [
+      "pc",
+      "mac"
+    ],
+    "device_model": [
+      "Windows",
+      "Macintosh"
+    ],
+    "os": [
+      "Windows",
+      "Mac OS X"
+    ],
+    "os_version": [
+      "win10",
+      "10.15.7"
+    ],
+    "language": [
+      "ko-KR",
+      "en-US"
+    ],
+    "o": [
+      "win10",
+      "mac"
+    ],
+    "w": [
+      "webkit",
+      "chrome"
+    ],
+    "s": "1280x720",
+    "m": "360ee",
+    "ism": [
+      "pc",
+      "mac"
+    ],
+    "p": "1",
+    "b": "mandatory",
+    "tag": "1",
+    "stag": "-1",
+    "lstag": "-1",
+    "_g_encode": "utf-8"
+  },
+  "product_click": {
+    "gmkey": "CLK",
+    "ts": "mandatory",
+    "rd": "mandatory",
+    "gokey": "mandatory",
+    "cna": "mandatory",
+    "spm-cnt": "gmktpc.searchlistcategory.0",
+    "_gr_uid_": "11758850530814005372000000",
+    "uidaplus": "11758850530814005372000000",
+    "logtype": "2",
+    "scr": "mandatory",
+    "_p_url": "mandatory",
+    "spm-url": "",
+    "spm-pre": "",
+    "_f_t": "false",
+    "pid": "www_gmarket_co_kr",
+    "cguid": "11758850530814005372000000",
+    "pguid": "skip",
+    "sguid": "skip",
+    "channel_code": "200003514",
+    "st_page_id": "mandatory",
+    "server_env": "<environment>",
+    "params-clk": {
+      "raw": "mandatory",
+      "parsed": {
+        "gmkt_page_id": "",
+        "gmkt_area_code": "200011627",
+        "section_index": "",
+        "module_index": "mandatory",
+        "is_ad": "Y",
+        "ab_buckets": "skip",
+        "is_airticket": "N",
+        "utLogMap": {
+          "raw": "mandatory",
+          "parsed": {
+            "scene": "search",
+            "sub_scene": "main_srp",
+            "x_object_id": "<상품번호>",
+            "x_object_type": "item",
+            "x_sku_id": "0",
+            "pageIndex": "0",
+            "pagePos": "0",
+            "pageSize": "8",
+            "listno": "0",
+            "sort": "popularity",
+            "searchScenario": "category",
+            "query": "<검색어>",
+            "pvid": "mandatory",
+            "pvid_sys": "gmarket server",
+            "search_session_id": "mandatory",
+            "origin_price": "<원가>",
+            "promotion_price": "<할인가>",
+            "coupon_price": "<쿠폰적용가>",
+            "ab_buckets": "skip",
+            "trafficType": "ad",
+            "adProduct": "N",
+            "adSubProduct": "A"
+          }
+        },
+        "_p_prod": "<상품번호>",
+        "_p_sku": "0",
+        "_p_catalog": "skip",
+        "_p_group": "skip"
+      }
+    },
+    "_is_auto_clk": "1",
+    "spm": "gmktpc.searchlistcategory.cpc.d0_0",
+    "scm": "",
+    "cache": "mandatory",
+    "jsver": "aplus.js",
+    "lver": "1.13.26-1",
+    "customSdkId": "",
+    "platformType": [
+      "pc",
+      "mac"
+    ],
+    "device_model": [
+      "Windows",
+      "Macintosh"
+    ],
+    "os": [
+      "Windows",
+      "Mac OS X"
+    ],
+    "os_version": [
+      "win10",
+      "10.15.7"
+    ],
+    "language": [
+      "ko-KR",
+      "en-US"
+    ],
+    "o": [
+      "win10",
+      "mac"
+    ],
+    "w": [
+      "webkit",
+      "chrome"
+    ],
+    "s": "1280x720",
+    "m": "360ee",
+    "ism": [
+      "pc",
+      "mac"
+    ],
+    "p": "1",
+    "b": "mandatory",
+    "tag": "1",
+    "stag": "-1",
+    "lstag": "-1",
+    "_g_encode": "utf-8"
+  },
+  "product_atc_click": {
+    "payload": {
+      "gmkey": "CLK",
+      "ts": "mandatory",
+      "rd": "mandatory",
+      "gokey": "mandatory",
+      "cna": "mandatory",
+      "spm-cnt": "gmktpc.searchlistcategory.0",
+      "_gr_uid_": "11758850530814005372000000",
+      "uidaplus": "11758850530814005372000000",
+      "logtype": "2",
+      "scr": "mandatory",
+      "_p_url": "mandatory",
+      "decoded_gokey": {
+        "decoded_gokey": "mandatory",
+        "params": {
+          "uidaplus": "11758850530814005372000000",
+          "spm-url": "",
+          "spm-pre": "",
+          "spm-cnt": "gmktpc.searchlistcategory.0",
+          "_f_t": "false",
+          "pid": "www_gmarket_co_kr",
+          "cguid": "11758850530814005372000000",
+          "pguid": "skip",
+          "sguid": "skip",
+          "channel_code": "200003514",
+          "st_page_id": "mandatory",
+          "server_env": "<environment>",
+          "params-clk": {
+            "raw": "mandatory",
+            "parsed": {
+              "atc_quantity": "1",
+              "gmkt_page_id": "",
+              "gmkt_area_code": "200013164",
+              "section_index": "",
+              "module_index": "mandatory",
+              "is_ad": "Y",
+              "ab_buckets": "skip",
+              "is_airticket": "N",
+              "utLogMap": {
+                "raw": "mandatory",
+                "parsed": {
+                  "scene": "search",
+                  "sub_scene": "main_srp",
+                  "x_object_id": "<상품번호>",
+                  "x_object_type": "item",
+                  "x_sku_id": "0",
+                  "pageIndex": "0",
+                  "pagePos": "0",
+                  "pageSize": "8",
+                  "listno": "0",
+                  "sort": "popularity",
+                  "searchScenario": "category",
+                  "query": "<검색어>",
+                  "pvid": "mandatory",
+                  "pvid_sys": "gmarket server",
+                  "search_session_id": "mandatory",
+                  "origin_price": "<원가>",
+                  "promotion_price": "<할인가>",
+                  "coupon_price": "<쿠폰적용가>",
+                  "ab_buckets": "skip",
+                  "trafficType": "ad",
+                  "adProduct": "N",
+                  "adSubProduct": "A"
+                }
+              },
+              "_p_prod": "<상품번호>",
+              "_p_sku": "0",
+              "_p_catalog": "skip",
+              "_p_group": "skip"
+            }
+          },
+          "_is_auto_clk": "1",
+          "spm": "gmktpc.searchlistcategory.cpc.d0_0",
+          "scm": "",
+          "cache": "mandatory",
+          "jsver": "aplus.js",
+          "lver": "1.13.26-1",
+          "customSdkId": "",
+          "platformType": [
+            "pc",
+            "mac"
+          ],
+          "device_model": [
+            "Windows",
+            "Macintosh"
+          ],
+          "os": [
+            "Windows",
+            "Mac OS X"
+          ],
+          "os_version": [
+            "win10",
+            "10.15.7"
+          ],
+          "language": [
+            "ko-KR",
+            "en-US"
+          ],
+          "o": [
+            "win10",
+            "mac"
+          ],
+          "w": [
+            "webkit",
+            "chrome"
+          ],
+          "s": "1280x720",
+          "scr": "mandatory",
+          "m": "360ee",
+          "ism": [
+            "pc",
+            "mac"
+          ],
+          "p": "1",
+          "b": "mandatory",
+          "tag": "1",
+          "stag": "-1",
+          "lstag": "-1",
+          "_g_encode": "utf-8"
+        }
+      }
+    }
+  },
+  "pdp_pv": {
+    "payload": {
+      "logtype": "1",
+      "title": "G마켓 - 명자네 코다리 조림 2대 노하우 매콤 명태조림+시래기 가마솥 공법 명태조림450g 5팩+국내산시래기200g 2팩",
+      "pre": "https://www.gmarket.co.kr/n/list?category=300018833",
+      "scr": "mandatory",
+      "_p_url": "mandatory",
+      "ts": "mandatory",
+      "rd": "mandatory",
+      "cna": "mandatory",
+      "spm-cnt": "gmktpc.pdp.0",
+      "spm-url": "gmktpc.searchlistcategory.cpc.d0_0",
+      "uidaplus": "11758850530814005372000000",
+      "sidx": "aplusSidex",
+      "ckx": "aplusCkx",
+      "pid": "item_gmarket_co_kr",
+      "cguid": "11758850530814005372000000",
+      "pguid": "skip",
+      "sguid": "skip",
+      "_p_typ": "pdp",
+      "_p_ispdp": "1",
+      "_p_prod": "<상품번호>",
+      "origin_price": "<원가>",
+      "promotion_price": "<할인가>",
+      "coupon_price": "<쿠폰적용가>",
+      "payment_price": "{\r\n  \"0\": {\r\n    \"payment_type\": \"A\",\r\n    \"payment_method_id\": \"13915685558\",\r\n    \"payment_method_name\": \"G마켓 삼성카드 첫 결제 시 50% 할인\",\r\n    \"price_threshold\": \"10000\",\r\n    \"discount_percent\": \"\",\r\n    \"discount_amount\": \"\",\r\n    \"price\": \"17960\",\r\n    \"max_discount_amount\": \"70000\"\r\n  },\r\n  \"1\": {\r\n    \"payment_type\": \"A\",\r\n    \"payment_method_id\": \"13963052861\",\r\n    \"payment_method_name\": \"현대&스마일카드 1,000원 할인\",\r\n    \"price_threshold\": \"20000\",\r\n    \"discount_percent\": \"\",\r\n    \"discount_amount\": \"\",\r\n    \"price\": \"34910\",\r\n    \"max_discount_amount\": \"\"\r\n  },\r\n  \"2\": {\r\n    \"payment_type\": \"A\",\r\n    \"payment_method_id\": \"13927380549\",\r\n    \"payment_method_name\": \"G마켓 삼성카드 1,000원 할인\",\r\n    \"price_threshold\": \"20000\",\r\n    \"discount_percent\": \"\",\r\n    \"discount_amount\": \"\",\r\n    \"price\": \"34910\",\r\n    \"max_discount_amount\": \"\"\r\n  },\r\n  \"3\": {\r\n    \"payment_type\": \"B\",\r\n    \"payment_method_id\": \"13924277169\",\r\n    \"payment_method_name\": \"스마일카드 첫결제 8만원 할인\",\r\n    \"price_threshold\": \"80100\",\r\n    \"discount_percent\": \"\",\r\n    \"discount_amount\": \"80000\",\r\n    \"price\": \"\",\r\n    \"max_discount_amount\": \"\"\r\n  },\r\n  \"4\": {\r\n    \"payment_type\": \"B\",\r\n    \"payment_method_id\": \"13963294543\",\r\n    \"payment_method_name\": \"현대&스마일카드 10,000원 할인\",\r\n    \"price_threshold\": \"300000\",\r\n    \"discount_percent\": \"\",\r\n    \"discount_amount\": \"10000\",\r\n    \"price\": \"\",\r\n    \"max_discount_amount\": \"\"\r\n  },\r\n  \"5\": {\r\n    \"payment_type\": \"B\",\r\n    \"payment_method_id\": \"13927389360\",\r\n    \"payment_method_name\": \"G마켓 삼성카드 1만원 할인\",\r\n    \"price_threshold\": \"300000\",\r\n    \"discount_percent\": \"\",\r\n    \"discount_amount\": \"10000\",\r\n    \"price\": \"\",\r\n    \"max_discount_amount\": \"\"\r\n  },\r\n  \"6\": {\r\n    \"payment_type\": \"B\",\r\n    \"payment_method_id\": \"13963183692\",\r\n    \"payment_method_name\": \"현대&스마일카드 2,000원 할인\",\r\n    \"price_threshold\": \"100000\",\r\n    \"discount_percent\": \"\",\r\n    \"discount_amount\": \"2000\",\r\n    \"price\": \"\",\r\n    \"max_discount_amount\": \"\"\r\n  },\r\n  \"7\": {\r\n    \"payment_type\": \"B\",\r\n    \"payment_method_id\": \"13963127144\",\r\n    \"payment_method_name\": \"현대&스마일카드 1,500원 할인\",\r\n    \"price_threshold\": \"50000\",\r\n    \"discount_percent\": \"\",\r\n    \"discount_amount\": \"1500\",\r\n    \"price\": \"\",\r\n    \"max_discount_amount\": \"\"\r\n  }\r\n}",
+      "_p_sku": "0",
+      "price_signal": "30 Days Lowest Price",
+      "item_status": "1",
+      "ab_buckets": "skip",
+      "pageid": "oul5iwfizn0caxcp19be90bde46153e41ee5a896b3",
+      "server_env": "<environment>",
+      "goodscode": "4533572642",
+      "buyboxtype": "ad",
+      "utparam-url": "mandatory",
+      "_is_auto_pv": "1",
+      "cache": "mandatory",
+      "jsver": "aplus.js",
+      "lver": "1.13.26-1",
+      "platformType": [
+        "pc",
+        "mac"
+      ],
+      "device_model": [
+        "Windows",
+        "Macintosh"
+      ],
+      "os": [
+        "Windows",
+        "Mac OS X"
+      ],
+      "os_version": [
+        "win10",
+        "10.15.7"
+      ],
+      "language": [
+        "ko-KR",
+        "en-US"
+      ],
+      "o": [
+        "win10",
+        "mac"
+      ],
+      "w": [
+        "webkit",
+        "chrome"
+      ],
+      "s": "1280x720",
+      "m": "360ee",
+      "ism": [
+        "pc",
+        "mac"
+      ],
+      "p": "1",
+      "b": "mandatory",
+      "tag": "1",
+      "stag": "-1",
+      "lstag": "-1",
+      "_g_encode": "utf-8"
+    }
+  },
+  "pv": {
+    "payload": {
+      "logtype": "1",
+      "title": "G마켓 - 조림반찬류",
+      "pre": "-",
+      "scr": "mandatory",
+      "_p_url": "mandatory",
+      "ts": "mandatory",
+      "rd": "mandatory",
+      "cna": "mandatory",
+      "spm-cnt": "gmktpc.searchlistcategory.0",
+      "uidaplus": "11758850530814005372000000",
+      "sidx": "aplusSidex",
+      "ckx": "aplusCkx",
+      "pid": "www_gmarket_co_kr",
+      "cguid": "11758850530814005372000000",
+      "pguid": "skip",
+      "sguid": "skip",
+      "channel_code": "200003514",
+      "_p_typ": "search",
+      "_p_ispdp": "0",
+      "query": "<검색어>",
+      "searchScenario": "category",
+      "pageid": "oul5iwfizn0caxcp19be90bc7e4197d3e77c1f77d6",
+      "server_env": "<environment>",
+      "category": "300018833",
+      "_is_auto_pv": "1",
+      "cache": "mandatory",
+      "jsver": "aplus.js",
+      "lver": "1.13.26-1",
+      "platformType": [
+        "pc",
+        "mac"
+      ],
+      "device_model": [
+        "Windows",
+        "Macintosh"
+      ],
+      "os": [
+        "Windows",
+        "Mac OS X"
+      ],
+      "os_version": [
+        "win10",
+        "10.15.7"
+      ],
+      "language": [
+        "ko-KR",
+        "en-US"
+      ],
+      "o": [
+        "win10",
+        "mac"
+      ],
+      "w": [
+        "webkit",
+        "chrome"
+      ],
+      "s": "1280x720",
+      "m": "360ee",
+      "ism": [
+        "pc",
+        "mac"
+      ],
+      "p": "1",
+      "b": "mandatory",
+      "tag": "1",
+      "stag": "-1",
+      "lstag": "-1",
+      "_g_encode": "utf-8"
+    }
+  }
+}

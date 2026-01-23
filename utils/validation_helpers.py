@@ -340,9 +340,17 @@ def replace_placeholders(value: Any, goodscode: str, frontend_data: Optional[Dic
         
         # frontend_data에서 값 가져오기
         if frontend_data:
-            # <검색어> placeholder 치환
-            if '<검색어>' in value and 'keyword' in frontend_data:
-                value = value.replace('<검색어>', str(frontend_data['keyword']))
+            # <검색어> placeholder 치환 (keyword 또는 category_id 사용)
+            if '<검색어>' in value:
+                # keyword가 있으면 우선 사용, 없으면 category_id 사용
+                search_value = None
+                if 'keyword' in frontend_data and frontend_data['keyword']:
+                    search_value = str(frontend_data['keyword'])
+                elif 'category_id' in frontend_data and frontend_data['category_id']:
+                    search_value = str(frontend_data['category_id'])
+                
+                if search_value:
+                    value = value.replace('<검색어>', search_value)
             
             # <원가> placeholder 치환
             if '<원가>' in value and 'origin_price' in frontend_data:

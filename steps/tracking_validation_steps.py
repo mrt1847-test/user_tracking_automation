@@ -142,6 +142,7 @@ def _get_common_context(bdd_context):
         raise ValueError("bdd_context에 'area'가 없습니다. Feature 파일 경로에서 영역을 추론하지 못했습니다.")
     
     keyword = bdd_context.get('keyword', '')
+    category_id = bdd_context.get('category_id', '')
     
     # 🔥 PDP PV 로그에서 가격 정보 추출 (프론트엔드 대신)
     price_info = extract_price_info_from_pdp_pv(tracker, goodscode)
@@ -149,6 +150,8 @@ def _get_common_context(bdd_context):
     frontend_data = price_info.copy() if price_info else {}
     if keyword:
         frontend_data['keyword'] = keyword
+    if category_id:
+        frontend_data['category_id'] = category_id
     
     return tracker, goodscode, module_title, frontend_data if frontend_data else None, area
 

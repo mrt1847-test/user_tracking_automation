@@ -8,6 +8,7 @@ from pytest_bdd import given, when, then, parsers
 from playwright.sync_api import expect
 from pages.search_page import SearchPage
 from pages.home_page import HomePage
+from pages.list_page import ListPage
 from pages.Etc import Etc
 
 # 프론트 실패 처리 헬퍼 함수 import
@@ -405,3 +406,92 @@ def product_page_is_opened(browser_session, bdd_context):
     except Exception as e:
         logger.error(f"상품 페이지 이동 확인 중 예외 발생: {e}", exc_info=True)
         record_frontend_failure(browser_session, bdd_context, str(e), "상품 페이지로 이동되었다")
+
+
+@when(parsers.parse('사용자가 카테고리 아이디 "{category_id}" 로 이동한다'))
+def when_user_goes_to_category(browser_session, category_id, bdd_context):
+    """
+    사용자가 카테고리 아이디로 LP 페이지 이동
+    실패 시에도 다음 스텝으로 진행
+    
+    Args:
+        browser_session: BrowserSession 객체 (page 참조 관리)
+        category_id: 카테고리 ID
+        bdd_context: BDD context (step 간 데이터 공유용)
+    """
+    try:
+        logger.info(f"LP 페이지 이동 시작: category_id={category_id}")
+        list_page = ListPage(browser_session.page)
+        list_page.go_to_list_page(category_id)
+        bdd_context.store['category_id'] = category_id
+        logger.info(f"LP 페이지 이동 완료: category_id={category_id}")
+    except Exception as e:
+        logger.error(f"LP 페이지 이동 실패: {e}", exc_info=True)
+        record_frontend_failure(browser_session, bdd_context, f"LP 페이지 이동 실패: {str(e)}", "사용자가 카테고리 아이디로 이동한다")
+        if 'category_id' not in bdd_context.store:
+            bdd_context.store['category_id'] = category_id
+
+
+@given(parsers.parse('사용자가 카테고리 아이디 "{category_id}" 로 이동했다'))
+def given_user_went_to_category(browser_session, category_id, bdd_context):
+    """
+    사용자가 이미 카테고리 아이디로 이동한 상태 (Given)
+    실패 시에도 다음 스텝으로 진행
+    
+    Args:
+        browser_session: BrowserSession 객체 (page 참조 관리)
+        category_id: 카테고리 ID
+        bdd_context: BDD context (step 간 데이터 공유용)
+    """
+    try:
+        logger.info(f"LP 페이지 상태 확인: category_id={category_id}")
+        list_page = ListPage(browser_session.page)
+        # 이미 리스트 페이지에 있는지 확인
+        current_url = browser_session.page.url
+        # 리스트 페이지 URL인지 먼저 확인
+        if '/n/list' in current_url:
+            try:
+                # list_page의 검증 함수 사용
+                list_page.verify_category_id_in_url(current_url, category_id)
+                # 검증 통과 시 이미 올바른 페이지에 있음
+                bdd_context.store['category_id'] = category_id
+                logger.info(f"이미 LP 페이지에 있음: category_id={category_id}")
+            except AssertionError:
+                # 다른 카테고리면 이동 수행
+                when_user_goes_to_category(browser_session, category_id, bdd_context)
+                # 이동 스텝에서 실패했을 경우 플래그가 설정됨
+        else:
+            # 리스트 페이지가 아니면 이동 수행
+            when_user_goes_to_category(browser_session, category_id, bdd_context)
+            # 이동 스텝에서 실패했을 경우 플래그가 설정됨
+    except Exception as e:
+        logger.error(f"LP 페이지 상태 확인 실패: {e}", exc_info=True)
+        record_frontend_failure(browser_session, bdd_context, f"LP 페이지 상태 확인 실패: {str(e)}", "사용자가 카테고리 아이디로 이동했다")
+        if 'category_id' not in bdd_context.store:
+            bdd_context.store['category_id'] = category_id
+
+
+@then("리스트 페이지가 표시된다")
+def then_list_page_is_displayed(browser_session, bdd_context):
+    """
+    리스트 페이지가 표시되는지 확인 (검증)
+    실패 시에도 다음 스텝으로 진행
+    
+    Args:
+        browser_session: BrowserSession 객체 (page 참조 관리)
+        bdd_context: BDD context (step 간 데이터 공유용)
+    """
+    try:
+        list_page = ListPage(browser_session.page)
+        # list_page의 로드 대기 함수 사용
+        list_page.wait_for_list_page_load()
+        
+        # URL에 리스트 페이지 패턴이 있는지 확인
+        current_url = browser_session.page.url
+        if '/n/list' not in current_url:
+            raise AssertionError(f"리스트 페이지 URL이 아닙니다: {current_url}")
+        
+        logger.info("리스트 페이지 표시 확인")
+    except Exception as e:
+        logger.error(f"리스트 페이지 표시 확인 실패: {e}", exc_info=True)
+        record_frontend_failure(browser_session, bdd_context, f"리스트 페이지 표시 확인 실패: {str(e)}", "리스트 페이지가 표시된다")

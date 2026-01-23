@@ -17,7 +17,7 @@ user_tracking_automation/
 │   └── srp_tracking.feature        # SRP 영역 테스트 시나리오
 ├── steps/                           # BDD Step Definitions
 │   ├── home_steps.py               # 홈페이지 관련 스텝 (영역 추론 포함)
-│   ├── srp_steps.py                # SRP 관련 스텝
+│   ├── srp_lp_steps.py             # SRP/LP 관련 스텝
 │   ├── tracking_validation_steps.py # 트래킹 로그 검증 스텝
 │   └── ...
 ├── pages/                           # Page Object Model

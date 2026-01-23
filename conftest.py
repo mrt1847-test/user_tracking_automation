@@ -2,7 +2,7 @@ pytest_plugins = [
     "pytest_bdd",
     "steps.home_steps",
     "steps.login_steps",
-    "steps.srp_steps",
+    "steps.srp_lp_steps",
     "steps.product_steps",
     "steps.cart_steps",
     "steps.checkout_steps",
@@ -26,8 +26,10 @@ import time
 import logging
 from dotenv import load_dotenv  # type: ignore
 
-# .env 파일 로드
-load_dotenv()
+# .env 파일 로드 (프로젝트 루트 기준)
+project_root = Path(__file__).parent
+env_path = project_root / '.env'
+load_dotenv(dotenv_path=env_path)
 
 
 
