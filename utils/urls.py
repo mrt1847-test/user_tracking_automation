@@ -1,29 +1,53 @@
 """
 G마켓 URL 관리
-config.json에서 환경 설정을 읽어 환경별 URL 반환
+환경별 URL 설정을 직접 관리
 """
 import json
 import os
 from typing import Dict
+from pathlib import Path
 
 
-def _load_config() -> Dict:
-    """config.json 파일 로드"""
-    config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config.json')
-    with open(config_path, 'r', encoding='utf-8') as f:
-        return json.load(f)
+# 환경별 URL 설정
+_URLS = {
+    "dev": {
+        "base": "https://www-dev.gmarket.co.kr",
+        "item": "https://item-dev.gmarket.co.kr",
+        "cart": "https://cart-dev.gmarket.co.kr"
+    },
+    "stg": {
+        "base": "https://www-stg.gmarket.co.kr",
+        "item": "https://item-stg.gmarket.co.kr",
+        "cart": "https://cart-av.gmarket.co.kr"
+    },
+    "prod": {
+        "base": "https://www.gmarket.co.kr",
+        "item": "https://item.gmarket.co.kr",
+        "cart": "https://cart.gmarket.co.kr"
+    }
+}
+
+
+def _get_environment() -> str:
+    """config.json에서 현재 환경 반환 (dev/stg/prod)"""
+    config_path = Path(__file__).parent.parent / 'config.json'
+    try:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+            return config.get('environment', 'prod')
+    except (FileNotFoundError, json.JSONDecodeError):
+        # config.json이 없거나 읽을 수 없으면 기본값 'prod' 반환
+        return 'prod'
 
 
 def _get_environment_urls() -> Dict[str, str]:
     """현재 환경의 URL 설정 반환"""
-    config = _load_config()
-    environment = config.get('environment', 'prod')
-    urls = config.get('urls', {})
+    environment = _get_environment()
     
-    if environment not in urls:
-        raise ValueError(f"config.json에 '{environment}' 환경 설정이 없습니다.")
+    if environment not in _URLS:
+        raise ValueError(f"지원하지 않는 환경입니다: {environment}. (dev/stg/prod)")
     
-    return urls[environment]
+    return _URLS[environment]
 
 
 # 환경별 URL 캐싱
@@ -48,17 +72,10 @@ def _get_item_base_url() -> str:
 
 def _get_cart_base_url() -> str:
     """장바구니 기본 URL 반환"""
-    # cart 도메인은 환경별로 다를 수 있으므로 base URL에서 도메인 추출
-    base = _get_base_url()
-    # www.gmarket.co.kr -> cart.gmarket.co.kr
-    if 'www' in base:
-        return base.replace('www', 'cart')
-    # dev/stg 환경 처리
-    if '-dev' in base:
-        return base.replace('www-dev', 'cart-dev')
-    if '-stg' in base:
-        return base.replace('www-stg', 'cart-stg')
-    return base.replace('www', 'cart')
+    global _env_urls
+    if _env_urls is None:
+        _env_urls = _get_environment_urls()
+    return _env_urls['cart']
 
 
 def base_url() -> str:
