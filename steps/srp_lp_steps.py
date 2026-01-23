@@ -212,6 +212,7 @@ def user_confirms_and_clicks_product_in_module(browser_session, module_title, bd
         # 모듈로 이동
         module = search_page.get_module_by_title(module_title)
         search_page.scroll_module_into_view(module)
+        ad_check = search_page.check_ad_item_in_module(module_title)
         
         # 모듈 내 상품 찾기
         parent = search_page.get_module_parent(module, 2)
@@ -242,6 +243,11 @@ def user_confirms_and_clicks_product_in_module(browser_session, module_title, bd
         else:
             logger.info(f"장바구니 담기 버튼이 존재하지 않습니다: {goodscode}")
         
+        if ad_check == "F":
+            is_ad = search_page.check_ad_tag_in_product(product)
+        else:
+            is_ad =ad_check
+        
         # 상품 클릭
         try:
             new_page = search_page.click_product_and_wait_new_page(product)
@@ -252,6 +258,7 @@ def user_confirms_and_clicks_product_in_module(browser_session, module_title, bd
             # bdd context에 저장 (module_title, goodscode, product_url 등)
             bdd_context.store['module_title'] = module_title
             bdd_context.store['goodscode'] = goodscode
+            bdd_context.store['is_ad'] = is_ad
             bdd_context.store['product_url'] = new_page.url
             
             logger.info(f"{module_title} 모듈 내 상품 확인 및 클릭 완료: {goodscode}")

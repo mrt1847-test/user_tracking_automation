@@ -144,6 +144,13 @@ def _get_common_context(bdd_context):
     keyword = bdd_context.get('keyword', '')
     category_id = bdd_context.get('category_id', '')
     
+    # is_ad 가져오기 (bdd_context.store 또는 bdd_context에서)
+    is_ad = None
+    if hasattr(bdd_context, 'store') and hasattr(bdd_context.store, 'get'):
+        is_ad = bdd_context.store.get('is_ad')
+    elif hasattr(bdd_context, 'get'):
+        is_ad = bdd_context.get('is_ad')
+    
     # 🔥 PDP PV 로그에서 가격 정보 추출 (프론트엔드 대신)
     price_info = extract_price_info_from_pdp_pv(tracker, goodscode)
     
@@ -152,6 +159,8 @@ def _get_common_context(bdd_context):
         frontend_data['keyword'] = keyword
     if category_id:
         frontend_data['category_id'] = category_id
+    if is_ad is not None:
+        frontend_data['is_ad'] = is_ad
     
     return tracker, goodscode, module_title, frontend_data if frontend_data else None, area
 

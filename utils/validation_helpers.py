@@ -310,7 +310,7 @@ def replace_placeholders(value: Any, goodscode: str, frontend_data: Optional[Dic
     Args:
         value: 치환할 값
         goodscode: 상품 번호
-        frontend_data: 프론트에서 읽은 데이터 (keyword, origin_price, promotion_price, coupon_price 등)
+        frontend_data: 프론트에서 읽은 데이터 (keyword, origin_price, promotion_price, coupon_price, is_ad 등)
     
     Returns:
         치환된 값
@@ -366,6 +366,12 @@ def replace_placeholders(value: Any, goodscode: str, frontend_data: Optional[Dic
                 coupon_price = frontend_data.get('coupon_price', '')
                 value = value.replace('<쿠폰적용가>', str(coupon_price) if coupon_price is not None else '')
             
+            # <is_ad> placeholder 치환
+            if '<is_ad>' in value and 'is_ad' in frontend_data:
+                is_ad_value = frontend_data.get('is_ad')
+                if is_ad_value is not None:
+                    value = value.replace('<is_ad>', str(is_ad_value))
+            
 
     return value
 
@@ -385,7 +391,7 @@ def build_expected_from_module_config(
         module_config: 모듈 설정 딕셔너리 (module_exposure, product_exposure 등 포함)
         event_type: 이벤트 타입 ('Module Exposure', 'Product Exposure', 'Product Click' 등)
         goodscode: 상품 번호
-        frontend_data: 프론트에서 읽은 데이터 (price, keyword 등)
+        frontend_data: 프론트에서 읽은 데이터 (price, keyword, is_ad 등)
         exclude_fields: 제외할 필드 목록
     
     Returns:
@@ -451,7 +457,7 @@ def validate_event_type_logs(
         event_type: 이벤트 타입 ('PV', 'Module Exposure', 'Product Exposure' 등)
         goodscode: 상품 번호
         module_title: 모듈 타이틀
-        frontend_data: 프론트에서 읽은 데이터 (price, keyword 등)
+        frontend_data: 프론트에서 읽은 데이터 (price, keyword, is_ad 등)
         module_config: 모듈별 설정 딕셔너리 (None이면 JSON 파일에서 자동 로드)
         exclude_fields: 검증에서 제외할 필드 목록
     
