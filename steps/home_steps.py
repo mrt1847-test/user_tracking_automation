@@ -59,15 +59,13 @@ def given_gmarket_home_page_accessed(browser_session, request, bdd_context):
                     test_file_path = Path(test_file_path)
                     test_file_name = test_file_path.stem  # 파일명에서 확장자 제거
                     
-                    # test_*.py 패턴에서 영역 추론 (예: test_srp.py -> SRP)
+                    # test_*.py 패턴에서 영역 추론 (예: test_srp.py -> SRP, test_lp.py -> LP)
                     if test_file_name.startswith('test_'):
                         area_name = test_file_name.replace('test_', '').upper()
-                        # 영역명이 유효한지 확인 (SRP, PDP, HOME, CART 등)
-                        valid_areas = ['SRP', 'PDP', 'HOME', 'CART']
-                        if area_name in valid_areas:
-                            area = area_name
-                            bdd_context.store['area'] = area
-                            logger.info(f"영역 자동 감지: {area} (Test 파일: {test_file_path})")
+                        # valid_areas 제한 제거 - 모든 영역명 허용
+                        area = area_name
+                        bdd_context.store['area'] = area
+                        logger.info(f"영역 자동 감지: {area} (Test 파일: {test_file_path})")
             except (AttributeError, Exception) as e:
                 logger.debug(f"테스트 파일 경로에서 영역 추론 실패: {e}")
         

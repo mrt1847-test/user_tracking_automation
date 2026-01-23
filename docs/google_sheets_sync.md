@@ -49,7 +49,8 @@ tracking_all JSON 파일을 구글 시트로 변환하여 기본 틀 생성
 ```bash
 python scripts/json_to_sheets.py \
   --input json/tracking_all_먼저_둘러보세요.json \
-  --module "먼저 둘러보세요"
+  --module "먼저 둘러보세요" \
+  --area SRP
 ```
 
 (전체 로그 파일명: `tracking_all_{module_title}.json`. 모듈 타이틀의 공백·특수문자는 파일명용으로 치환됨.)
@@ -58,6 +59,9 @@ python scripts/json_to_sheets.py \
 
 - `--input`: 입력 tracking_all JSON 파일 경로 (필수)
 - `--module`: 모듈명 (필수, 예: "먼저 둘러보세요")
+- `--area`: 영역명 (필수, SRP, PDP, HOME, CART 등)
+
+**시트명 형식**: 시트는 `{영역}-{모듈명}` 형식으로 생성됩니다 (예: `SRP-먼저 둘러보세요`).
 
 **참고**: Spreadsheet ID와 Credentials 파일 경로는 스크립트에 하드코딩되어 있습니다.
 
@@ -73,7 +77,7 @@ python scripts/json_to_sheets.py \
    - PV (선택적)
 3. 각 이벤트 타입의 첫 번째 이벤트 payload 사용 (대표값)
 4. 중첩된 JSON 구조를 평면화
-5. 구글 시트에 모듈명으로 시트 생성
+5. 구글 시트에 `{영역}-{모듈명}` 형식으로 시트 생성 (예: `SRP-먼저 둘러보세요`)
 6. 각 시트 내에 이벤트 타입별 테이블 구성
 
 ### 시트 구조
@@ -102,7 +106,11 @@ python scripts/json_to_sheets.py \
 ### 사용법
 
 ```bash
-python scripts/sheets_to_json.py --module "먼저 둘러보세요" --area SRP [--output config/SRP/먼저\ 둘러보세요.json] [--overwrite]
+python scripts/sheets_to_json.py \
+  --module "먼저 둘러보세요" \
+  --area SRP \
+  [--output config/SRP/먼저\ 둘러보세요.json] \
+  [--overwrite]
 ```
 
 ### 인자 설명
@@ -112,11 +120,13 @@ python scripts/sheets_to_json.py --module "먼저 둘러보세요" --area SRP [-
 - `--output`: 출력 JSON 파일 경로 (선택, 기본값: `config/{area}/{module}.json`)
 - `--overwrite`: 기존 파일이 있으면 덮어쓰기 (기본값: False)
 
+**시트명 형식**: 시트는 `{영역}-{모듈명}` 형식으로 읽습니다 (예: `SRP-먼저 둘러보세요`). 이 시트명을 기반으로 `config/{area}/{module}.json` 파일이 생성됩니다.
+
 **참고**: Spreadsheet ID와 Credentials 파일 경로는 스크립트에 하드코딩되어 있습니다.
 
 ### 동작 방식
 
-1. 구글 시트에서 모듈명 시트 선택
+1. 구글 시트에서 `{영역}-{모듈명}` 형식의 시트 선택 (예: `SRP-먼저 둘러보세요`)
 2. 이벤트 타입별 테이블 읽기:
    - Module Exposure → `module_exposure`
    - Product Exposure → `product_exposure`
@@ -254,8 +264,10 @@ gspread.exceptions.APIError: 403 Forbidden
 ```bash
 python scripts/json_to_sheets.py \
   --input json/tracking_all_먼저_둘러보세요.json \
-  --module "먼저 둘러보세요"
+  --module "먼저 둘러보세요" \
+  --area SRP
 ```
+   → 시트명: `SRP-먼저 둘러보세요` 생성
 
 3. **구글 시트에서 데이터 편집** (웹 브라우저에서)
 
@@ -266,6 +278,7 @@ python scripts/sheets_to_json.py \
   --area SRP \
   --overwrite
 ```
+   → 시트명: `SRP-먼저 둘러보세요`에서 읽어서 → `config/SRP/먼저 둘러보세요.json` 생성
 
 5. **생성된 config JSON 사용** (테스트 실행)
 
@@ -276,130 +289,130 @@ python scripts/sheets_to_json.py \
 #### 1. 4.5 이상
 
 ```bash
-# JSON → 구글 시트
-python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "4.5 이상"
+# JSON → 구글 시트 (시트명: SRP-4.5 이상)
+python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "4.5 이상" --area SRP
 
-# 구글 시트 → JSON
+# 구글 시트 → JSON (시트명: SRP-4.5 이상 → config/SRP/4.5 이상.json)
 python scripts/sheets_to_json.py --module "4.5 이상" --area SRP --overwrite
 ```
 
 #### 2. MD's Pick
 
 ```bash
-# JSON → 구글 시트
-python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "MD's Pick"
+# JSON → 구글 시트 (시트명: SRP-MD's Pick)
+python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "MD's Pick" --area SRP
 
-# 구글 시트 → JSON
+# 구글 시트 → JSON (시트명: SRP-MD's Pick → config/SRP/MD's Pick.json)
 python scripts/sheets_to_json.py --module "MD's Pick" --area SRP --overwrite
 ```
 
 #### 3. 대체검색어
 
 ```bash
-# JSON → 구글 시트
-python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "대체검색어"
+# JSON → 구글 시트 (시트명: SRP-대체검색어)
+python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "대체검색어" --area SRP
 
-# 구글 시트 → JSON
+# 구글 시트 → JSON (시트명: SRP-대체검색어 → config/SRP/대체검색어.json)
 python scripts/sheets_to_json.py --module "대체검색어" --area SRP --overwrite
 ```
 
 #### 4. 먼저 둘러보세요
 
 ```bash
-# JSON → 구글 시트
-python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "먼저 둘러보세요"
+# JSON → 구글 시트 (시트명: SRP-먼저 둘러보세요)
+python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "먼저 둘러보세요" --area SRP
 
-# 구글 시트 → JSON
+# 구글 시트 → JSON (시트명: SRP-먼저 둘러보세요 → config/SRP/먼저 둘러보세요.json)
 python scripts/sheets_to_json.py --module "먼저 둘러보세요" --area SRP --overwrite
 ```
 
 #### 5. 백화점 브랜드
 
 ```bash
-# JSON → 구글 시트
-python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "백화점 브랜드"
+# JSON → 구글 시트 (시트명: SRP-백화점 브랜드)
+python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "백화점 브랜드" --area SRP
 
-# 구글 시트 → JSON
+# 구글 시트 → JSON (시트명: SRP-백화점 브랜드 → config/SRP/백화점 브랜드.json)
 python scripts/sheets_to_json.py --module "백화점 브랜드" --area SRP --overwrite
 ```
 
 #### 6. 브랜드 인기상품
 
 ```bash
-# JSON → 구글 시트
-python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "브랜드 인기상품"
+# JSON → 구글 시트 (시트명: SRP-브랜드 인기상품)
+python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "브랜드 인기상품" --area SRP
 
-# 구글 시트 → JSON
+# 구글 시트 → JSON (시트명: SRP-브랜드 인기상품 → config/SRP/브랜드 인기상품.json)
 python scripts/sheets_to_json.py --module "브랜드 인기상품" --area SRP --overwrite
 ```
 
 #### 7. 스타배송
 
 ```bash
-# JSON → 구글 시트
-python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "스타배송"
+# JSON → 구글 시트 (시트명: SRP-스타배송)
+python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "스타배송" --area SRP
 
-# 구글 시트 → JSON
+# 구글 시트 → JSON (시트명: SRP-스타배송 → config/SRP/스타배송.json)
 python scripts/sheets_to_json.py --module "스타배송" --area SRP --overwrite
 ```
 
 #### 8. 오늘의 상품이에요
 
 ```bash
-# JSON → 구글 시트
-python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "오늘의 상품이에요"
+# JSON → 구글 시트 (시트명: SRP-오늘의 상품이에요)
+python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "오늘의 상품이에요" --area SRP
 
-# 구글 시트 → JSON
+# 구글 시트 → JSON (시트명: SRP-오늘의 상품이에요 → config/SRP/오늘의 상품이에요.json)
 python scripts/sheets_to_json.py --module "오늘의 상품이에요" --area SRP --overwrite
 ```
 
 #### 9. 오늘의 슈퍼딜
 
 ```bash
-# JSON → 구글 시트
-python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "오늘의 슈퍼딜"
+# JSON → 구글 시트 (시트명: SRP-오늘의 슈퍼딜)
+python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "오늘의 슈퍼딜" --area SRP
 
-# 구글 시트 → JSON
+# 구글 시트 → JSON (시트명: SRP-오늘의 슈퍼딜 → config/SRP/오늘의 슈퍼딜.json)
 python scripts/sheets_to_json.py --module "오늘의 슈퍼딜" --area SRP --overwrite
 ```
 
 #### 10. 오늘의 프라임상품
 
 ```bash
-# JSON → 구글 시트
-python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "오늘의 프라임상품"
+# JSON → 구글 시트 (시트명: SRP-오늘의 프라임상품)
+python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "오늘의 프라임상품" --area SRP
 
-# 구글 시트 → JSON
+# 구글 시트 → JSON (시트명: SRP-오늘의 프라임상품 → config/SRP/오늘의 프라임상품.json)
 python scripts/sheets_to_json.py --module "오늘의 프라임상품" --area SRP --overwrite
 ```
 
 #### 11. 인기 상품이에요
 
 ```bash
-# JSON → 구글 시트
-python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "인기 상품이에요"
+# JSON → 구글 시트 (시트명: SRP-인기 상품이에요)
+python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "인기 상품이에요" --area SRP
 
-# 구글 시트 → JSON
+# 구글 시트 → JSON (시트명: SRP-인기 상품이에요 → config/SRP/인기 상품이에요.json)
 python scripts/sheets_to_json.py --module "인기 상품이에요" --area SRP --overwrite
 ```
 
 #### 12. 일반상품
 
 ```bash
-# JSON → 구글 시트
-python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "일반상품"
+# JSON → 구글 시트 (시트명: SRP-일반상품)
+python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "일반상품" --area SRP
 
-# 구글 시트 → JSON
+# 구글 시트 → JSON (시트명: SRP-일반상품 → config/SRP/일반상품.json)
 python scripts/sheets_to_json.py --module "일반상품" --area SRP --overwrite
 ```
 
 #### 13. 최상단 클릭아이템
 
 ```bash
-# JSON → 구글 시트
-python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "최상단 클릭아이템"
+# JSON → 구글 시트 (시트명: SRP-최상단 클릭아이템)
+python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "최상단 클릭아이템" --area SRP
 
-# 구글 시트 → JSON
+# 구글 시트 → JSON (시트명: SRP-최상단 클릭아이템 → config/SRP/최상단 클릭아이템.json)
 python scripts/sheets_to_json.py --module "최상단 클릭아이템" --area SRP --overwrite
 ```
 

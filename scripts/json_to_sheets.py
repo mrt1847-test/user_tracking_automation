@@ -234,6 +234,12 @@ def main():
         required=True,
         help='모듈명 (예: "먼저 둘러보세요")'
     )
+    parser.add_argument(
+        '--area',
+        type=str,
+        required=True,
+        help='영역명 (SRP, PDP, HOME, CART 등)'
+    )
     args = parser.parse_args()
     
     # 하드코딩된 값 설정
@@ -253,8 +259,8 @@ def main():
     print(f"구글 시트 연결 중... (Spreadsheet ID: {SPREADSHEET_ID})")
     sync = GoogleSheetsSync(SPREADSHEET_ID, CREDENTIALS_PATH)
     
-    # 워크시트 가져오기 또는 생성
-    worksheet_name = args.module
+    # 워크시트 가져오기 또는 생성 (시트명: {영역}-{모듈명})
+    worksheet_name = f"{args.area}-{args.module}"
     print(f"워크시트 '{worksheet_name}' 준비 중...")
     worksheet = sync.get_or_create_worksheet(worksheet_name)
     

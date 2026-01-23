@@ -179,10 +179,11 @@ def main():
     print(f"구글 시트 연결 중... (Spreadsheet ID: {SPREADSHEET_ID})")
     sync = GoogleSheetsSync(SPREADSHEET_ID, CREDENTIALS_PATH)
     
-    # 시트에서 데이터 읽기
-    print(f"시트 '{args.module}'에서 데이터 읽는 중...")
+    # 시트에서 데이터 읽기 (시트명: {영역}-{모듈명})
+    worksheet_name = f"{args.area}-{args.module}"
+    print(f"시트 '{worksheet_name}'에서 데이터 읽는 중...")
     try:
-        event_data_dict = read_all_event_types(sync, args.module)
+        event_data_dict = read_all_event_types(sync, worksheet_name)
     except Exception as e:
         print(f"❌ 오류: 시트에서 데이터를 읽는 중 예외 발생: {e}")
         import traceback
@@ -195,7 +196,7 @@ def main():
         print("   1. 시트가 비어있거나")
         print("   2. 이벤트 타입 헤더([Module Exposure] 등)를 찾을 수 없거나")
         print("   3. 시트 이름이 올바르지 않습니다")
-        print(f"   시트 이름 확인: '{args.module}'")
+        print(f"   시트 이름 확인: '{worksheet_name}'")
         sys.exit(1)
     
     # config JSON 구조 생성

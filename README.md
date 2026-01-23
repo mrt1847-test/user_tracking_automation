@@ -66,7 +66,7 @@ user_tracking_automation/
 ├── steps/                           # BDD Step Definitions
 │   ├── home_steps.py                # 홈페이지 관련 스텝
 │   ├── login_steps.py               # 로그인 관련 스텝
-│   ├── srp_steps.py                 # SRP 관련 스텝
+│   ├── srp_lp_steps.py              # SRP/LP 관련 스텝
 │   ├── product_steps.py             # 상품 관련 스텝
 │   ├── cart_steps.py                # 장바구니 관련 스텝
 │   ├── checkout_steps.py            # 결제 관련 스텝

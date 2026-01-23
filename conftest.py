@@ -2,7 +2,7 @@ pytest_plugins = [
     "pytest_bdd",
     "steps.home_steps",
     "steps.login_steps",
-    "steps.srp_steps",
+    "steps.srp_lp_steps",
     "steps.product_steps",
     "steps.cart_steps",
     "steps.checkout_steps",
@@ -26,8 +26,10 @@ import time
 import logging
 from dotenv import load_dotenv  # type: ignore
 
-# .env 파일 로드
-load_dotenv()
+# .env 파일 로드 (프로젝트 루트 기준)
+project_root = Path(__file__).parent
+env_path = project_root / '.env'
+load_dotenv(dotenv_path=env_path)
 
 
 
@@ -213,15 +215,22 @@ def is_state_valid(state_path: str) -> bool:
 def create_login_state(pw):
     """로그인 수행 후 state.json 저장"""
     from utils.urls import base_url
+    from utils.credentials import get_credentials, MemberType
+    
     print("[INFO] 로그인 절차 시작")
+    # 계정 정보 가져오기 (일반회원 사용)
+    credentials = get_credentials(MemberType.NORMAL)
+    username = credentials["username"]
+    password = credentials["password"]
+    
     browser = pw.chromium.launch(headless=False)  # 화면 확인용
     context = browser.new_context()
     page = context.new_page()
     page.goto(base_url())
     # 로그인 페이지 이동 및 입력
     page.click("text=로그인")
-    page.fill("#typeMemberInputId", "t4adbuy01")
-    page.fill("#typeMemberInputPassword", "Gmkt1004!!")
+    page.fill("#typeMemberInputId", username)
+    page.fill("#typeMemberInputPassword", password)
     page.click("#btn_memberLogin")
     # 로그인 완료 대기
     page.wait_for_selector("text=로그아웃", timeout=15000)
