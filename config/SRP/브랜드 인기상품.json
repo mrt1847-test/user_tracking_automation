@@ -139,7 +139,7 @@
               "gmkt_area_code": "200003978",
               "section_index": "",
               "module_index": "mandatory",
-              "is_ad": "N",
+              "is_ad": "<is_ad>",
               "ab_buckets": "skip",
               "is_airticket": "N",
               "utLogMap": {
@@ -164,7 +164,7 @@
                   "promotion_price": "<할인가>",
                   "coupon_price": "<쿠폰적용가>",
                   "ab_buckets": "skip",
-                  "trafficType": "organic"
+                  "trafficType": "<trafficType>"
                 }
               },
               "_p_prod": "<상품번호>",
@@ -256,7 +256,7 @@
         "gmkt_area_code": "200003978",
         "section_index": "",
         "module_index": "mandatory",
-        "is_ad": "N",
+        "is_ad": "<is_ad>",
         "ab_buckets": "skip",
         "is_airticket": "N",
         "utLogMap": {
@@ -281,7 +281,7 @@
             "promotion_price": "<할인가>",
             "coupon_price": "<쿠폰적용가>",
             "ab_buckets": "skip",
-            "trafficType": "organic"
+            "trafficType": "<trafficType>"
           }
         },
         "_p_prod": "<상품번호>",

@@ -286,6 +286,17 @@ def _process_config_section(
             # utLogMap 내부 필드는 그대로 사용, 그 외는 key만 사용
             field_name = key if is_utlogmap else key
             
+            # adProduct, adSubProduct 필드는 is_ad가 "Y"일 때만 검증
+            if field_name in ('adProduct', 'adSubProduct'):
+                if frontend_data:
+                    is_ad_value = frontend_data.get('is_ad')
+                    # is_ad가 "Y"가 아니면 이 필드는 검증에서 제외
+                    if is_ad_value is None or str(is_ad_value).upper() != 'Y':
+                        continue
+                else:
+                    # frontend_data가 없으면 is_ad를 확인할 수 없으므로 제외
+                    continue
+            
             # 값 처리 (placeholder 치환)
             processed_value = replace_placeholders(value, goodscode, frontend_data)
             
