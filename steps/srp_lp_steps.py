@@ -288,6 +288,7 @@ def user_confirms_and_clicks_product_in_module_type2(browser_session, module_tit
         # 모듈로 이동
         module = search_page.get_module_by_title(module_title)
         search_page.scroll_module_into_view(module)
+        ad_check = search_page.check_ad_item_in_module(module_title)
         
         # 모듈 내 상품 찾기
         parent = search_page.get_module_parent(module, 3)
@@ -313,7 +314,12 @@ def user_confirms_and_clicks_product_in_module_type2(browser_session, module_tit
         
         # 🔥 가격 정보는 이제 PDP PV 로그에서 추출하므로 프론트엔드에서 수집하지 않음
         # (PDP PV 로그는 상품 페이지 이동 후 수집됨)
-        
+
+        # 모듈별 광고상품 여부 저장장
+        if ad_check == "F":
+            is_ad = search_page.check_ad_tag_in_product(product)
+        else:
+            is_ad =ad_check
         # 상품 클릭s
         try:
             new_page = search_page.click_product_and_wait_new_page(product)
@@ -324,6 +330,7 @@ def user_confirms_and_clicks_product_in_module_type2(browser_session, module_tit
             # bdd context에 저장 (module_title, goodscode, product_url 등)
             bdd_context.store['module_title'] = module_title
             bdd_context.store['goodscode'] = goodscode
+            bdd_context.store['is_ad'] = is_ad
             bdd_context.store['product_url'] = new_page.url
             
             logger.info(f"{module_title} 모듈 내 상품 확인 및 클릭 완료: {goodscode}")
