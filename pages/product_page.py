@@ -2,7 +2,7 @@
 상품 상세 페이지 객체
 """
 from pages.base_page import BasePage
-from playwright.sync_api import Page, Locator
+from playwright.sync_api import Page, Locator, TimeoutError
 from utils.urls import product_url
 from typing import Optional
 import logging
@@ -31,7 +31,7 @@ class ProductPage(BasePage):
             goodscode: 상품번호
         """
         logger.info(product_url(goodscode))
-        self.goto(product_url(goodscode))
+        self.page.goto(product_url(goodscode), wait_until="domcontentloaded", timeout=10000)
 
     def is_product_detail_displayed(self) -> bool:
         """
@@ -196,7 +196,7 @@ class ProductPage(BasePage):
             Locator 객체
         """
         logger.debug(f"모듈 찾기: {module_title}")
-        return self.page.get_by_text(module_title, exact=True)
+        return self.page.get_by_text(module_title)
     
     def scroll_module_into_view(self, module_locator: Locator) -> None:
         """
@@ -206,20 +206,35 @@ class ProductPage(BasePage):
             module_locator: 모듈 Locator 객체
         """
         logger.debug("모듈 스크롤")
-        module_locator.scroll_into_view_if_needed()
+        try:
+            module_locator.scroll_into_view_if_needed()
+        except Exception as e:
+            logger.warning(f"scroll_into_view_if_needed 실패, 강제 스크롤 시도: {e}")
+            # 강제 스크롤
+            module_locator.evaluate("el => el.scrollIntoView({behavior: 'smooth', block: 'center'})")
     
-    def get_module_parent(self, module_locator: Locator) -> Locator:
+    def wait_module_is_view(self, module_locator: Locator) -> None:
+        logger.debug("모듈 보일때까지 대기")
+        module_locator.first.wait_for(state="visible", timeout=5000)
+
+    def get_module_parent(self, module_locator: Locator, n: int) -> Locator:
         """
-        모듈의 부모 요소 찾기
-        
+        모듈의 n번째 부모 요소 찾기
+
         Args:
             module_locator: 모듈 Locator 객체
-            
+            n: 올라갈 부모 단계 수 (1 이상)
+
         Returns:
             부모 Locator 객체
         """
-        logger.debug("모듈 부모 요소 찾기")
-        return module_locator.locator("xpath=../..")
+        if n < 1:
+            raise ValueError("n은 1 이상의 정수여야 합니다.")
+
+        logger.debug(f"모듈 부모 요소 {n}단계 찾기")
+
+        xpath = "xpath=" + "/".join([".."] * n)
+        return module_locator.locator(xpath)
     
     def get_product_in_module(self, parent_locator: Locator) -> Locator:
         """
@@ -232,7 +247,7 @@ class ProductPage(BasePage):
             상품 Locator 객체
         """
         logger.debug("모듈 내 상품 요소 찾기")
-        return parent_locator.locator("a")
+        return parent_locator.locator("li").nth(0).locator("a")
     
     def scroll_product_into_view(self, product_locator: Locator) -> None:
         """
@@ -291,11 +306,37 @@ class ProductPage(BasePage):
         Returns:
             새 탭의 Page 객체
         """
-        logger.debug("상품 클릭 및 새 탭 대기")
         
-        # 새 탭이 생성될 때까지 대기
-        with self.page.context.expect_page() as new_page_info:
-            product_locator.click()
+        
+        logger.debug("상품 클릭 및 새 탭 대기 시도")
+
+        new_page_info = None
+
+        try:
+        # 1. 새 탭 감지 (timeout 3초 설정: 3초 안에 안 열리면 없는 것으로 간주)
+            with self.page.context.expect_page(timeout=3000) as new_page_info:
+                product_locator.click()
+            
+        except TimeoutError:
+            # 2. [CASE: 현재 탭 이동] 새 탭이 안 열림 -> 현재 탭에서 이동한 것으로 간주
+            logger.info("새 탭이 감지되지 않음. 현재 탭 이동으로 간주합니다.")
+            try:
+                self.page.wait_for_load_state("domcontentloaded", timeout=30000)
+            except Exception as e:
+                logger.warning(f"현재 탭 로드 대기 중 경고: {e}")
+            
+            return self.page
+        
+        except Exception as e:
+            # 클릭 동작 자체에서 에러가 난 경우
+            logger.error(f"상품 클릭 중 알 수 없는 에러 발생: {e}")
+            raise e
+        
+        # logger.debug("상품 클릭 및 새 탭 대기")
+
+        # # 새 탭이 생성될 때까지 대기
+        # with self.page.context.expect_page() as new_page_info:
+        #     product_locator.click()
         
         new_page = new_page_info.value
         logger.debug(f"새 탭 생성됨: {new_page.url}")

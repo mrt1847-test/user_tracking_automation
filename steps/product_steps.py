@@ -187,13 +187,14 @@ def user_confirms_and_clicks_product_in_pdp_module(browser_session, module_title
         bdd_context: BDD context (step 간 데이터 공유용)
     """
     product_page = ProductPage(browser_session.page)
-    
+
     # 모듈로 이동
     module = product_page.get_module_by_title(module_title)
     product_page.scroll_module_into_view(module)
-    
+    product_page.wait_module_is_view(module)
+  
     # 모듈 내 상품 찾기
-    parent = product_page.get_module_parent(module)
+    parent = product_page.get_module_parent(module, 2)
     product = product_page.get_product_in_module(parent)
     product_page.scroll_product_into_view(product)
     
@@ -209,13 +210,16 @@ def user_confirms_and_clicks_product_in_pdp_module(browser_session, module_title
     # 상품 클릭
     new_page = product_page.click_product_and_wait_new_page(product)
     
-    # 🔥 명시적 페이지 전환 (상태 관리자 패턴)
+
+    # 1. 새 탭이 정상적으로 열린 경우
+
+        # 🔥 명시적 페이지 전환 (상태 관리자 패턴)
     browser_session.switch_to(new_page)
     
-    # bdd context에 저장 (module_title, goodscode, product_url 등)
+        # bdd context에 저장 (product_url)
+    bdd_context.store['product_url'] = new_page.url        
     bdd_context.store['module_title'] = module_title
     bdd_context.store['goodscode'] = goodscode
-    bdd_context.store['product_url'] = new_page.url
-    
+
     logger.info(f"{module_title} 모듈 내 상품 확인 및 클릭 완료: {goodscode}")
 
