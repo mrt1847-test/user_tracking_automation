@@ -2,6 +2,7 @@
 BDD Step Definitions for SRP Tracking Tests
 """
 import logging
+import time
 from pytest_bdd import given, when, then, parsers
 from playwright.sync_api import expect
 from pages.search_page import SearchPage
@@ -358,19 +359,34 @@ def user_confirms_and_clicks_product_in_module_type2(browser_session, module_tit
             bdd_context.store['module_title'] = module_title
 
 
+def _wait_until_pdp_pv_collected(tracker, goodscode, page, timeout_ms=15000, poll_interval=0.3):
+    """PDP PV 로그 수집이 확인될 때까지 폴링 (해당 goodscode에 대한 PDP PV 로그 수신 시 logger.info 출력 후 종료)."""
+    try:
+        page.wait_for_load_state("domcontentloaded", timeout=3000)
+    except Exception:
+        pass
+    deadline = time.time() + (timeout_ms / 1000.0)
+    while time.time() < deadline:
+        logs = tracker.get_pdp_pv_logs_by_goodscode(goodscode)
+        if logs:
+            logger.info(f"PDP PV 수집 확인됨: goodscode={goodscode}")
+            return
+        time.sleep(poll_interval)
+    logger.warning(f"PDP PV 수집 대기 타임아웃 ({timeout_ms}ms): goodscode={goodscode}")
+    time.sleep(2)
+
+
 @then('상품 페이지로 이동되었다')
 def product_page_is_opened(browser_session, bdd_context):
     """
     상품 페이지 이동 확인 (검증)
-    PDP PV 로그 수집을 위해 networkidle 상태까지 대기
+    PDP PV 로그 수집 관련 로그가 뜰 때까지 대기 (tracker 있으면 수집 확인, 없으면 load 대기)
     실패 시에도 다음 스텝으로 진행
     
     Args:
         browser_session: BrowserSession 객체 (page 참조 관리)
         bdd_context: BDD context (step 간 데이터 공유용)
     """
-    import time
-    
     try:
         search_page = SearchPage(browser_session.page)
         
@@ -398,20 +414,22 @@ def product_page_is_opened(browser_session, bdd_context):
             record_frontend_failure(browser_session, bdd_context, f"상품 페이지 이동 확인 실패: {str(e)}", "상품 페이지로 이동되었다")
             # 계속 진행 (PDP PV 로그 수집은 시도)
         
-        # 🔥 PDP PV 로그 수집을 위해 domcontentloaded 상태까지 대기
-        try:
-            browser_session.page.wait_for_load_state("networkidle", timeout=10000)
-            logger.debug("domcontentloaded 상태 대기 완료 (PDP PV 로그 수집 대기)")
-        except Exception as e:
-            logger.warning(f"domcontentloaded 대기 실패, load 상태로 대기: {e}")
+        # 🔥 PDP PV 로그 수집 관련 로그가 뜰 때까지 대기 (tracker 있으면 수집 확인, 없으면 load 대기)
+        tracker = bdd_context.get("tracker") or bdd_context.store.get("tracker")
+        if tracker:
+            _wait_until_pdp_pv_collected(tracker, goodscode, browser_session.page, timeout_ms=15000)
+        else:
             try:
-                browser_session.page.wait_for_load_state("load", timeout=30000)
-                logger.debug("load 상태 대기 완료")
-            except Exception as e2:
-                logger.warning(f"load 상태 대기도 실패: {e2}")
-        
-        # 추가 안전 대기 (PDP PV 로그가 비동기로 전송될 수 있음)
-        time.sleep(2)
+                browser_session.page.wait_for_load_state("networkidle", timeout=10000)
+                logger.debug("networkidle 상태 대기 완료 (tracker 없음, PDP PV 대체 대기)")
+            except Exception as e:
+                logger.warning(f"networkidle 대기 실패, load 상태로 대기: {e}")
+                try:
+                    browser_session.page.wait_for_load_state("load", timeout=30000)
+                    logger.debug("load 상태 대기 완료")
+                except Exception as e2:
+                    logger.warning(f"load 상태 대기도 실패: {e2}")
+            time.sleep(2)
         logger.info(f"상품 페이지 이동 확인 완료: {goodscode} (PDP PV 로그 수집 대기 완료)")
         
     except Exception as e:
