@@ -359,23 +359,6 @@ def user_confirms_and_clicks_product_in_module_type2(browser_session, module_tit
             bdd_context.store['module_title'] = module_title
 
 
-def _wait_until_pdp_pv_collected(tracker, goodscode, page, timeout_ms=15000, poll_interval=0.3):
-    """PDP PV 로그 수집이 확인될 때까지 폴링 (해당 goodscode에 대한 PDP PV 로그 수신 시 logger.info 출력 후 종료)."""
-    try:
-        page.wait_for_load_state("domcontentloaded", timeout=3000)
-    except Exception:
-        pass
-    deadline = time.time() + (timeout_ms / 1000.0)
-    while time.time() < deadline:
-        logs = tracker.get_pdp_pv_logs_by_goodscode(goodscode)
-        if logs:
-            logger.info(f"PDP PV 수집 확인됨: goodscode={goodscode}")
-            return
-        time.sleep(poll_interval)
-    logger.warning(f"PDP PV 수집 대기 타임아웃 ({timeout_ms}ms): goodscode={goodscode}")
-    time.sleep(2)
-
-
 @then('상품 페이지로 이동되었다')
 def product_page_is_opened(browser_session, bdd_context):
     """
@@ -417,7 +400,7 @@ def product_page_is_opened(browser_session, bdd_context):
         # 🔥 PDP PV 로그 수집 관련 로그가 뜰 때까지 대기 (tracker 있으면 수집 확인, 없으면 load 대기)
         tracker = bdd_context.get("tracker") or bdd_context.store.get("tracker")
         if tracker:
-            _wait_until_pdp_pv_collected(tracker, goodscode, browser_session.page, timeout_ms=15000)
+            SearchPage.wait_until_pdp_pv_collected(tracker, goodscode, browser_session.page, timeout_ms=15000)
         else:
             try:
                 browser_session.page.wait_for_load_state("networkidle", timeout=10000)
