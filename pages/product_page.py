@@ -30,8 +30,9 @@ class ProductPage(BasePage):
         Args:
             goodscode: 상품번호
         """
-        logger.info(product_url(goodscode))
-        self.page.goto(product_url(goodscode), wait_until="domcontentloaded", timeout=10000)
+        logger.debug(f'페이지 이동 시작: goodscode={goodscode}')
+        self.page.goto(product_url(goodscode), wait_until="domcontentloaded")
+        logger.info(f'페이지 이동 완료: goodscode={goodscode}')
 
     def is_product_detail_displayed(self) -> bool:
         """
@@ -196,7 +197,7 @@ class ProductPage(BasePage):
             Locator 객체
         """
         logger.debug(f"모듈 찾기: {module_title}")
-        return self.page.get_by_text(module_title)
+        return self.page.get_by_text(module_title).nth(0)
     
     def scroll_module_into_view(self, module_locator: Locator) -> None:
         """
@@ -212,10 +213,6 @@ class ProductPage(BasePage):
             logger.warning(f"scroll_into_view_if_needed 실패, 강제 스크롤 시도: {e}")
             # 강제 스크롤
             module_locator.evaluate("el => el.scrollIntoView({behavior: 'smooth', block: 'center'})")
-    
-    def wait_module_is_view(self, module_locator: Locator) -> None:
-        logger.debug("모듈 보일때까지 대기")
-        module_locator.first.wait_for(state="visible", timeout=5000)
 
     def get_module_parent(self, module_locator: Locator, n: int) -> Locator:
         """
@@ -248,7 +245,22 @@ class ProductPage(BasePage):
         """
         logger.debug("모듈 내 상품 요소 찾기")
         return parent_locator.locator("li").nth(0).locator("a")
-    
+       
+    def get_product_in_emart_module(self, parent_locator: Locator, module_title) -> Locator:
+        """
+        모듈 내 상품 요소 찾기
+        
+        Args:
+            parent_locator: 모듈 부모 Locator 객체
+            
+        Returns:
+            상품 Locator 객체
+        """
+        logger.debug("모듈 내 상품 요소 찾기")
+        if module_title == "함께 보면 좋은 상품이에요" or module_title == "함께 구매하면 좋은 상품이에요":
+            return parent_locator.locator("li").nth(6)
+        return parent_locator.locator("li").nth(6).locator("a").nth(0)    
+
     def scroll_product_into_view(self, product_locator: Locator) -> None:
         """
         상품 요소를 뷰포트로 스크롤
@@ -257,7 +269,12 @@ class ProductPage(BasePage):
             product_locator: 상품 Locator 객체
         """
         logger.debug("상품 요소 스크롤")
-        product_locator.scroll_into_view_if_needed()
+        try:
+            product_locator.scroll_into_view_if_needed()
+        except Exception as e:
+            logger.warning(f"scroll_into_view_if_needed 실패, 강제 스크롤 시도: {e}")
+            # 강제 스크롤
+            product_locator.evaluate("el => el.scrollIntoView({behavior: 'smooth', block: 'center'})")
 
     
     def get_product_code(self, product_locator: Locator) -> Optional[str]:
@@ -296,6 +313,16 @@ class ProductPage(BasePage):
         logger.debug("새 페이지 대기")
         return self.page.context.expect_page()
     
+    def click_product(self, product_locator: Locator) -> None:
+        """
+        상품 클릭
+        
+        Args:
+            timeout: 타임아웃 (기본값: 10000ms)
+        """
+        logger.debug("상품 클릭")
+        product_locator.click()
+
     def click_product_and_wait_new_page(self, product_locator: Locator) -> Page:
         """
         상품 클릭하고 새 탭 대기 (새 탭 열림)
@@ -307,36 +334,11 @@ class ProductPage(BasePage):
             새 탭의 Page 객체
         """
         
-        
-        logger.debug("상품 클릭 및 새 탭 대기 시도")
+        logger.debug("상품 클릭 및 새 탭 대기")
 
-        new_page_info = None
-
-        try:
-        # 1. 새 탭 감지 (timeout 3초 설정: 3초 안에 안 열리면 없는 것으로 간주)
-            with self.page.context.expect_page(timeout=3000) as new_page_info:
-                product_locator.click()
-            
-        except TimeoutError:
-            # 2. [CASE: 현재 탭 이동] 새 탭이 안 열림 -> 현재 탭에서 이동한 것으로 간주
-            logger.info("새 탭이 감지되지 않음. 현재 탭 이동으로 간주합니다.")
-            try:
-                self.page.wait_for_load_state("domcontentloaded", timeout=30000)
-            except Exception as e:
-                logger.warning(f"현재 탭 로드 대기 중 경고: {e}")
-            
-            return self.page
-        
-        except Exception as e:
-            # 클릭 동작 자체에서 에러가 난 경우
-            logger.error(f"상품 클릭 중 알 수 없는 에러 발생: {e}")
-            raise e
-        
-        # logger.debug("상품 클릭 및 새 탭 대기")
-
-        # # 새 탭이 생성될 때까지 대기
-        # with self.page.context.expect_page() as new_page_info:
-        #     product_locator.click()
+        # 새 탭이 생성될 때까지 대기
+        with self.page.context.expect_page() as new_page_info:
+            product_locator.click()
         
         new_page = new_page_info.value
         logger.debug(f"새 탭 생성됨: {new_page.url}")
