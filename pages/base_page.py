@@ -33,6 +33,18 @@ class BasePage:
         """
         logger.info(f"페이지 이동: {url}")
         self.page.goto(url, wait_until="domcontentloaded")
+
+    def go_back(self, timeout: Optional[int] = None) -> None:
+        """
+        이전 페이지로 이동 (브라우저 뒤로가기)
+        
+        Args:
+            timeout: 타임아웃 (기본값: self.timeout)
+        """
+        timeout = timeout or self.timeout
+        logger.info("이전 페이지로 이동")
+        self.page.go_back(timeout=timeout, wait_until="domcontentloaded")
+        logger.info(f"이전 페이지 이동 완료: {self.page.url}")
     
     def click(self, selector: str, timeout: Optional[int] = None) -> None:
         """
@@ -288,7 +300,80 @@ class BasePage:
         """
         logger.debug(f"범용 로케이터: selector={selector}")
         return self.page.locator(selector)
-    
+
+    def scroll_module_into_view(self, module_locator: Locator) -> None:
+        """
+        모듈을 뷰포트로 스크롤
+
+        Args:
+            module_locator: 모듈 Locator 객체
+        """
+        logger.debug("모듈 스크롤")
+        try:
+            module_locator.scroll_into_view_if_needed()
+        except Exception as e:
+            logger.warning(f"scroll_into_view_if_needed 실패, 강제 스크롤 시도: {e}")
+            module_locator.evaluate("el => el.scrollIntoView({behavior: 'smooth', block: 'center'})")
+
+    def get_module_parent(self, module_locator: Locator, n: int) -> Locator:
+        """
+        모듈의 n번째 부모 요소 찾기
+
+        Args:
+            module_locator: 모듈 Locator 객체
+            n: 올라갈 부모 단계 수 (1 이상)
+
+        Returns:
+            부모 Locator 객체
+        """
+        if n < 1:
+            raise ValueError("n은 1 이상의 정수여야 합니다.")
+
+        logger.debug(f"모듈 부모 요소 {n}단계 찾기")
+
+        xpath = "xpath=" + "/".join([".."] * n)
+        return module_locator.locator(xpath)
+
+    def scroll_product_into_view(self, product_locator: Locator) -> None:
+        """
+        상품 요소를 뷰포트로 스크롤
+
+        Args:
+            product_locator: 상품 Locator 객체
+        """
+        logger.debug("상품 요소 스크롤")
+        try:
+            product_locator.scroll_into_view_if_needed()
+        except Exception as e:
+            logger.warning(f"scroll_into_view_if_needed 실패, 강제 스크롤 시도: {e}")
+            product_locator.evaluate("el => el.scrollIntoView({behavior: 'smooth', block: 'center'})")
+
+    def get_product_code(self, product_locator: Locator) -> Optional[str]:
+        """
+        상품 코드 가져오기
+
+        Args:
+            product_locator: 상품 Locator 객체
+
+        Returns:
+            상품 코드 (data-montelena-goodscode 속성 값)
+        """
+        logger.debug("상품 코드 가져오기")
+        return product_locator.get_attribute("data-montelena-goodscode")
+
+    def get_product_by_code(self, goodscode: str) -> Locator:
+        """
+        상품 번호로 상품 요소 찾기
+
+        Args:
+            goodscode: 상품 번호
+
+        Returns:
+            상품 Locator 객체
+        """
+        logger.debug(f"상품 번호로 상품 찾기: {goodscode}")
+        return self.page.locator(f'a[data-montelena-goodscode="{goodscode}"]').nth(0)
+
     def get_by_role_and_click(self, role: str, name: str = None, timeout: Optional[int] = None, **kwargs) -> None:
         """
         역할 기반 로케이터로 요소 찾아서 클릭

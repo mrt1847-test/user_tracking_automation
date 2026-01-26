@@ -142,3 +142,8 @@ class HomePage(BasePage):
         logger.info("로그아웃 버튼 클릭")
         self.click("text='로그아웃'")
 
+    def click_cart(self) -> None:
+        """장바구니 버튼 클릭"""
+        logger.info("장바구니 버튼 클릭")
+        self.click("[title='장바구니']")
+
