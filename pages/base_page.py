@@ -416,14 +416,15 @@ class BasePage:
         logger.debug(f"텍스트 기반 클릭: text={text}")
         self.get_by_text(text, exact=exact).click(timeout=timeout)
     
-    def click_and_expect_dialog(self, selector: str = None, locator: Locator = None, timeout: Optional[int] = None) -> None:
+    def click_and_expect_dialog(self, selector: str = None, locator: Locator = None, timeout: Optional[int] = None, accept: bool = True) -> None:
         """
-        요소를 클릭하고 얼럿이 나타나는 것을 기대하며 수락 (expect_event 방식)
+        요소를 클릭하고 얼럿이 나타나는 것을 기대하며 처리 (page.on 방식)
         
         Args:
             selector: 클릭할 요소의 선택자 (selector 또는 locator 중 하나 필수)
             locator: 클릭할 Locator 객체 (selector 또는 locator 중 하나 필수)
             timeout: 타임아웃 (기본값: self.timeout)
+            accept: True면 확인 버튼 클릭, False면 취소 버튼 클릭 (기본값: True)
             
         Raises:
             ValueError: selector와 locator 둘 다 제공되지 않은 경우
@@ -433,17 +434,69 @@ class BasePage:
             raise ValueError("selector 또는 locator 중 하나를 제공해야 합니다.")
         
         timeout = timeout or self.timeout
-        logger.debug(f"얼럿을 기대하며 클릭")
+        action = "수락" if accept else "취소"
+        logger.debug(f"얼럿을 기대하며 클릭 (timeout: {timeout}ms, {action})")
         
-        with self.page.expect_event("dialog", timeout=timeout) as dialog_info:
+        # 얼럿 처리용 변수
+        dialog_handled = False
+        dialog_message = None
+        dialog_error = None
+        
+        def handle_dialog(dialog):
+            """얼럿 핸들러"""
+            nonlocal dialog_handled, dialog_message
+            dialog_message = dialog.message
+            logger.debug(f"얼럿 감지됨: {dialog_message}")
+            try:
+                if accept:
+                    dialog.accept()
+                    logger.debug(f"얼럿 확인 버튼 클릭: {dialog_message}")
+                else:
+                    dialog.dismiss()
+                    logger.debug(f"얼럿 취소 버튼 클릭: {dialog_message}")
+                dialog_handled = True
+            except Exception as e:
+                nonlocal dialog_error
+                dialog_error = e
+                logger.error(f"얼럿 처리 중 오류: {e}")
+        
+        # 얼럿 리스너 등록 (클릭 전에 설정해야 함)
+        self.page.on("dialog", handle_dialog)
+        
+        try:
+            # 클릭 실행
             if locator:
+                logger.debug("Locator를 사용하여 클릭")
                 locator.click(timeout=timeout)
             else:
+                logger.debug(f"Selector를 사용하여 클릭: {selector}")
                 self.click(selector, timeout=timeout)
-        
-        dialog = dialog_info.value
-        dialog.accept()
-        logger.debug(f"얼럿 수락 완료: {dialog.message}")
+            
+            logger.debug("클릭 완료, 얼럿 대기 중...")
+            
+            # 얼럿이 처리될 때까지 대기 (최대 timeout)
+            deadline = time.time() + (timeout / 1000.0)
+            while time.time() < deadline:
+                if dialog_handled:
+                    logger.info(f"얼럿 {action} 완료: {dialog_message}")
+                    return
+                if dialog_error:
+                    raise dialog_error
+                time.sleep(0.1)  # 100ms 간격으로 체크
+            
+            # 타임아웃 발생
+            if not dialog_handled:
+                raise TimeoutError(f"얼럿이 나타나지 않았습니다 (timeout: {timeout}ms)")
+                
+        except Exception as e:
+            logger.error(f"얼럿 처리 중 오류 발생: {e}")
+            raise
+        finally:
+            # 리스너 제거
+            try:
+                self.page.remove_listener("dialog", handle_dialog)
+            except Exception:
+                pass  # 리스너가 없을 수 있음
     
     # ============================================
     # URL 파싱 헬퍼 메서드

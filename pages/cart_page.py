@@ -24,7 +24,7 @@ class CartPage(BasePage):
         장바구니 페이지로 이동
         """
         logger.debug("장바구니 페이지로 이동")
-        self.page.goto(cart_url, wait_until="domcontentloaded", timeout=30000)
+        self.page.goto(cart_url(), wait_until="domcontentloaded", timeout=30000)
         logger.info("장바구니 페이지 이동 완료")
     
     def go_to_product_page(self, goodscode: str):
@@ -128,7 +128,7 @@ class CartPage(BasePage):
         else:
             logger.debug("전체 선택 이미 체크됨")
 
-        self.click_and_expect_dialog(selector="button.btn_del")
+        self.click_and_expect_dialog(selector="button.btn_del:has-text('선택삭제')")
         logger.debug("선택삭제 버튼 클릭, 확인 얼럿 수락")
 
     def click_go_to_cart_page(self, timeout: int = 10000) -> None:
@@ -163,14 +163,31 @@ class CartPage(BasePage):
 
         logger.info("장바구니 페이지로 이동 완료")
 
-    def check_module_in_cart(self, module_title: str) -> Locator:
+    def check_module_in_cart(self, module_title: str, timeout: Optional[int] = None) -> Locator:
         """
-        장바구니 페이지에 모듈이 있는지 확인
+        장바구니 페이지에 모듈이 있는지 확인하고 나타날 때까지 대기
+        
+        Args:
+            module_title: 모듈 타이틀
+            timeout: 타임아웃 (기본값: self.timeout)
+        
+        Returns:
+            모듈 Locator 객체
         """
-        logger.debug(f"모듈 찾기: {module_title}")
+        timeout = timeout or self.timeout
+        logger.debug(f"모듈 찾기: {module_title} (timeout: {timeout}ms)")
+        
         if module_title == "장바구니 최저가":
-            return self.page.locator(".text__title", has_text="최저가")
-        return self.page.locator(".text__title", has_text=module_title)
+            locator = self.page.locator(".text__title strong", has_text="최저가")
+        else:
+            locator = self.page.locator(".text__title", has_text=module_title)
+        
+        # 모듈이 나타날 때까지 대기
+        logger.debug(f"모듈 노출 대기 중: {module_title}")
+        locator.wait_for(state="visible", timeout=timeout)
+        logger.info(f"모듈 노출 확인됨: {module_title}")
+        
+        return locator
 
     def check_ad_item_in_module(self, modulel_title: str) -> str:
         """

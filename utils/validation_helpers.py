@@ -373,9 +373,13 @@ def replace_placeholders(value: Any, goodscode: str, frontend_data: Optional[Dic
             
             # <쿠폰적용가> placeholder 치환
             if '<쿠폰적용가>' in value:
-                # coupon_price가 frontend_data에 없거나 None이면 빈 문자열로 치환
+                # coupon_price가 frontend_data에 없거나 None이거나 빈 문자열이면 공란("")으로 치환
                 coupon_price = frontend_data.get('coupon_price', '')
-                value = value.replace('<쿠폰적용가>', str(coupon_price) if coupon_price is not None else '')
+                if coupon_price is None or coupon_price == '':
+                    coupon_price_str = ''
+                else:
+                    coupon_price_str = str(coupon_price)
+                value = value.replace('<쿠폰적용가>', coupon_price_str)
             
             # <is_ad> placeholder 치환
             if '<is_ad>' in value and 'is_ad' in frontend_data:
