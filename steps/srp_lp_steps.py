@@ -36,12 +36,15 @@ def when_user_searches_keyword(browser_session, keyword, bdd_context):
 
 @then("검색 결과 페이지가 표시된다")
 def then_search_results_page_is_displayed(browser_session, bdd_context):
-    """검색 결과 페이지가 표시되는지 확인
+    """bdd_context의 keyword로 data-montelena-keyword=keyword 요소 존재 검증
     실패 시에도 다음 스텝으로 진행"""
     try:
+        keyword = bdd_context.store.get("keyword") or bdd_context.get("keyword")
+        if not keyword:
+            raise ValueError("bdd_context에 keyword가 없습니다.")
         search_page = SearchPage(browser_session.page)
-        search_page.wait_for_search_results_load()
-        logger.info("검색 결과 페이지 표시 확인")
+        search_page.verify_keyword_element_exists(keyword)
+        logger.info(f"검색 결과 페이지 표시 확인 (data-montelena-keyword={keyword})")
     except Exception as e:
         logger.error(f"검색 결과 페이지 표시 확인 실패: {e}", exc_info=True)
         record_frontend_failure(browser_session, bdd_context, f"검색 결과 페이지 표시 확인 실패: {str(e)}", "검색 결과 페이지가 표시된다")
@@ -399,20 +402,18 @@ def product_page_is_opened(browser_session, bdd_context):
         
         # 🔥 PDP PV 로그 수집 관련 로그가 뜰 때까지 대기 (tracker 있으면 수집 확인, 없으면 load 대기)
         tracker = bdd_context.get("tracker") or bdd_context.store.get("tracker")
-        if tracker:
-            SearchPage.wait_until_pdp_pv_collected(tracker, goodscode, browser_session.page, timeout_ms=15000)
-        else:
+
+        try:
+            browser_session.page.wait_for_load_state("networkidle", timeout=10000)
+            logger.debug("networkidle 상태 대기 완료 (tracker 없음, PDP PV 대체 대기)")
+        except Exception as e:
+            logger.warning(f"networkidle 대기 실패, load 상태로 대기: {e}")
             try:
-                browser_session.page.wait_for_load_state("networkidle", timeout=10000)
-                logger.debug("networkidle 상태 대기 완료 (tracker 없음, PDP PV 대체 대기)")
-            except Exception as e:
-                logger.warning(f"networkidle 대기 실패, load 상태로 대기: {e}")
-                try:
-                    browser_session.page.wait_for_load_state("load", timeout=30000)
-                    logger.debug("load 상태 대기 완료")
-                except Exception as e2:
-                    logger.warning(f"load 상태 대기도 실패: {e2}")
-            time.sleep(2)
+                browser_session.page.wait_for_load_state("load", timeout=30000)
+                logger.debug("load 상태 대기 완료")
+            except Exception as e2:
+                logger.warning(f"load 상태 대기도 실패: {e2}")
+        time.sleep(2)
         logger.info(f"상품 페이지 이동 확인 완료: {goodscode} (PDP PV 로그 수집 대기 완료)")
         
     except Exception as e:

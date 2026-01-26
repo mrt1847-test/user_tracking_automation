@@ -269,7 +269,13 @@ class SearchPage(BasePage):
     def wait_for_search_results_load(self) -> None:
         """검색 결과 페이지 로드 대기"""
         logger.debug("검색 결과 페이지 로드 대기")
-        self.page.wait_for_load_state("networkidle")
+        self.page.wait_for_load_state("domcontentloaded")
+
+    def verify_keyword_element_exists(self, keyword: str) -> None:
+        """data-montelena-keyword=keyword 인 요소가 있는지 검증"""
+        logger.debug(f"data-montelena-keyword={keyword} 요소 검증")
+        locator = self.page.locator(f'[data-montelena-keyword="{keyword}"]').first
+        expect(locator).to_be_visible()
     
     def click_first_product(self, timeout: int = 10000) -> Optional[Page]:
         """
@@ -644,7 +650,7 @@ class SearchPage(BasePage):
             "최상단 클릭아이템": "Y",
         }
         
-        if modulel_title not in self.MODULE_AD_CHECK:
+        if modulel_title not in MODULE_AD_CHECK:
             raise ValueError(f"모듈 타이틀 {modulel_title} 확인 불가")
         
         return MODULE_AD_CHECK[modulel_title]

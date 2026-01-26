@@ -383,6 +383,17 @@ def replace_placeholders(value: Any, goodscode: str, frontend_data: Optional[Dic
                 if is_ad_value is not None:
                     value = value.replace('<is_ad>', str(is_ad_value))
             
+            # <trafficType> placeholder 치환 (is_ad에 따라 "ad" 또는 "organic")
+            if '<trafficType>' in value:
+                if 'is_ad' in frontend_data:
+                    is_ad_val = frontend_data.get('is_ad')
+                    if is_ad_val is True or (isinstance(is_ad_val, str) and str(is_ad_val).upper() in ('Y', 'TRUE', '1')) or is_ad_val == 1:
+                        traffic_type = "ad"
+                    else:
+                        traffic_type = "organic"
+                else:
+                    traffic_type = "organic"  # is_ad 없을 때 기본 organic
+                value = value.replace('<trafficType>', traffic_type)
 
     return value
 
