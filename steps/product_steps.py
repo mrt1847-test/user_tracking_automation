@@ -289,7 +289,7 @@ def user_confirms_and_clicks_product_in_emart_pdp_module(browser_session, module
             
             # bdd context에 저장 (product_url, module_title, goodscode)
             bdd_context.store['product_url'] = browser_session.page.url        
-            bdd_context.store['module_title'] = module_title
+            bdd_context.store['module_title'] = f"이마트몰 {module_title}"
             bdd_context.store['goodscode'] = goodscode
 
             logger.info(f"{module_title} 모듈 내 상품 확인 및 클릭 완료: {goodscode}")
