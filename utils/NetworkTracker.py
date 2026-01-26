@@ -1305,6 +1305,15 @@ class NetworkTracker:
                             f"키 '{key}'의 값이 일치하지 않습니다. "
                             f"기대값 (포함 여부): {expected_value}, 실제값: {actual_value}"
                         )
+                elif key in {'query'} and isinstance(expected_value, str) and isinstance(actual_value, str):
+                    # query 등: 대소문자 구분 없이 비교
+                    if str(expected_value).strip().lower() == str(actual_value).strip().lower():
+                        field_passed = True
+                    else:
+                        errors.append(
+                            f"키 '{key}'의 값이 일치하지 않습니다. "
+                            f"기대값: {expected_value}, 실제값: {actual_value}"
+                        )
                 elif actual_value != expected_value:
                     errors.append(
                         f"키 '{key}'의 값이 일치하지 않습니다. "

@@ -6,6 +6,7 @@ from playwright.sync_api import Page, Locator
 from typing import Optional
 from urllib.parse import unquote, parse_qs, urlparse
 import logging
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ class BasePage:
             url: 이동할 URL
         """
         logger.info(f"페이지 이동: {url}")
-        self.page.goto(url, wait_until="networkidle", timeout=10000)
+        self.page.goto(url, wait_until="domcontentloaded")
     
     def click(self, selector: str, timeout: Optional[int] = None) -> None:
         """
@@ -399,4 +400,35 @@ class BasePage:
             디코딩된 문자열
         """
         return unquote(encoded_url)
+    
+    # ============================================
+    # 네트워크 트래킹 관련 헬퍼 메서드
+    # ============================================
+    
+    @staticmethod
+    def wait_until_pdp_pv_collected(tracker, goodscode: str, page: Page, timeout_ms: int = 15000, poll_interval: float = 0.3) -> None:
+        """
+        PDP PV 로그 수집이 확인될 때까지 폴링
+        해당 goodscode에 대한 PDP PV 로그 수신 시 logger.info 출력 후 종료
+        
+        Args:
+            tracker: NetworkTracker 인스턴스
+            goodscode: 상품 코드
+            page: Playwright Page 객체
+            timeout_ms: 타임아웃 (밀리초, 기본값: 15000)
+            poll_interval: 폴링 간격 (초, 기본값: 0.3)
+        """
+        try:
+            page.wait_for_load_state("domcontentloaded", timeout=3000)
+        except Exception:
+            pass
+        deadline = time.time() + (timeout_ms / 1000.0)
+        while time.time() < deadline:
+            logs = tracker.get_pdp_pv_logs_by_goodscode(goodscode)
+            if logs:
+                logger.info(f"PDP PV 수집 확인됨: goodscode={goodscode}")
+                return
+            time.sleep(poll_interval)
+        logger.warning(f"PDP PV 수집 대기 타임아웃 ({timeout_ms}ms): goodscode={goodscode}")
+        time.sleep(2)
 

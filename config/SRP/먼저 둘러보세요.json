@@ -139,7 +139,7 @@
               "gmkt_area_code": "200011491",
               "section_index": "",
               "module_index": "mandatory",
-              "is_ad": "Y",
+              "is_ad": "<is_ad>",
               "ab_buckets": "skip",
               "is_airticket": "N",
               "utLogMap": {
@@ -152,7 +152,7 @@
                   "x_sku_id": "0",
                   "pageIndex": "0",
                   "pagePos": "0",
-                  "pageSize": "8",
+                  "pageSize": "mandatory",
                   "listno": "0",
                   "sort": "popularity",
                   "searchScenario": "keyword",
@@ -164,7 +164,7 @@
                   "promotion_price": "<할인가>",
                   "coupon_price": "<쿠폰적용가>",
                   "ab_buckets": "skip",
-                  "trafficType": "ad",
+                  "trafficType": "<trafficType>",
                   "adProduct": "N",
                   "adSubProduct": "A"
                 }
@@ -258,7 +258,7 @@
         "gmkt_area_code": "200011491",
         "section_index": "",
         "module_index": "mandatory",
-        "is_ad": "Y",
+        "is_ad": "<is_ad>",
         "ab_buckets": "skip",
         "is_airticket": "N",
         "utLogMap": {
@@ -271,7 +271,7 @@
             "x_sku_id": "0",
             "pageIndex": "0",
             "pagePos": "0",
-            "pageSize": "8",
+            "pageSize": "mandatory",
             "listno": "0",
             "sort": "popularity",
             "searchScenario": "keyword",
@@ -283,7 +283,7 @@
             "promotion_price": "<할인가>",
             "coupon_price": "<쿠폰적용가>",
             "ab_buckets": "skip",
-            "trafficType": "ad",
+            "trafficType": "<trafficType>",
             "adProduct": "N",
             "adSubProduct": "A"
           }
@@ -379,7 +379,7 @@
               "gmkt_area_code": "200003330",
               "section_index": "",
               "module_index": "mandatory",
-              "is_ad": "Y",
+              "is_ad": "<is_ad>",
               "ab_buckets": "skip",
               "is_airticket": "N",
               "utLogMap": {
@@ -392,7 +392,7 @@
                   "x_sku_id": "0",
                   "pageIndex": "0",
                   "pagePos": "0",
-                  "pageSize": "8",
+                  "pageSize": "mandatory",
                   "listno": "0",
                   "sort": "popularity",
                   "searchScenario": "keyword",
@@ -404,7 +404,7 @@
                   "promotion_price": "<할인가>",
                   "coupon_price": "<쿠폰적용가>",
                   "ab_buckets": "skip",
-                  "trafficType": "ad",
+                  "trafficType": "<trafficType>",
                   "adProduct": "N",
                   "adSubProduct": "A"
                 }

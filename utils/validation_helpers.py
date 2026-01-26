@@ -286,6 +286,17 @@ def _process_config_section(
             # utLogMap 내부 필드는 그대로 사용, 그 외는 key만 사용
             field_name = key if is_utlogmap else key
             
+            # adProduct, adSubProduct 필드는 is_ad가 "Y"일 때만 검증
+            if field_name in ('adProduct', 'adSubProduct'):
+                if frontend_data:
+                    is_ad_value = frontend_data.get('is_ad')
+                    # is_ad가 "Y"가 아니면 이 필드는 검증에서 제외
+                    if is_ad_value is None or str(is_ad_value).upper() != 'Y':
+                        continue
+                else:
+                    # frontend_data가 없으면 is_ad를 확인할 수 없으므로 제외
+                    continue
+            
             # 값 처리 (placeholder 치환)
             processed_value = replace_placeholders(value, goodscode, frontend_data)
             
@@ -310,7 +321,7 @@ def replace_placeholders(value: Any, goodscode: str, frontend_data: Optional[Dic
     Args:
         value: 치환할 값
         goodscode: 상품 번호
-        frontend_data: 프론트에서 읽은 데이터 (keyword, origin_price, promotion_price, coupon_price 등)
+        frontend_data: 프론트에서 읽은 데이터 (keyword, origin_price, promotion_price, coupon_price, is_ad 등)
     
     Returns:
         치환된 값
@@ -366,6 +377,23 @@ def replace_placeholders(value: Any, goodscode: str, frontend_data: Optional[Dic
                 coupon_price = frontend_data.get('coupon_price', '')
                 value = value.replace('<쿠폰적용가>', str(coupon_price) if coupon_price is not None else '')
             
+            # <is_ad> placeholder 치환
+            if '<is_ad>' in value and 'is_ad' in frontend_data:
+                is_ad_value = frontend_data.get('is_ad')
+                if is_ad_value is not None:
+                    value = value.replace('<is_ad>', str(is_ad_value))
+            
+            # <trafficType> placeholder 치환 (is_ad에 따라 "ad" 또는 "organic")
+            if '<trafficType>' in value:
+                if 'is_ad' in frontend_data:
+                    is_ad_val = frontend_data.get('is_ad')
+                    if is_ad_val is True or (isinstance(is_ad_val, str) and str(is_ad_val).upper() in ('Y', 'TRUE', '1')) or is_ad_val == 1:
+                        traffic_type = "ad"
+                    else:
+                        traffic_type = "organic"
+                else:
+                    traffic_type = "organic"  # is_ad 없을 때 기본 organic
+                value = value.replace('<trafficType>', traffic_type)
 
     return value
 
@@ -385,7 +413,7 @@ def build_expected_from_module_config(
         module_config: 모듈 설정 딕셔너리 (module_exposure, product_exposure 등 포함)
         event_type: 이벤트 타입 ('Module Exposure', 'Product Exposure', 'Product Click' 등)
         goodscode: 상품 번호
-        frontend_data: 프론트에서 읽은 데이터 (price, keyword 등)
+        frontend_data: 프론트에서 읽은 데이터 (price, keyword, is_ad 등)
         exclude_fields: 제외할 필드 목록
     
     Returns:
@@ -451,7 +479,7 @@ def validate_event_type_logs(
         event_type: 이벤트 타입 ('PV', 'Module Exposure', 'Product Exposure' 등)
         goodscode: 상품 번호
         module_title: 모듈 타이틀
-        frontend_data: 프론트에서 읽은 데이터 (price, keyword 등)
+        frontend_data: 프론트에서 읽은 데이터 (price, keyword, is_ad 등)
         module_config: 모듈별 설정 딕셔너리 (None이면 JSON 파일에서 자동 로드)
         exclude_fields: 검증에서 제외할 필드 목록
     

@@ -2,6 +2,7 @@
 BDD Step Definitions for SRP Tracking Tests
 """
 import logging
+import time
 from pytest_bdd import given, when, then, parsers
 from playwright.sync_api import expect
 from pages.search_page import SearchPage
@@ -35,12 +36,15 @@ def when_user_searches_keyword(browser_session, keyword, bdd_context):
 
 @then("검색 결과 페이지가 표시된다")
 def then_search_results_page_is_displayed(browser_session, bdd_context):
-    """검색 결과 페이지가 표시되는지 확인
+    """bdd_context의 keyword로 data-montelena-keyword=keyword 요소 존재 검증
     실패 시에도 다음 스텝으로 진행"""
     try:
+        keyword = bdd_context.store.get("keyword") or bdd_context.get("keyword")
+        if not keyword:
+            raise ValueError("bdd_context에 keyword가 없습니다.")
         search_page = SearchPage(browser_session.page)
-        search_page.wait_for_search_results_load()
-        logger.info("검색 결과 페이지 표시 확인")
+        search_page.verify_keyword_element_exists(keyword)
+        logger.info(f"검색 결과 페이지 표시 확인 (data-montelena-keyword={keyword})")
     except Exception as e:
         logger.error(f"검색 결과 페이지 표시 확인 실패: {e}", exc_info=True)
         record_frontend_failure(browser_session, bdd_context, f"검색 결과 페이지 표시 확인 실패: {str(e)}", "검색 결과 페이지가 표시된다")
@@ -212,6 +216,7 @@ def user_confirms_and_clicks_product_in_module(browser_session, module_title, bd
         # 모듈로 이동
         module = search_page.get_module_by_title(module_title)
         search_page.scroll_module_into_view(module)
+        ad_check = search_page.check_ad_item_in_module(module_title)
         
         # 모듈 내 상품 찾기
         parent = search_page.get_module_parent(module, 2)
@@ -242,6 +247,11 @@ def user_confirms_and_clicks_product_in_module(browser_session, module_title, bd
         else:
             logger.info(f"장바구니 담기 버튼이 존재하지 않습니다: {goodscode}")
         
+        if ad_check == "F":
+            is_ad = search_page.check_ad_tag_in_product(product)
+        else:
+            is_ad =ad_check
+        
         # 상품 클릭
         try:
             new_page = search_page.click_product_and_wait_new_page(product)
@@ -252,6 +262,7 @@ def user_confirms_and_clicks_product_in_module(browser_session, module_title, bd
             # bdd context에 저장 (module_title, goodscode, product_url 등)
             bdd_context.store['module_title'] = module_title
             bdd_context.store['goodscode'] = goodscode
+            bdd_context.store['is_ad'] = is_ad
             bdd_context.store['product_url'] = new_page.url
             
             logger.info(f"{module_title} 모듈 내 상품 확인 및 클릭 완료: {goodscode}")
@@ -288,6 +299,7 @@ def user_confirms_and_clicks_product_in_module_type2(browser_session, module_tit
         # 모듈로 이동
         module = search_page.get_module_by_title(module_title)
         search_page.scroll_module_into_view(module)
+        ad_check = search_page.check_ad_item_in_module(module_title)
         
         # 모듈 내 상품 찾기
         parent = search_page.get_module_parent(module, 3)
@@ -313,7 +325,12 @@ def user_confirms_and_clicks_product_in_module_type2(browser_session, module_tit
         
         # 🔥 가격 정보는 이제 PDP PV 로그에서 추출하므로 프론트엔드에서 수집하지 않음
         # (PDP PV 로그는 상품 페이지 이동 후 수집됨)
-        
+
+        # 모듈별 광고상품 여부 저장장
+        if ad_check == "F":
+            is_ad = search_page.check_ad_tag_in_product(product)
+        else:
+            is_ad =ad_check
         # 상품 클릭s
         try:
             new_page = search_page.click_product_and_wait_new_page(product)
@@ -324,6 +341,7 @@ def user_confirms_and_clicks_product_in_module_type2(browser_session, module_tit
             # bdd context에 저장 (module_title, goodscode, product_url 등)
             bdd_context.store['module_title'] = module_title
             bdd_context.store['goodscode'] = goodscode
+            bdd_context.store['is_ad'] = is_ad
             bdd_context.store['product_url'] = new_page.url
             
             logger.info(f"{module_title} 모듈 내 상품 확인 및 클릭 완료: {goodscode}")
@@ -348,15 +366,13 @@ def user_confirms_and_clicks_product_in_module_type2(browser_session, module_tit
 def product_page_is_opened(browser_session, bdd_context):
     """
     상품 페이지 이동 확인 (검증)
-    PDP PV 로그 수집을 위해 networkidle 상태까지 대기
+    PDP PV 로그 수집 관련 로그가 뜰 때까지 대기 (tracker 있으면 수집 확인, 없으면 load 대기)
     실패 시에도 다음 스텝으로 진행
     
     Args:
         browser_session: BrowserSession 객체 (page 참조 관리)
         bdd_context: BDD context (step 간 데이터 공유용)
     """
-    import time
-    
     try:
         search_page = SearchPage(browser_session.page)
         
@@ -384,19 +400,19 @@ def product_page_is_opened(browser_session, bdd_context):
             record_frontend_failure(browser_session, bdd_context, f"상품 페이지 이동 확인 실패: {str(e)}", "상품 페이지로 이동되었다")
             # 계속 진행 (PDP PV 로그 수집은 시도)
         
-        # 🔥 PDP PV 로그 수집을 위해 domcontentloaded 상태까지 대기
+        # 🔥 PDP PV 로그 수집 관련 로그가 뜰 때까지 대기 (tracker 있으면 수집 확인, 없으면 load 대기)
+        tracker = bdd_context.get("tracker") or bdd_context.store.get("tracker")
+
         try:
             browser_session.page.wait_for_load_state("networkidle", timeout=10000)
-            logger.debug("domcontentloaded 상태 대기 완료 (PDP PV 로그 수집 대기)")
+            logger.debug("networkidle 상태 대기 완료 (tracker 없음, PDP PV 대체 대기)")
         except Exception as e:
-            logger.warning(f"domcontentloaded 대기 실패, load 상태로 대기: {e}")
+            logger.warning(f"networkidle 대기 실패, load 상태로 대기: {e}")
             try:
                 browser_session.page.wait_for_load_state("load", timeout=30000)
                 logger.debug("load 상태 대기 완료")
             except Exception as e2:
                 logger.warning(f"load 상태 대기도 실패: {e2}")
-        
-        # 추가 안전 대기 (PDP PV 로그가 비동기로 전송될 수 있음)
         time.sleep(2)
         logger.info(f"상품 페이지 이동 확인 완료: {goodscode} (PDP PV 로그 수집 대기 완료)")
         

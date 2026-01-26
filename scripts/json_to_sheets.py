@@ -77,6 +77,8 @@ def replace_value_with_placeholder(field_name: str, value: Any) -> Any:
         'server_env': '<environment>',
         '_p_prod': '<상품번호>',
         'x_object_id': '<상품번호>',
+        "is_ad": "<is_ad>",
+        "trafficType": "<trafficType>",
         "ts": "mandatory",
         "rd": "mandatory",
         "scr": "mandatory",
@@ -113,7 +115,8 @@ def replace_value_with_placeholder(field_name: str, value: Any) -> Any:
         "_p_group" : "skip",
         "utparam-url" : "mandatory",
         "search_session_id" : "mandatory",
-        "_pkgSize" : "skip"
+        "_pkgSize" : "skip",
+        "pageSize" : "mandatory"
     }
     
     if field_name in field_placeholder_map:

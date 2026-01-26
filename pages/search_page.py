@@ -212,12 +212,7 @@ class SearchPage(BasePage):
         return url
 
     def hybrid_ratio_check(self, parent):
-        """
-        특정 모듈의 타이틀 텍스트를 통해 해당 모듈 노출 확인하고 그 모듈 엘리먼트를 반환
-        :param (element) parent : 모듈의 element
-        :return:
-        :example:
-        """
+
         logger.debug('일반상품 광고상품 비율 확인 시작')
         container_divs = parent.locator("> div").all()
 
@@ -274,7 +269,13 @@ class SearchPage(BasePage):
     def wait_for_search_results_load(self) -> None:
         """검색 결과 페이지 로드 대기"""
         logger.debug("검색 결과 페이지 로드 대기")
-        self.page.wait_for_load_state("networkidle")
+        self.page.wait_for_load_state("domcontentloaded")
+
+    def verify_keyword_element_exists(self, keyword: str) -> None:
+        """data-montelena-keyword=keyword 인 요소가 있는지 검증"""
+        logger.debug(f"data-montelena-keyword={keyword} 요소 검증")
+        locator = self.page.locator(f'[data-montelena-keyword="{keyword}"]').first
+        expect(locator).to_be_visible()
     
     def click_first_product(self, timeout: int = 10000) -> Optional[Page]:
         """
@@ -617,3 +618,66 @@ class SearchPage(BasePage):
         """
         top_search_module_url = search_url(keyword)+ f"&jaehuid=200018252&itemno={goodscode}"
         self.page.goto(top_search_module_url, wait_until="domcontentloaded", timeout=30000)
+
+    def check_ad_item_in_module(self, modulel_title: str) -> str:
+        """
+        모듈 내 광고상품 노출 확인
+        
+        Args:
+            modulel_title: 모듈 타이틀
+        
+        Returns:
+            "Y", "N", 또는 "F" (광고 상품 여부)
+        
+        Raises:
+            ValueError: 알 수 없는 모듈 타이틀인 경우
+        """
+        logger.debug(f"모듈 내 광고상품 노출 확인: {modulel_title}")
+
+        MODULE_AD_CHECK = {
+            "오늘의 슈퍼딜": "N",
+            "오늘의 프라임상품": "Y",
+            "인기 상품이에요": "N",
+            "일반상품": "F",
+            "스타배송": "N",
+            "4.5 이상": "N",
+            "백화점 브랜드": "N",
+            "브랜드 인기상품": "N",
+            "대체검색어": "N",
+            "MD's Pick": "N",
+            "먼저 둘러보세요": "Y",
+            "오늘의 상품이에요": "Y",
+            "최상단 클릭아이템": "N",
+        }
+        
+        if modulel_title not in MODULE_AD_CHECK:
+            raise ValueError(f"모듈 타이틀 {modulel_title} 확인 불가")
+        
+        return MODULE_AD_CHECK[modulel_title]
+
+    def check_ad_tag_in_product(self, product_locator: Locator) -> str:
+        """
+        상품 내 광고 태그 노출 확인
+        
+        Args:
+            product_locator: 상품 Locator 객체
+        
+        Returns:
+            "Y", "N"(광고 상품 여부)
+        """
+        logger.debug(f"상품 내 광고 태그 노출 확인: {product_locator}")
+        
+        try:
+            # 상품 요소의 조상 요소에서 div.box__ads-layer 찾기
+            item_container = product_locator.locator("xpath=ancestor::div[contains(@class, 'box__item-container')]")
+            ads_layer = item_container.locator("div.box__ads-layer")
+            
+            if ads_layer.count() > 0:
+                logger.debug("광고 태그 발견: Y")
+                return "Y"
+            else:
+                logger.debug("광고 태그 없음: N")
+                return "N"
+        except Exception as e:
+            logger.warning(f"광고 태그 확인 중 오류 발생: {e}")
+            return "N"

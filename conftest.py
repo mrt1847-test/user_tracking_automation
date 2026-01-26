@@ -758,27 +758,32 @@ def pytest_report_teststatus(report, config):
 # except json.JSONDecodeError as e:
 #     raise RuntimeError(f"config.json 파일의 JSON 형식이 잘못되었습니다: {e}")
 
-# # 환경변수 기반 설정
-# try:
-#     TESTRAIL_BASE_URL = config['tr_url']
-#     TESTRAIL_PROJECT_ID = config['project_id']
-#     TESTRAIL_SUITE_ID = config['suite_id']
-#     TESTRAIL_SECTION_ID = config['section_id']
-#     TESTRAIL_MILESTONE_ID = config['milestone_id']
-# except KeyError as e:
-#     raise RuntimeError(f"config.json에 필수 키 '{e}'가 없습니다.")
+# TestRail 기록: testrail_report가 Y일 때만 Run 생성·결과 기록
+TESTRAIL_REPORT_ENABLED = (config.get("testrail_report") or "N").strip().upper() == "Y"
 
-# try:
-#     TESTRAIL_USER = os.getenv("TESTRAIL_USERNAME")
-#     TESTRAIL_TOKEN = os.getenv("TESTRAIL_PASSWORD")
-#     if not TESTRAIL_USER or not TESTRAIL_TOKEN:
-#         raise RuntimeError("TestRail 인증 정보(username 또는 password)가 없습니다. .env 파일에 TESTRAIL_USERNAME과 TESTRAIL_PASSWORD를 설정해주세요.")
-# except Exception as e:
-#     raise RuntimeError(f"TestRail 인증 정보를 가져오는 중 오류 발생: {e}")
-# testrail_run_id = None
-# case_id_map = {}  # {섹션 이름: [케이스ID 리스트]}
-# test_logs = {}  # {nodeid: 로그 문자열} - 테스트별 로그 저장
-# current_test_nodeid = None  # 현재 실행 중인 테스트의 nodeid
+if TESTRAIL_REPORT_ENABLED:
+    try:
+        TESTRAIL_BASE_URL = config['tr_url']
+        TESTRAIL_PROJECT_ID = config['project_id']
+        TESTRAIL_SUITE_ID = config['suite_id']
+        TESTRAIL_SECTION_ID = config['section_id']
+        TESTRAIL_MILESTONE_ID = config['milestone_id']
+    except KeyError as e:
+        raise RuntimeError(f"config.json에 필수 키 '{e}'가 없습니다.")
+    try:
+        TESTRAIL_USER = os.getenv("TESTRAIL_USERNAME")
+        TESTRAIL_TOKEN = os.getenv("TESTRAIL_PASSWORD")
+        if not TESTRAIL_USER or not TESTRAIL_TOKEN:
+            raise RuntimeError("TestRail 인증 정보(username 또는 password)가 없습니다. .env 파일에 TESTRAIL_USERNAME과 TESTRAIL_PASSWORD를 설정해주세요.")
+    except Exception as e:
+        raise RuntimeError(f"TestRail 인증 정보를 가져오는 중 오류 발생: {e}")
+else:
+    TESTRAIL_BASE_URL = TESTRAIL_PROJECT_ID = TESTRAIL_SUITE_ID = TESTRAIL_SECTION_ID = TESTRAIL_MILESTONE_ID = None
+    TESTRAIL_USER = TESTRAIL_TOKEN = None
+testrail_run_id = None
+case_id_map = {}  # {섹션 이름: [케이스ID 리스트]}
+test_logs = {}  # {nodeid: 로그 문자열} - 테스트별 로그 저장
+current_test_nodeid = None  # 현재 실행 중인 테스트의 nodeid
 
 
 # def testrail_get(endpoint):
@@ -851,8 +856,12 @@ def pytest_report_teststatus(report, config):
 #     """
 #     global testrail_run_id, case_id_map
     
-#     logger.debug(f"pytest_sessionstart 실행 시작")
-#     logger.debug(f"현재 testrail_run_id 값: {testrail_run_id}")
+    if not TESTRAIL_REPORT_ENABLED:
+        print("[TestRail] testrail_report가 Y가 아님 — 기록 비활성화")
+        return
+    
+    logger.debug(f"pytest_sessionstart 실행 시작")
+    logger.debug(f"현재 testrail_run_id 값: {testrail_run_id}")
     
 #     if testrail_run_id is not None:
 #         print(f"[TestRail] 이미 Run(ID={testrail_run_id})이 존재합니다. 새 Run 생성 생략")
