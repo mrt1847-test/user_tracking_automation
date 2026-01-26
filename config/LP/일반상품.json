@@ -138,7 +138,7 @@
               "gmkt_area_code": "200010108",
               "section_index": "",
               "module_index": "mandatory",
-              "is_ad": "N",
+              "is_ad": "<is_ad>",
               "ab_buckets": "skip",
               "is_airticket": "N",
               "utLogMap": {
@@ -151,7 +151,7 @@
                   "x_sku_id": "0",
                   "pageIndex": "0",
                   "pagePos": "0",
-                  "pageSize": "60",
+                  "pageSize": "mandatory",
                   "listno": "0",
                   "sort": "popularity",
                   "searchScenario": "category",
@@ -163,7 +163,7 @@
                   "promotion_price": "<할인가>",
                   "coupon_price": "<쿠폰적용가>",
                   "ab_buckets": "skip",
-                  "trafficType": "organic"
+                  "trafficType": "<trafficType>"
                 }
               },
               "_p_prod": "<상품번호>",
@@ -255,7 +255,7 @@
         "gmkt_area_code": "200010108",
         "section_index": "",
         "module_index": "mandatory",
-        "is_ad": "N",
+        "is_ad": "<is_ad>",
         "ab_buckets": "skip",
         "is_airticket": "N",
         "utLogMap": {
@@ -268,7 +268,7 @@
             "x_sku_id": "0",
             "pageIndex": "0",
             "pagePos": "0",
-            "pageSize": "60",
+            "pageSize": "mandatory",
             "listno": "0",
             "sort": "popularity",
             "searchScenario": "category",
@@ -280,7 +280,7 @@
             "promotion_price": "<할인가>",
             "coupon_price": "<쿠폰적용가>",
             "ab_buckets": "skip",
-            "trafficType": "organic"
+            "trafficType": "<trafficType>"
           }
         },
         "_p_prod": "<상품번호>",
@@ -373,7 +373,7 @@
               "gmkt_area_code": "200013164",
               "section_index": "",
               "module_index": "mandatory",
-              "is_ad": "N",
+              "is_ad": "<is_ad>",
               "ab_buckets": "skip",
               "is_airticket": "N",
               "utLogMap": {
@@ -386,7 +386,7 @@
                   "x_sku_id": "0",
                   "pageIndex": "0",
                   "pagePos": "0",
-                  "pageSize": "60",
+                  "pageSize": "mandatory",
                   "listno": "0",
                   "sort": "popularity",
                   "searchScenario": "category",
@@ -398,7 +398,7 @@
                   "promotion_price": "<할인가>",
                   "coupon_price": "<쿠폰적용가>",
                   "ab_buckets": "skip",
-                  "trafficType": "organic"
+                  "trafficType": "<trafficType>"
                 }
               },
               "_p_prod": "<상품번호>",
@@ -462,7 +462,7 @@
   "pdp_pv": {
     "payload": {
       "logtype": "1",
-      "title": "G마켓 - 매콤 코다리조림 3마리 속초 코다리찜 명태찜 명태조림 쫄면사리증정",
+      "title": "G마켓 - 이금선명인 이금선명장 가자미식해 1kg",
       "pre": "https://www.gmarket.co.kr/n/list?category=300018833",
       "scr": "mandatory",
       "_p_url": "mandatory",
@@ -481,17 +481,18 @@
       "_p_typ": "pdp",
       "_p_ispdp": "1",
       "_p_prod": "<상품번호>",
-      "_p_group": "skip",
+      "_p_catalog": "skip",
       "origin_price": "<원가>",
       "promotion_price": "<할인가>",
       "coupon_price": "<쿠폰적용가>",
-      "payment_price": "{\r\n  \"0\": {\r\n    \"payment_type\": \"A\",\r\n    \"payment_method_id\": \"13915685558\",\r\n    \"payment_method_name\": \"G마켓 삼성카드 첫 결제 시 50% 할인\",\r\n    \"price_threshold\": \"10000\",\r\n    \"discount_percent\": \"\",\r\n    \"discount_amount\": \"\",\r\n    \"price\": \"13180\",\r\n    \"max_discount_amount\": \"70000\"\r\n  },\r\n  \"1\": {\r\n    \"payment_type\": \"A\",\r\n    \"payment_method_id\": \"13963052861\",\r\n    \"payment_method_name\": \"현대&스마일카드 1,000원 할인\",\r\n    \"price_threshold\": \"20000\",\r\n    \"discount_percent\": \"\",\r\n    \"discount_amount\": \"\",\r\n    \"price\": \"25350\",\r\n    \"max_discount_amount\": \"\"\r\n  },\r\n  \"2\": {\r\n    \"payment_type\": \"A\",\r\n    \"payment_method_id\": \"13927380549\",\r\n    \"payment_method_name\": \"G마켓 삼성카드 1,000원 할인\",\r\n    \"price_threshold\": \"20000\",\r\n    \"discount_percent\": \"\",\r\n    \"discount_amount\": \"\",\r\n    \"price\": \"25350\",\r\n    \"max_discount_amount\": \"\"\r\n  },\r\n  \"3\": {\r\n    \"payment_type\": \"B\",\r\n    \"payment_method_id\": \"13924277169\",\r\n    \"payment_method_name\": \"스마일카드 첫결제 8만원 할인\",\r\n    \"price_threshold\": \"80100\",\r\n    \"discount_percent\": \"\",\r\n    \"discount_amount\": \"80000\",\r\n    \"price\": \"\",\r\n    \"max_discount_amount\": \"\"\r\n  },\r\n  \"4\": {\r\n    \"payment_type\": \"B\",\r\n    \"payment_method_id\": \"13963294543\",\r\n    \"payment_method_name\": \"현대&스마일카드 10,000원 할인\",\r\n    \"price_threshold\": \"300000\",\r\n    \"discount_percent\": \"\",\r\n    \"discount_amount\": \"10000\",\r\n    \"price\": \"\",\r\n    \"max_discount_amount\": \"\"\r\n  },\r\n  \"5\": {\r\n    \"payment_type\": \"B\",\r\n    \"payment_method_id\": \"13927389360\",\r\n    \"payment_method_name\": \"G마켓 삼성카드 1만원 할인\",\r\n    \"price_threshold\": \"300000\",\r\n    \"discount_percent\": \"\",\r\n    \"discount_amount\": \"10000\",\r\n    \"price\": \"\",\r\n    \"max_discount_amount\": \"\"\r\n  },\r\n  \"6\": {\r\n    \"payment_type\": \"B\",\r\n    \"payment_method_id\": \"13963183692\",\r\n    \"payment_method_name\": \"현대&스마일카드 2,000원 할인\",\r\n    \"price_threshold\": \"100000\",\r\n    \"discount_percent\": \"\",\r\n    \"discount_amount\": \"2000\",\r\n    \"price\": \"\",\r\n    \"max_discount_amount\": \"\"\r\n  },\r\n  \"7\": {\r\n    \"payment_type\": \"B\",\r\n    \"payment_method_id\": \"13963127144\",\r\n    \"payment_method_name\": \"현대&스마일카드 1,500원 할인\",\r\n    \"price_threshold\": \"50000\",\r\n    \"discount_percent\": \"\",\r\n    \"discount_amount\": \"1500\",\r\n    \"price\": \"\",\r\n    \"max_discount_amount\": \"\"\r\n  }\r\n}",
+      "payment_price": "{\r\n  \"0\": {\r\n    \"payment_type\": \"A\",\r\n    \"payment_method_id\": \"13915685558\",\r\n    \"payment_method_name\": \"G마켓 삼성카드 첫 결제 시 50% 할인\",\r\n    \"price_threshold\": \"10000\",\r\n    \"discount_percent\": \"\",\r\n    \"discount_amount\": \"\",\r\n    \"price\": \"10650\",\r\n    \"max_discount_amount\": \"70000\"\r\n  },\r\n  \"1\": {\r\n    \"payment_type\": \"A\",\r\n    \"payment_method_id\": \"13969451172\",\r\n    \"payment_method_name\": \"스마일카드 첫결제 10만원 할인\",\r\n    \"price_threshold\": \"10100\",\r\n    \"discount_percent\": \"\",\r\n    \"discount_amount\": \"\",\r\n    \"price\": \"\",\r\n    \"max_discount_amount\": \"\"\r\n  }\r\n}",
       "_p_sku": "0",
+      "price_signal": "Gmarket Lowest Price",
       "item_status": "1",
       "ab_buckets": "skip",
-      "pageid": "oul5iwfizn0caxcp19be90d0b751da8a527519cb92",
+      "pageid": "ird9ivr7lwwcaxcp19bf7e94b9c395800412149d96",
       "server_env": "<environment>",
-      "goodscode": "4429143373",
+      "goodscode": "4379495327",
       "utparam-url": "mandatory",
       "_is_auto_pv": "1",
       "cache": "mandatory",
@@ -562,7 +563,7 @@
       "_p_ispdp": "0",
       "query": "<검색어>",
       "searchScenario": "category",
-      "pageid": "oul5iwfizn0caxcp19be90cf49be1d1ac7623ad10e",
+      "pageid": "ird9ivr7lwwcaxcp19bf7e932ea5f01eec21db5307",
       "server_env": "<environment>",
       "category": "300018833",
       "_is_auto_pv": "1",

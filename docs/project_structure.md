@@ -180,7 +180,9 @@ Feature 파일명에서 영역을 자동으로 추론합니다:
   "origin_price": "<원가>",
   "promotion_price": "<할인가>",
   "coupon_price": "<쿠폰적용가>",
-  "server_env": "<environment>"
+  "server_env": "<environment>",
+  "is_ad": "<is_ad>",
+  "trafficType": "<trafficType>"
 }
 ```
 
@@ -190,6 +192,9 @@ Feature 파일명에서 영역을 자동으로 추론합니다:
   - `<검색어>`: `bdd_context`의 `keyword`
   - `<원가>`, `<할인가>`, `<쿠폰적용가>`: PDP PV 로그에서 추출한 가격 정보
   - `<environment>`: `config.json`의 `environment` 값 (예: `"prod"`, `"dev"`, `"stg"`)
+  - `<is_ad>`: `bdd_context`의 `is_ad` (광고 상품 여부, 클릭한 상품이 광고 여부 — `"Y"`/`"N"` 등)
+  - `<trafficType>`: `is_ad`에 따라 `"ad"` 또는 `"organic"` (is_ad가 Y/True/1 등이면 `"ad"`, 아니면 `"organic"`)
+- **is_ad 연관**: `adProduct`, `adSubProduct` 필드는 `is_ad`가 `"Y"`일 때만 검증에 포함됨 (플레이스홀더 아님)
 
 ### 검증 프로세스
 
