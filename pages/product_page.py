@@ -197,42 +197,21 @@ class ProductPage(BasePage):
             Locator 객체
         """
         logger.debug(f"모듈 찾기: {module_title}")
-        return self.page.get_by_text(module_title).nth(0)
-    
-    def scroll_module_into_view(self, module_locator: Locator) -> None:
+        return self.page.get_by_text(module_title).nth(0)  
+   
+    def get_module_by_spm(self, module_spm: str) -> Locator:
         """
-        모듈을 뷰포트로 스크롤
+        모듈 클래스명으로 모듈 요소 찾기
         
         Args:
-            module_locator: 모듈 Locator 객체
-        """
-        logger.debug("모듈 스크롤")
-        try:
-            module_locator.scroll_into_view_if_needed()
-        except Exception as e:
-            logger.warning(f"scroll_into_view_if_needed 실패, 강제 스크롤 시도: {e}")
-            # 강제 스크롤
-            module_locator.evaluate("el => el.scrollIntoView({behavior: 'smooth', block: 'center'})")
-
-    def get_module_parent(self, module_locator: Locator, n: int) -> Locator:
-        """
-        모듈의 n번째 부모 요소 찾기
-
-        Args:
-            module_locator: 모듈 Locator 객체
-            n: 올라갈 부모 단계 수 (1 이상)
-
+            module_class: 모듈 클래스명
+            
         Returns:
-            부모 Locator 객체
+            Locator 객체
         """
-        if n < 1:
-            raise ValueError("n은 1 이상의 정수여야 합니다.")
+        logger.debug(f"모듈 찾기: {module_spm}")
+        return self.page.locator(f'div[data-spm="{module_spm}"]')
 
-        logger.debug(f"모듈 부모 요소 {n}단계 찾기")
-
-        xpath = "xpath=" + "/".join([".."] * n)
-        return module_locator.locator(xpath)
-    
     def get_product_in_module(self, parent_locator: Locator) -> Locator:
         """
         모듈 내 상품 요소 찾기
@@ -245,7 +224,32 @@ class ProductPage(BasePage):
         """
         logger.debug("모듈 내 상품 요소 찾기")
         return parent_locator.locator("li").nth(0).locator("a")
-       
+
+    def get_product_in_related_module(self, parent_locator: Locator) -> Locator:
+        """
+        연관상품 모듈 내 상품 요소 찾기
+        
+        Args:
+            parent_locator: 모듈 부모 Locator 객체
+            
+        Returns:
+            상품 Locator 객체
+        """
+        logger.debug("모듈 내 상품 요소 찾기")
+        return parent_locator.locator("li").nth(1)
+
+    def get_product_in_related_btn_module(self, parent_locator: Locator) -> Locator:
+        """
+        모듈         
+        Args:
+            parent_locator: 모듈 부모 Locator 객체
+            
+        Returns:
+            상품 Locator 객체
+        """
+        logger.debug("모듈 내 상품 요소 찾기")
+        return parent_locator.locator(".btn_detail")
+
     def get_product_in_emart_module(self, parent_locator: Locator, module_title) -> Locator:
         """
         모듈 내 상품 요소 찾기
@@ -259,50 +263,8 @@ class ProductPage(BasePage):
         logger.debug("모듈 내 상품 요소 찾기")
         if module_title == "함께 보면 좋은 상품이에요" or module_title == "함께 구매하면 좋은 상품이에요":
             return parent_locator.locator("li").nth(6)
-        return parent_locator.locator("li").nth(6).locator("a").nth(0)    
-
-    def scroll_product_into_view(self, product_locator: Locator) -> None:
-        """
-        상품 요소를 뷰포트로 스크롤
-        
-        Args:
-            product_locator: 상품 Locator 객체
-        """
-        logger.debug("상품 요소 스크롤")
-        try:
-            product_locator.scroll_into_view_if_needed()
-        except Exception as e:
-            logger.warning(f"scroll_into_view_if_needed 실패, 강제 스크롤 시도: {e}")
-            # 강제 스크롤
-            product_locator.evaluate("el => el.scrollIntoView({behavior: 'smooth', block: 'center'})")
-
-    
-    def get_product_code(self, product_locator: Locator) -> Optional[str]:
-        """
-        상품 코드 가져오기
-        
-        Args:
-            product_locator: 상품 Locator 객체
-            
-        Returns:
-            상품 코드 (data-montelena-goodscode 속성 값)
-        """
-        logger.debug("상품 코드 가져오기")
-        return product_locator.get_attribute("data-montelena-goodscode")
-    
-    def get_product_by_code(self, goodscode: str) -> Locator:
-        """
-        상품 번호로 상품 요소 찾기
-        
-        Args:
-            goodscode: 상품 번호
-            
-        Returns:
-            상품 Locator 객체
-        """
-        logger.debug(f"상품 번호로 상품 찾기: {goodscode}")
-        return self.page.locator(f'a[data-montelena-goodscode="{goodscode}"]').nth(0)
-    
+        return parent_locator.locator("li").nth(6).locator("a").nth(0)
+  
     def wait_for_new_page(self):
         """
         새 페이지가 열릴 때까지 대기하는 컨텍스트 매니저
@@ -313,12 +275,22 @@ class ProductPage(BasePage):
         logger.debug("새 페이지 대기")
         return self.page.context.expect_page()
     
+    def hover_product(self, product_locator: Locator) -> None:
+        """
+        상품 호버
+        
+        Args:
+            product_locator: 상품 Locator 객체
+        """
+        logger.debug("상품 호버")
+        product_locator.hover()
+
     def click_product(self, product_locator: Locator) -> None:
         """
         상품 클릭
         
         Args:
-            timeout: 타임아웃 (기본값: 10000ms)
+            product_locator: 상품 Locator 객체
         """
         logger.debug("상품 클릭")
         product_locator.click()
@@ -381,4 +353,59 @@ class ProductPage(BasePage):
         logger.debug(f"URL에 상품 번호 포함 확인: {goodscode}")
         assert goodscode in url, f"상품 번호 {goodscode}가 URL에 포함되어야 합니다"
 
+    def check_ad_item_in_module(self, modulel_title: str) -> str:
+        """
+        모듈 내 광고상품 노출 확인
+        
+        Args:
+            modulel_title: 모듈 타이틀
+        
+        Returns:
+            "Y", "N", 또는 "F" (광고 상품 여부)
+        
+        Raises:
+            ValueError: 알 수 없는 모듈 타이틀인 경우
+        """
+        logger.debug(f"모듈 내 광고상품 노출 확인: {modulel_title}")
 
+        MODULE_AD_CHECK = {
+            "함께 보면 좋은 상품이에요": "Y",
+            "이 판매자의 인기상품이에요": "N",
+            "함께 구매하면 좋은 상품이에요": "F",
+            "이마트몰VT": "N",
+            "이마트몰BT": "N",
+            "이 브랜드의 인기상품": "N",
+            "점포 행사 상품이에요": "N",
+            "연관 상품": "N",
+        }
+        
+        if modulel_title not in MODULE_AD_CHECK:
+            raise ValueError(f"모듈 타이틀 {modulel_title} 확인 불가")
+        
+        return MODULE_AD_CHECK[modulel_title]
+
+    def check_ad_tag_in_product(self, product_locator: Locator) -> str:
+        """
+        상품 내 광고 태그 노출 확인
+        
+        Args:
+            product_locator: 상품 Locator 객체
+        
+        Returns:
+            "Y", "N"(광고 상품 여부)
+        """
+        logger.debug(f"상품 내 광고 태그 노출 확인: {product_locator}")
+        
+        try:
+            # 상품 요소의 조상 요소에서 div.box__ads-layer 찾기
+            ads_layer = product_locator.locator("div.box__ads-tag")
+            
+            if ads_layer.count() > 0:
+                logger.debug("광고 태그 발견: Y")
+                return "Y"
+            else:
+                logger.debug("광고 태그 없음: N")
+                return "N"
+        except Exception as e:
+            logger.warning(f"광고 태그 확인 중 오류 발생: {e}")
+            return "N"
