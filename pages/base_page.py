@@ -570,3 +570,15 @@ class BasePage:
         logger.warning(f"PDP PV 수집 대기 타임아웃 ({timeout_ms}ms): goodscode={goodscode}")
         time.sleep(2)
 
+    def get_module_by_spmc(self, module_spmc: str) -> Locator:
+        """
+        특정 모듈을 spmc로 찾아 반환
+        
+        Args:
+            module_spmc: 모듈 SPM 코드
+        
+        Returns:
+            모듈 Locator 객체
+        """
+        logger.debug(f"페이지에서 spmc로 모듈 찾기: {module_spmc}")
+        return self.page.locator(f".module-exp-spm-c[data-spm='{module_spmc}']")
