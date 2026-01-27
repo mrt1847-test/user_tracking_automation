@@ -287,6 +287,7 @@ def main():
         'Product Exposure',
         'Product Click',
         'Product ATC Click',
+        'Product Minidetail',
         'PDP PV',
         'PV',  # PV는 선택적
     ]
