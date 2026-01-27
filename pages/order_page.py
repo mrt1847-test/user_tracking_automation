@@ -22,6 +22,9 @@ class OrderPage(BasePage):
     def go_to_order_complete_page(self,cart_num):
         """
         주문완료 페이지로 이동
+        
+        Args:
+            cart_num: 장바구니 번호
         """
         logger.debug("주문완료 페이지로 이동")
         self.page.goto(order_complete_url(cart_num), wait_until="domcontentloaded", timeout=30000)
@@ -30,19 +33,53 @@ class OrderPage(BasePage):
     def is_order_complete_page_displayed(self):
         """
         주문완료 페이지가 표시되었는지 확인
+        
+        Returns:
+            True: 주문완료 페이지가 표시되었음
+            False: 주문완료 페이지가 표시되지 않았음
         """
         logger.debug("주문완료 페이지 표시 확인")
         return self.is_visible("h2.text__main-title:has-text('주문완료')")
     
-    def get_module_by_spmc(self, module_spmc: str) -> Locator:
+    def get_spmc_by_module_title(self, module_title: str) -> str:
         """
-        특정 모듈을 spmc로 찾아 반환
+        모듈 타이틀로 SPM 코드 가져오기
         
         Args:
-            module_spmc: 모듈 SPM 코드
+            module_title: 모듈 타이틀
         
         Returns:
-            모듈 Locator 객체
+            SPM 코드
         """
-        logger.debug(f"주문완료 페이지에 모듈 찾기: {module_spmc}")
-        return self.page.locator(f".module-exp-spm-c[data-spm='{module_spmc}']")
+        logger.debug(f"모듈 타이틀로 SPM 코드 가져오기: {module_title}")
+        if module_title == "주문완료 BT":
+            return "ordercompletebt"
+        else:
+            raise ValueError(f"모듈 타이틀 {module_title} SPM 코드 확인 불가")
+
+    def find_option_select_button_in_module(self, module: Locator) -> Locator:
+        """
+        모듈 내 옵션선택 버튼 찾기
+        
+        Args:
+            module: 모듈 Locator 객체
+        
+        Returns:
+            옵션선택 버튼 Locator 객체
+        """
+        logger.debug(f"모듈 내 옵션선택 버튼 찾기: {module}")
+        return module.get_by_text("옵션선택", exact=True).nth(0)
+
+    def get_goodscode_in_product(self, product: Locator) -> str:
+        """
+        모듈 내 상품 코드 가져오기
+        
+        Args:
+            product: 상품 Locator 객체
+        
+        Returns:
+            상품 코드
+        """
+        logger.debug(f"모듈 내 상품 코드 가져오기")
+        return product.get_attribute("data-montelena-goodscode")
+    
