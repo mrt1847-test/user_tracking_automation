@@ -16,6 +16,7 @@ EVENT_TYPE_METHODS = {
     'Product Exposure': 'get_product_exposure_logs_by_goodscode',
     'Product Click': 'get_product_click_logs_by_goodscode',
     'Product ATC Click': 'get_product_atc_click_logs_by_goodscode',
+    'Product Minidetail': 'get_product_minidetail_logs_by_goodscode',
 }
 
 # 최상위 필드 패턴 (gokey.params.* 경로에 직접 매핑되는 필드들)
@@ -27,6 +28,7 @@ EVENT_TYPE_PARAMS_MAP = {
     'Product Exposure': 'params-exp',
     'Product Click': 'params-clk',
     'Product ATC Click': 'params-clk',
+    'Product Minidetail': 'params-clk',
 }
 
 # 이벤트 타입별 module_config.json 키 매핑
@@ -35,6 +37,7 @@ EVENT_TYPE_CONFIG_KEY_MAP = {
     'Product Exposure': 'product_exposure',
     'Product Click': 'product_click',
     'Product ATC Click': 'product_atc_click',  # 별도 섹션으로 분리
+    'Product Minidetail': 'product_minidetail',
     'PDP PV': 'pdp_pv',
     'PV': 'pv',  # PV는 특별한 구조가 없을 수 있음
 }
@@ -133,26 +136,16 @@ def load_module_config(
     return config_dict
 
 
-def extract_price_info_from_pdp_pv(tracker: NetworkTracker, goodscode: str) -> Optional[Dict[str, Any]]:
+def _extract_price_info_from_payload(payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """
-    PDP PV 로그에서 가격 정보 추출
+    payload에서 가격 정보 추출 (헬퍼 함수)
     
     Args:
-        tracker: NetworkTracker 인스턴스
-        goodscode: 상품 번호
+        payload: 로그의 payload 딕셔너리
     
     Returns:
         가격 정보 딕셔너리 (origin_price, promotion_price, coupon_price) 또는 None
     """
-    pdp_pv_logs = tracker.get_pdp_pv_logs_by_goodscode(goodscode)
-    
-    if not pdp_pv_logs or len(pdp_pv_logs) == 0:
-        return None
-    
-    # 첫 번째 PDP PV 로그에서 가격 정보 추출
-    first_log = pdp_pv_logs[0]
-    payload = first_log.get('payload', {})
-    
     price_info = {}
     
     # payload 최상위에서 직접 가격 정보 추출
@@ -166,6 +159,47 @@ def extract_price_info_from_pdp_pv(tracker: NetworkTracker, goodscode: str) -> O
         price_info['coupon_price'] = str(coupon_price_value) if coupon_price_value is not None else ''
     
     return price_info if price_info else None
+
+
+def extract_price_info_from_pdp_pv(tracker: NetworkTracker, goodscode: str) -> Optional[Dict[str, Any]]:
+    """
+    PDP PV 또는 Product Minidetail 로그에서 가격 정보 추출
+    PDP PV가 없으면 Product Minidetail에서 가격 정보를 가져옴
+    
+    Args:
+        tracker: NetworkTracker 인스턴스
+        goodscode: 상품 번호
+    
+    Returns:
+        가격 정보 딕셔너리 (origin_price, promotion_price, coupon_price) 또는 None
+    """
+    # 먼저 PDP PV에서 가격 정보 추출 시도
+    pdp_pv_logs = tracker.get_pdp_pv_logs_by_goodscode(goodscode)
+    
+    if pdp_pv_logs and len(pdp_pv_logs) > 0:
+        # 첫 번째 PDP PV 로그에서 가격 정보 추출
+        first_log = pdp_pv_logs[0]
+        payload = first_log.get('payload', {})
+        price_info = _extract_price_info_from_payload(payload)
+        
+        # 가격 정보가 있으면 반환
+        if price_info:
+            return price_info
+    
+    # PDP PV가 없거나 가격 정보가 없으면 Product Minidetail에서 가격 정보 추출
+    minidetail_logs = tracker.get_product_minidetail_logs_by_goodscode(goodscode)
+    
+    if minidetail_logs and len(minidetail_logs) > 0:
+        # 첫 번째 Product Minidetail 로그에서 가격 정보 추출
+        first_log = minidetail_logs[0]
+        payload = first_log.get('payload', {})
+        price_info = _extract_price_info_from_payload(payload)
+        
+        # 가격 정보가 있으면 반환
+        if price_info:
+            return price_info
+    
+    return None
 
 
 def get_event_logs(tracker: NetworkTracker, event_type: str, goodscode: str, module_config_data: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -207,6 +241,8 @@ def get_event_logs(tracker: NetworkTracker, event_type: str, goodscode: str, mod
         logs = tracker.get_product_click_logs_by_goodscode(goodscode)
     elif event_type == 'Product ATC Click':
         logs = tracker.get_product_atc_click_logs_by_goodscode(goodscode)
+    elif event_type == 'Product Minidetail':
+        logs = tracker.get_product_minidetail_logs_by_goodscode(goodscode)
     else:
         logs = []
     
@@ -373,9 +409,13 @@ def replace_placeholders(value: Any, goodscode: str, frontend_data: Optional[Dic
             
             # <쿠폰적용가> placeholder 치환
             if '<쿠폰적용가>' in value:
-                # coupon_price가 frontend_data에 없거나 None이면 빈 문자열로 치환
+                # coupon_price가 frontend_data에 없거나 None이거나 빈 문자열이면 공란("")으로 치환
                 coupon_price = frontend_data.get('coupon_price', '')
-                value = value.replace('<쿠폰적용가>', str(coupon_price) if coupon_price is not None else '')
+                if coupon_price is None or coupon_price == '':
+                    coupon_price_str = ''
+                else:
+                    coupon_price_str = str(coupon_price)
+                value = value.replace('<쿠폰적용가>', coupon_price_str)
             
             # <is_ad> placeholder 치환
             if '<is_ad>' in value and 'is_ad' in frontend_data:

@@ -5,6 +5,7 @@ import logging
 from pytest_bdd import given, when, then, parsers
 from playwright.sync_api import expect
 from pages.cart_page import CartPage
+import time
 
 # 프론트 실패 처리 헬퍼 함수 import
 from utils.frontend_helpers import record_frontend_failure
@@ -100,6 +101,8 @@ def cart_page_has_module(browser_session, module_title, bdd_context):
         module = cart_page.check_module_in_cart(module_title)
         # 모듈이 존재하는지 확인 (count == 0이면 모듈이 없음)
         module_count = module.count()
+        logger.info(f"모듈 존재 확인: {module_count}")
+        time.sleep(100)
         if module_count == 0:
             # 모듈이 없으면 skip 플래그 설정 (시나리오는 계속 진행)
             skip_reason = f"'{module_title}' 모듈이 검색 결과에 없습니다."
@@ -132,8 +135,8 @@ def cart_page_has_module(browser_session, module_title, bdd_context):
         if 'module_title' not in bdd_context.store:
             bdd_context.store['module_title'] = module_title
 
-@when(parsers.parse('사용자가 "{module_title}" 모듈 내 상품을 확인하고 클릭한다'))
-def user_confirms_and_clicks_product_in_module(browser_session, module_title, bdd_context):
+@when(parsers.parse('사용자가 "{module_title}" 장바구니 모듈 내 상품을 확인하고 클릭한다'))
+def clicks_product_in_cart_module(browser_session, module_title, bdd_context):
     """
     모듈 내 상품 노출 확인하고 클릭 (When)
     모듈로 스크롤·상품 찾기·노출 검증·장바구니 담기(가능 시)·상품 클릭(새 탭)을 수행한다.
@@ -145,18 +148,17 @@ def user_confirms_and_clicks_product_in_module(browser_session, module_title, bd
         bdd_context: BDD context (step 간 데이터 공유용)
     """
     try:
-        search_page = SearchPage(browser_session.page)
         cart_page = CartPage(browser_session.page)
         
         # 모듈로 이동
-        module = search_page.get_module_by_title(module_title)
-        search_page.scroll_module_into_view(module)
-        ad_check = search_page.check_ad_item_in_module(module_title)
+        module = cart_page.check_module_in_cart(module_title)
+        cart_page.scroll_module_into_view(module)
+        ad_check = cart_page.check_ad_item_in_module(module_title)
         
         # 모듈 내 상품 찾기
-        parent = search_page.get_module_parent(module, 2)
-        product = search_page.get_product_in_module(parent)
-        search_page.scroll_product_into_view(product)
+        parent = cart_page.get_module_parent(module, 2)
+        product = cart_page.get_product_in_module(parent)
+        cart_page.scroll_product_into_view(product)
         
         # 상품 노출 확인 (실패 시 예외 발생)
         try:
@@ -170,36 +172,22 @@ def user_confirms_and_clicks_product_in_module(browser_session, module_title, bd
             return  # 여기서 종료 (다음 스텝으로 진행)
         
         # 상품 코드 가져오기
-        goodscode = search_page.get_product_code(product)
-        
-        # 장바구니 담기 버튼 존재할 경우 클릭
-        if search_page.is_add_to_cart_button_visible(parent, goodscode):
-            try:
-                search_page.click_add_to_cart_button(parent, goodscode)
-                logger.info(f"장바구니 담기 버튼 클릭 완료: {goodscode}")
-            except Exception as e:
-                logger.warning(f"장바구니 담기 버튼 클릭 실패 (계속 진행): {e}")
-        else:
-            logger.info(f"장바구니 담기 버튼이 존재하지 않습니다: {goodscode}")
-        
+        goodscode = cart_page.get_product_code(product)
+
         if ad_check == "F":
-            is_ad = search_page.check_ad_tag_in_product(product)
+            is_ad = cart_page.check_ad_tag_in_product(product)
         else:
             is_ad =ad_check
         
         # 상품 클릭
         try:
-            new_page = search_page.click_product_and_wait_new_page(product)
-            
-            # 명시적 페이지 전환 (상태 관리자 패턴)
-            browser_session.switch_to(new_page)
+            cart_page.click_product_and_wait_pdp_pv(product)
             
             # bdd context에 저장 (module_title, goodscode, product_url 등)
             bdd_context.store['module_title'] = module_title
             bdd_context.store['goodscode'] = goodscode
             bdd_context.store['is_ad'] = is_ad
-            bdd_context.store['product_url'] = new_page.url
-            
+
             logger.info(f"{module_title} 모듈 내 상품 확인 및 클릭 완료: {goodscode}")
         except Exception as e:
             logger.error(f"상품 클릭 실패: {e}", exc_info=True)
@@ -216,3 +204,52 @@ def user_confirms_and_clicks_product_in_module(browser_session, module_title, bd
         record_frontend_failure(browser_session, bdd_context, str(e), "사용자가 모듈 내 상품을 확인하고 클릭한다")
         if 'module_title' not in bdd_context.store:
             bdd_context.store['module_title'] = module_title
+
+@given("이전페이지로 이동해서 장바구니 페이지로 이동")
+def goes_back_to_previous_page(browser_session, bdd_context):
+    """
+    이전페이지로 이동한다 (Given)
+    이전 페이지로 이동한다.
+    실패 시 record_frontend_failure로 기록하고 다음 스텝으로 진행 (soft assertion)
+
+    Args:
+        browser_session: BrowserSession 객체 (page 참조 관리)
+        bdd_context: BDD context (step 간 데이터 공유용)
+    """
+    try:
+        cart_page = CartPage(browser_session.page)
+        cart_page.go_back()
+        cart_page.wait_for_cart_page_load()
+    except Exception as e:
+        logger.error("이전페이지로 이동 실패: %s", e, exc_info=True)
+        record_frontend_failure(browser_session, bdd_context, f"이전페이지로 이동 실패: {e}", "이전페이지로 이동한다")
+
+@when("모듈 내 장바구니 버튼 클릭")
+def clicks_cart_button_in_module(browser_session, bdd_context):
+    """
+    모듈 내 장바구니 버튼 클릭 (When)
+    모듈 내 장바구니 버튼 클릭한다.
+    실패 시 record_frontend_failure로 기록하고 다음 스텝으로 진행 (soft assertion)
+    """
+    try:
+        cart_page = CartPage(browser_session.page)
+        goodscode = bdd_context.store['goodscode']
+        cart_page.click_cart_button_in_module(goodscode)
+    except Exception as e:
+        logger.error("모듈 내 장바구니 버튼 클릭 실패: %s", e, exc_info=True)
+        record_frontend_failure(browser_session, bdd_context, f"모듈 내 장바구니 버튼 클릭 실패: {e}", "모듈 내 장바구니 버튼 클릭")
+
+@then("장바구니 담기 완료되었다")
+def cart_added_successfully(browser_session, bdd_context):
+    """
+    장바구니 담기 완료되었는지 확인한다 (Then)
+    장바구니 담기 완료되었는지 확인한다.
+    실패 시 record_frontend_failure로 기록하고 다음 스텝으로 진행 (soft assertion)
+    """
+    try:
+        cart_page = CartPage(browser_session.page)
+        goodscode = bdd_context.store['goodscode']
+        cart_page.check_cart_added(goodscode)
+    except Exception as e:
+        logger.error("장바구니 담기 완료 확인 실패: %s", e, exc_info=True)
+        record_frontend_failure(browser_session, bdd_context, f"장바구니 담기 완료 확인 실패: {e}", "장바구니 담기 완료되었다")

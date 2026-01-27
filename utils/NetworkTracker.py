@@ -41,7 +41,7 @@ class NetworkTracker:
             payload: 파싱된 payload (goodscode 확인용)
             
         Returns:
-            'PV', 'PDP PV', 'Module Exposure', 'Product Exposure', 'Product Click', 'Product ATC Click', 또는 'Unknown'
+            'PV', 'PDP PV', 'Module Exposure', 'Product Exposure', 'Product Click', 'Product ATC Click', 'Product Minidetail', 또는 'Unknown'
         """
         url_lower = url.lower()
         
@@ -109,6 +109,10 @@ class NetworkTracker:
         # Product Click: Product.Click.Event 패턴
         if '/product.click.event' in url_lower:
             return 'Product Click'
+        
+        # Product Minidetail: Product.Minidetail.Event 패턴
+        if '/product.minidetail.event' in url_lower:
+            return 'Product Minidetail'
         
         # Module Exposure: Module.Exposure.Event 패턴
         if '/module.exposure.event' in url_lower:
@@ -1118,6 +1122,18 @@ class NetworkTracker:
         """
         return self.get_logs_by_goodscode(goodscode, 'Product ATC Click')
     
+    def get_product_minidetail_logs_by_goodscode(self, goodscode: str) -> List[Dict[str, Any]]:
+        """
+        goodscode 기준으로 Product Minidetail 로그만 반환
+        
+        Args:
+            goodscode: 상품 번호
+        
+        Returns:
+            해당 goodscode의 Product Minidetail 로그 리스트
+        """
+        return self.get_logs_by_goodscode(goodscode, 'Product Minidetail')
+    
     def get_decoded_gokey_params(self, log: Dict[str, Any], param_key: Optional[str] = None) -> Dict[str, Any]:
         """
         로그에서 디코딩된 gokey 파라미터 조회
@@ -1267,7 +1283,18 @@ class NetworkTracker:
             
             # 값 검증
             field_passed = False
-            if actual_value is None:
+            # 빈 문자열("") 기대값 처리: actual_value가 None이어도 통과 (필드가 없어도 빈 값으로 간주)
+            if isinstance(expected_value, str) and expected_value == "":
+                # 기대값이 빈 문자열이면, actual_value가 None이거나 빈 문자열이면 통과
+                if actual_value is None or (isinstance(actual_value, str) and actual_value == ""):
+                    field_passed = True
+                else:
+                    # actual_value가 있으면 실패 (빈 값이어야 하는데 값이 있음)
+                    errors.append(
+                        f"키 '{key}'의 값이 일치하지 않습니다. "
+                        f"기대값 (빈 문자열): \"\", 실제값: {actual_value}"
+                    )
+            elif actual_value is None:
                 errors.append(f"키 '{key}'에 해당하는 값이 없습니다.")
             elif isinstance(expected_value, str) and expected_value == "__SKIP__":
                 # skip 필드: 어떤 값이든 통과 (검증 스킵)
