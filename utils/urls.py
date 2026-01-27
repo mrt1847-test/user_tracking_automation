@@ -13,17 +13,20 @@ _URLS = {
     "dev": {
         "base": "https://www-dev.gmarket.co.kr",
         "item": "https://item-dev.gmarket.co.kr",
-        "cart": "https://cart-dev.gmarket.co.kr"
+        "cart": "https://cart-dev.gmarket.co.kr",
+        "checkout": "https://checkout-dev.gmarket.co.kr"
     },
     "stg": {
         "base": "https://www-stg.gmarket.co.kr",
         "item": "https://item-stg.gmarket.co.kr",
-        "cart": "https://cart-av.gmarket.co.kr"
+        "cart": "https://cart-av.gmarket.co.kr",
+        "checkout": "https://checkout-av.gmarket.co.kr"
     },
     "prod": {
         "base": "https://www.gmarket.co.kr",
         "item": "https://item.gmarket.co.kr",
-        "cart": "https://cart.gmarket.co.kr"
+        "cart": "https://cart.gmarket.co.kr",
+        "checkout": "https://checkout.gmarket.co.kr"
     }
 }
 
@@ -78,6 +81,14 @@ def _get_cart_base_url() -> str:
     return _env_urls['cart']
 
 
+def _get_checkout_base_url() -> str:
+    """주문/결제 기본 URL 반환"""
+    global _env_urls
+    if _env_urls is None:
+        _env_urls = _get_environment_urls()
+    return _env_urls['checkout']
+
+
 def base_url() -> str:
     """기본 URL 반환"""
     return _get_base_url()
@@ -91,6 +102,11 @@ def item_base_url() -> str:
 def cart_base_url() -> str:
     """장바구니 기본 URL 반환"""
     return _get_cart_base_url()
+
+
+def checkout_base_url() -> str:
+    """주문/결제 기본 URL 반환"""
+    return _get_checkout_base_url()
 
 
 def search_url(keyword: str, spm: str = None) -> str:
@@ -167,6 +183,26 @@ def list_url(category_id: str, spm: str = None) -> str:
     params.append(f"category={category_id}")
     
     return f"{base}?{'&'.join(params)}"
+
+
+def order_complete_url(pno: str, spm: str = None) -> str:
+    """주문 완료 페이지 URL
+    
+    Args:
+        pno: 주문번호 (pno 파라미터)
+        spm: SPM 파라미터 (선택적)
+    
+    Returns:
+        주문 완료 페이지 URL (예: https://checkout-dev.gmarket.co.kr/ko/pc/complete?pno=4228111871&spm=gmktpc.ordersheet.order.d0#/)
+    """
+    base = f"{checkout_base_url()}/ko/pc/complete"
+    params = []
+    
+    params.append(f"pno={pno}")
+    if spm:
+        params.append(f"spm={spm}")
+    
+    return f"{base}?{'&'.join(params)}#/"
 
 
 # 기본 URL 상수 (하위 호환성, 함수 호출)

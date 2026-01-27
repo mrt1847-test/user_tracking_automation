@@ -208,6 +208,10 @@ def process_event_type_payload(event_data: Dict[str, Any], event_type: str) -> D
         
         return result if result else payload
     
+    elif event_type == 'Product Minidetail':
+        # product_minidetail은 pdp_pv와 동일하게 payload 전체 사용
+        return {'payload': payload}
+    
     elif event_type == 'Product ATC Click':
         # product_atc_click도 payload 전체 사용
         return {'payload': payload}
