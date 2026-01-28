@@ -546,9 +546,9 @@ class SearchPage(BasePage):
         top_search_module_url = search_url(keyword)+ f"&jaehuid=200018252&itemno={goodscode}"
         self.page.goto(top_search_module_url, wait_until="domcontentloaded", timeout=30000)
 
-    def check_ad_item_in_module(self, modulel_title: str) -> str:
+    def check_ad_item_in_srp_lp_module(self, modulel_title: str) -> str:
         """
-        모듈 내 광고상품 노출 확인
+        SRP/LP 모듈 내 광고상품 노출 확인
         
         Args:
             modulel_title: 모듈 타이틀
@@ -559,7 +559,7 @@ class SearchPage(BasePage):
         Raises:
             ValueError: 알 수 없는 모듈 타이틀인 경우
         """
-        logger.debug(f"모듈 내 광고상품 노출 확인: {modulel_title}")
+        logger.debug(f"SRP/LP 모듈 내 광고상품 노출 확인: {modulel_title}")
 
         MODULE_AD_CHECK = {
             "오늘의 슈퍼딜": "N",
@@ -582,9 +582,9 @@ class SearchPage(BasePage):
         
         return MODULE_AD_CHECK[modulel_title]
 
-    def check_ad_tag_in_product(self, product_locator: Locator) -> str:
+    def check_ad_tag_in_srp_lp_product(self, product_locator: Locator) -> str:
         """
-        상품 내 광고 태그 노출 확인
+        SRP/LP 상품 내 광고 태그 노출 확인
         
         Args:
             product_locator: 상품 Locator 객체
@@ -592,7 +592,7 @@ class SearchPage(BasePage):
         Returns:
             "Y", "N"(광고 상품 여부)
         """
-        logger.debug(f"상품 내 광고 태그 노출 확인: {product_locator}")
+        logger.debug(f"SRP/LP 상품 내 광고 태그 노출 확인: {product_locator}")
         
         try:
             # 상품 요소의 조상 요소에서 div.box__ads-layer 찾기
