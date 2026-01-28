@@ -19,17 +19,6 @@ EVENT_TYPE_METHODS = {
     'Product Minidetail': 'get_product_minidetail_logs_by_goodscode',
 }
 
-# 최상위 필드 패턴 (gokey.params.* 경로에 직접 매핑되는 필드들)
-TOP_LEVEL_FIELDS = {'channel_code', 'cguid', 'spm-url', 'spm-pre', 'spm-cnt', 'spm'}
-
-# 이벤트 타입별 params 경로 매핑
-EVENT_TYPE_PARAMS_MAP = {
-    'Module Exposure': 'params-exp',
-    'Product Exposure': 'params-exp',
-    'Product Click': 'params-clk',
-    'Product ATC Click': 'params-clk',
-    'Product Minidetail': 'params-clk',
-}
 
 # 이벤트 타입별 module_config.json 키 매핑
 EVENT_TYPE_CONFIG_KEY_MAP = {
