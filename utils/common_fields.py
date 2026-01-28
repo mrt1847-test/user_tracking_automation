@@ -123,10 +123,12 @@ def merge_common_fields_with_module_config(module_config: Dict[str, Any],
     from utils.google_sheets_sync import flatten_json
     module_flat = []
     if module_event_config:
-        # module_exposure는 payload 구조를 유지하여 평면화 (payload.decoded_gokey.params._w 형태)
-        # 다른 이벤트 타입은 payload가 있으면 payload를, 없으면 event_config 자체를 사용
-        if config_key == 'module_exposure' and 'payload' in module_event_config:
-            # payload 구조를 유지하여 평면화
+        # payload 구조를 유지해야 하는 이벤트 타입들
+        # module_exposure, product_atc_click, product_minidetail, pdp_pv 등은 payload 전체를 사용
+        payload_preserving_types = ['module_exposure', 'product_atc_click', 'product_minidetail', 'pdp_pv']
+        
+        if config_key in payload_preserving_types and 'payload' in module_event_config:
+            # payload 구조를 유지하여 평면화 (payload.decoded_gokey.params._w 형태)
             module_flat = flatten_json(module_event_config, exclude_keys=['timestamp', 'method', 'url'])
         else:
             # payload가 있으면 payload를, 없으면 event_config 자체를 사용

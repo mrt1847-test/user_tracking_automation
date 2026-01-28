@@ -52,10 +52,12 @@ def extract_fields_by_event_type(config_data: Dict[str, Any]) -> Dict[str, List[
         if not isinstance(event_data, dict):
             continue
         
-        # module_exposure는 payload 구조를 유지 (payload.decoded_gokey.params._w 형태)
-        # 다른 이벤트 타입은 payload가 없으면 event_data 자체를 사용
-        if event_type == 'module_exposure' and 'payload' in event_data:
-            # payload 구조를 유지하여 평면화
+        # payload 구조를 유지해야 하는 이벤트 타입들
+        # module_exposure, product_atc_click, product_minidetail, pdp_pv 등은 payload 전체를 사용
+        payload_preserving_types = ['module_exposure', 'product_atc_click', 'product_minidetail', 'pdp_pv']
+        
+        if event_type in payload_preserving_types and 'payload' in event_data:
+            # payload 구조를 유지하여 평면화 (payload.decoded_gokey.params._w 형태)
             flattened = flatten_json(event_data, exclude_keys=['timestamp', 'method', 'url'])
         else:
             # payload가 있으면 payload를, 없으면 event_data 자체를 사용
