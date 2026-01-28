@@ -66,6 +66,7 @@ def read_all_event_types(
         'Product Exposure',
         'Product Click',
         'Product ATC Click',
+        'Product Minidetail',
         'PDP PV',
         'PV',
     ]

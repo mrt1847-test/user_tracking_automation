@@ -67,6 +67,7 @@ def module_exists_in_order_complete_page(browser_session, module_title, bdd_cont
         # 모듈 찾기
         module_spmc = order_page.get_spmc_by_module_title(module_title)
         module = order_page.get_module_by_spmc(module_spmc)
+        order_page.scroll_module_into_view(module)
         
         # 모듈이 존재하는지 확인 (count == 0이면 모듈이 없음)
         module_count = module.count()
@@ -106,6 +107,7 @@ def module_exists_in_order_complete_page(browser_session, module_title, bdd_cont
 def user_confirms_and_clicks_product_in_module(browser_session, module_title, bdd_context):
     """
     주문완료 페이지에 특정 모듈 내 옵션선택 버튼 클릭 (비즈니스 로직)
+    실패 시에도 다음 스텝으로 진행
     
     Args:
         browser_session: BrowserSession 객체 (page 참조 관리)
@@ -114,17 +116,102 @@ def user_confirms_and_clicks_product_in_module(browser_session, module_title, bd
     """
     try:
         order_page = OrderPage(browser_session.page)
+        
         # 모듈 찾기
         module_spmc = order_page.get_spmc_by_module_title(module_title)
         module = order_page.get_module_by_spmc(module_spmc)
+        order_page.scroll_module_into_view(module)
+        
+        # 모듈별 광고상품 여부 확인
+        ad_check = order_page.check_ad_item_in_order_complete_module(module_title)
+        
         # 옵션선택 버튼 찾기 및 클릭
         option_select_button = order_page.find_option_select_button_in_module(module)
         goodscode = order_page.get_goodscode_in_product(option_select_button)
+        product = order_page.get_product_by_code(goodscode)
         option_select_button.click()
-        # goodscode 저장 (다음 스텝에서 사용)
+        
+        # 광고상품 여부 결정 (모듈 설정이 "F"면 상품 태그 확인, 아니면 모듈 설정 사용)
+        if ad_check == "F":
+            is_ad = order_page.check_ad_tag_in_order_complete_product(product)
+        else:
+            is_ad = ad_check
+        
+        # bdd context에 저장 (module_title, goodscode, is_ad 등)
+        bdd_context.store['module_title'] = module_title
         bdd_context.store['goodscode'] = goodscode
+        bdd_context.store['is_ad'] = is_ad
+        
         logger.info(f"{module_title} 모듈 내 옵션선택 버튼 클릭 완료: goodscode={goodscode}")
     except Exception as e:
         logger.error(f"{module_title} 모듈 내 옵션선택 버튼 클릭 실패: {e}", exc_info=True)
         record_frontend_failure(browser_session, bdd_context, f"{module_title} 모듈 내 옵션선택 버튼 클릭 실패: {e}", "사용자가 모듈 내 상품을 확인하고 옵션선택을 클릭한다")
+        # goodscode는 저장 (일부 정보라도 보존)
+        if 'goodscode' in locals():
+            bdd_context.store['goodscode'] = goodscode
+        if 'module_title' not in bdd_context.store:
+            bdd_context.store['module_title'] = module_title
         
+
+@when(parsers.parse('사용자가 "{module_title}" 모듈 내 상품을 확인하고 상품을 클릭한다'))
+def user_confirms_and_clicks_product_in_module_click(browser_session, module_title, bdd_context):
+    """
+    주문완료 페이지에 특정 모듈 내 상품을 확인하고 상품을 클릭한다 (비즈니스 로직)
+    실패 시에도 다음 스텝으로 진행
+    
+    Args:
+        browser_session: BrowserSession 객체 (page 참조 관리)
+        module_title: 모듈 타이틀
+        bdd_context: BDD context (step 간 데이터 공유용)
+    """
+    try:
+        order_page = OrderPage(browser_session.page)
+        
+        # 모듈 찾기
+        module_spmc = order_page.get_spmc_by_module_title(module_title)
+        module = order_page.get_module_by_spmc(module_spmc)
+        order_page.scroll_module_into_view(module)
+        
+        # 모듈별 광고상품 여부 확인
+        ad_check = order_page.check_ad_item_in_order_complete_module(module_title)
+        
+        # ATC 버튼 찾기 및 클릭
+        atc_button = order_page.get_atc_button_in_order_complete_module(module)
+        goodscode = order_page.get_goodscode_in_product(atc_button)
+        product = order_page.get_product_by_code(goodscode)
+        atc_button.click()
+        logger.info(f"{module_title} 모듈 내 상품 확인 및 담기 완료: goodscode={goodscode}")
+        
+        # 광고상품 여부 결정 (모듈 설정이 "F"면 상품 태그 확인, 아니면 모듈 설정 사용)
+        if ad_check == "F":
+            is_ad = order_page.check_ad_tag_in_order_complete_product(product)
+        else:
+            is_ad = ad_check
+        
+        # 상품 클릭
+        try:
+            product.click()
+            
+            # bdd context에 저장 (module_title, goodscode, is_ad 등)
+            bdd_context.store['module_title'] = module_title
+            bdd_context.store['goodscode'] = goodscode
+            bdd_context.store['is_ad'] = is_ad
+            
+            logger.info(f"{module_title} 모듈 내 상품 확인 및 클릭 완료: goodscode={goodscode}")
+        except Exception as e:
+            logger.error(f"상품 클릭 실패: {e}", exc_info=True)
+            record_frontend_failure(browser_session, bdd_context, f"상품 클릭 실패: {str(e)}", "사용자가 모듈 내 상품을 확인하고 상품을 클릭한다")
+            # goodscode는 저장 (일부 정보라도 보존)
+            if 'goodscode' in locals():
+                bdd_context.store['goodscode'] = goodscode
+            if 'module_title' not in bdd_context.store:
+                bdd_context.store['module_title'] = module_title
+    except Exception as e:
+        # 예상치 못한 예외 처리
+        logger.error(f"프론트 동작 중 예외 발생: {e}", exc_info=True)
+        record_frontend_failure(browser_session, bdd_context, str(e), "사용자가 모듈 내 상품을 확인하고 상품을 클릭한다")
+        # goodscode는 저장 (일부 정보라도 보존)
+        if 'goodscode' in locals():
+            bdd_context.store['goodscode'] = goodscode
+        if 'module_title' not in bdd_context.store:
+            bdd_context.store['module_title'] = module_title

@@ -27,6 +27,7 @@ TRACKING_TYPE_TO_CONFIG_KEY = {
     'Product Exposure': 'product_exposure',
     'Product Click': 'product_click',
     'Product ATC Click': 'product_atc_click',
+    'Product Minidetail': 'product_minidetail',
 }
 
 # 역매핑: config JSON의 섹션 키 → tracking_all JSON의 type

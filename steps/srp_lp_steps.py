@@ -216,7 +216,7 @@ def user_confirms_and_clicks_product_in_module(browser_session, module_title, bd
         # 모듈로 이동
         module = search_page.get_module_by_title(module_title)
         search_page.scroll_module_into_view(module)
-        ad_check = search_page.check_ad_item_in_module(module_title)
+        ad_check = search_page.check_ad_item_in_srp_lp_module(module_title)
         
         # 모듈 내 상품 찾기
         parent = search_page.get_module_parent(module, 2)
@@ -248,7 +248,7 @@ def user_confirms_and_clicks_product_in_module(browser_session, module_title, bd
             logger.info(f"장바구니 담기 버튼이 존재하지 않습니다: {goodscode}")
         
         if ad_check == "F":
-            is_ad = search_page.check_ad_tag_in_product(product)
+            is_ad = search_page.check_ad_tag_in_srp_lp_product(product)
         else:
             is_ad =ad_check
         
@@ -299,7 +299,7 @@ def user_confirms_and_clicks_product_in_module_type2(browser_session, module_tit
         # 모듈로 이동
         module = search_page.get_module_by_title(module_title)
         search_page.scroll_module_into_view(module)
-        ad_check = search_page.check_ad_item_in_module(module_title)
+        ad_check = search_page.check_ad_item_in_srp_lp_module(module_title)
         
         # 모듈 내 상품 찾기
         parent = search_page.get_module_parent(module, 3)
@@ -328,7 +328,7 @@ def user_confirms_and_clicks_product_in_module_type2(browser_session, module_tit
 
         # 모듈별 광고상품 여부 저장장
         if ad_check == "F":
-            is_ad = search_page.check_ad_tag_in_product(product)
+            is_ad = search_page.check_ad_tag_in_srp_lp_product(product)
         else:
             is_ad =ad_check
         # 상품 클릭s

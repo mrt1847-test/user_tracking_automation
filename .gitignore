@@ -19,6 +19,12 @@ node_modules/
 # Environments
 .env
 .python-version
+.venv
+venv/
+ENV/
+env/
+# Pipenv
+Pipfile.lock
 
 # netrc
 .netrc

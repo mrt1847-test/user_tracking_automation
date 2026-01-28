@@ -460,6 +460,7 @@ def _save_tracking_logs(bdd_context, tracker, goodscode, module_title):
             ('product_exposure', 'get_product_exposure_logs_by_goodscode', None),
             ('product_click', 'get_product_click_logs_by_goodscode', None),
             ('product_atc_click', 'get_product_atc_click_logs_by_goodscode', None),
+            ('product_minidetail', 'get_product_minidetail_logs_by_goodscode', None),
         ]
         
         for event_type, method_name, method_arg in event_configs:
@@ -521,6 +522,7 @@ def _save_tracking_logs(bdd_context, tracker, goodscode, module_title):
         all_logs.extend(product_exposure_logs)
         all_logs.extend(tracker.get_product_click_logs_by_goodscode(goodscode))
         all_logs.extend(tracker.get_product_atc_click_logs_by_goodscode(goodscode))
+        all_logs.extend(tracker.get_product_minidetail_logs_by_goodscode(goodscode))
         
         if len(all_logs) > 0:
             module_safe = module_title_to_filename(module_title)
