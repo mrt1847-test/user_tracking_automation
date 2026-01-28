@@ -130,6 +130,51 @@ def product_page_is_opened(browser_session, bdd_context):
         logger.error(f"상품 페이지 이동 확인 중 예외 발생: {e}", exc_info=True)
         record_frontend_failure(browser_session, bdd_context, str(e), "상품 페이지로 이동되었다")
 
+@then(parsers.parse('"{module_title}"가 출력되었다'))
+def product_page_is_opened(browser_session, module_title, bdd_context):
+    """
+    연관상품 상세보기 출력 확인 (검증)
+    PDP PV 로그 수집 관련 로그가 뜰 때까지 대기 (tracker 있으면 수집 확인, 없으면 load 대기)
+    실패 시에도 다음 스텝으로 진행
+    
+    Args:
+        browser_session: BrowserSession 객체 (page 참조 관리)
+        bdd_context: BDD context (step 간 데이터 공유용)
+    """
+    try:
+        product_page = ProductPage(browser_session.page)
+
+        module = product_page.get_module_by_title(module_title)
+        
+        # 검증 (실패 시 예외 발생)
+        try:
+            expect(module).to_be_visible()(timeout=5000)
+            logger.info(f"모듈 출력 확인 완료: {module_title}")
+        except AssertionError as e:
+            logger.error(f"연관상품 상세보기 출력 확인 실패: {e}")
+            record_frontend_failure(browser_session, bdd_context, f"연관상품 상세보기 출력 확인 실패: {str(e)}", "연관상품 상세보기가 출력되었다")
+            # 계속 진행 (PDP PV 로그 수집은 시도)
+        
+        # 🔥 PDP PV 로그 수집 관련 로그가 뜰 때까지 대기 (tracker 있으면 수집 확인, 없으면 load 대기)
+        tracker = bdd_context.get("tracker") or bdd_context.store.get("tracker")
+
+        try:
+            browser_session.page.wait_for_load_state("networkidle", timeout=10000)
+            logger.debug("networkidle 상태 대기 완료 (tracker 없음, PDP PV 대체 대기)")
+        except Exception as e:
+            logger.warning(f"networkidle 대기 실패, load 상태로 대기: {e}")
+            try:
+                browser_session.page.wait_for_load_state("load", timeout=30000)
+                logger.debug("load 상태 대기 완료")
+            except Exception as e2:
+                logger.warning(f"load 상태 대기도 실패: {e2}")
+        time.sleep(2)
+        logger.info(f"연관상품 상세보기 출력 확인 완료")
+        
+    except Exception as e:
+        logger.error(f"연관상품 상세보기 출력 확인 중 예외 발생: {e}", exc_info=True)
+        record_frontend_failure(browser_session, bdd_context, str(e), "연관상품 상세보기가 출력되었다")
+
 
 @then(parsers.parse('상품명에 "{product_name}"이 포함되어 있다'))
 def product_name_contains(browser_session, product_name):
@@ -170,47 +215,6 @@ def user_selects_specific_option(browser_session, option_name):
     product_page = ProductPage(browser_session.page)
     product_page.select_specific_option(option_name)
     logger.info(f"옵션 선택: {option_name}")
-
-
-@when("사용자가 수량을 변경한다")
-def user_changes_quantity(browser_session):
-    """
-    사용자가 상품 수량 변경
-    
-    Args:
-        browser_session: BrowserSession 객체 (page 참조 관리)
-    """
-    product_page = ProductPage(browser_session.page)
-    product_page.change_quantity()
-    logger.info("수량 변경")
-
-
-@when(parsers.parse('사용자가 수량을 "{quantity}"개로 변경한다'))
-def user_changes_quantity_to(browser_session, quantity):
-    """
-    사용자가 상품 수량을 특정 개수로 변경
-    
-    Args:
-        browser_session: BrowserSession 객체 (page 참조 관리)
-        quantity: 수량
-    """
-    product_page = ProductPage(browser_session.page)
-    product_page.change_quantity_to(quantity)
-    logger.info(f"수량 변경: {quantity}개")
-
-
-@then(parsers.parse('상품 가격이 "{price}"로 표시된다'))
-def product_price_is_displayed(browser_session, price):
-    """
-    상품 가격이 올바르게 표시되는지 확인
-    
-    Args:
-        browser_session: BrowserSession 객체 (page 참조 관리)
-        price: 예상 가격
-    """
-    product_page = ProductPage(browser_session.page)
-    assert product_page.is_price_displayed(price), f"상품 가격이 '{price}'로 표시되지 않았습니다"
-    logger.info(f"상품 가격 확인: {price}")
 
 @when("사용자가 구매하기 버튼을 클릭한다")
 def user_clicks_buy_now_button(browser_session):
@@ -360,7 +364,7 @@ def user_confirms_and_clicks_product_in_emart_pdp_module(browser_session, module
             
             # bdd context에 저장 (product_url, module_title, goodscode)
             bdd_context.store['product_url'] = browser_session.page.url        
-            bdd_context.store['module_title'] = f"이마트몰 {module_title}"
+            bdd_context.store['module_title'] = module_title
             bdd_context.store['is_ad'] = is_ad
             bdd_context.store['goodscode'] = goodscode
 
@@ -381,29 +385,30 @@ def user_confirms_and_clicks_product_in_emart_pdp_module(browser_session, module
         if 'module_title' not in bdd_context.store:
             bdd_context.store['module_title'] = module_title
 
-@when(parsers.parse('사용자가 PDP에서 연관상품 상세보기를 확인하고 클릭한다'))
-def user_confirms_and_clicks_product_in_pdp_related_module(browser_session, bdd_context):
+@when(parsers.parse('사용자가 PDP에서 "{module_title}"을 확인하고 클릭한다'))
+def user_confirms_and_clicks_product_in_pdp_related_module(browser_session, module_title, bdd_context):
     """
     모듈 내 상품 노출 확인하고 클릭 (Atomic POM 조합)
     
     Args:
         browser_session: BrowserSession 객체 (page 참조 관리)
+        module_title: 모듈 타이틀
         bdd_context: BDD context (step 간 데이터 공유용)
     """
-    module_title = "연관 상품"
     try:
         product_page = ProductPage(browser_session.page)
 
         # 모듈로 이동
-        module = product_page.get_module_by_spm("relateditem")
-        product_page.scroll_module_into_view(module)
+        module = product_page.get_module_by_title(module_title)
+        product_page.scroll_module_into_view_bottom(module)
+        time.sleep(2)
         
         # 모듈 내 상품 찾기
         product = product_page.get_product_in_related_module(module)
         product_page.scroll_product_into_view(product)
 
-        # 상품 내 상세보기 버튼 찾기
-        button = product_page.get_product_in_related_btn_module(product)
+        # 상품 버튼 호버
+        product_page.hover_product(product)
 
         # 상품 노출 확인 (실패 시 예외 발생)
         try:
@@ -417,12 +422,11 @@ def user_confirms_and_clicks_product_in_pdp_related_module(browser_session, bdd_
             return  # 여기서 종료 (다음 스텝으로 진행)
     
         # 상품 코드 가져오기
-        goodscode = product_page.get_product_code(button)
+        goodscode = product_page.get_product_code(product)
 
         try:
             # 상품 클릭
-            product_page.hover_product(product)
-            product_page.click_product(button)
+            product_page.click_product(product)
             
             # bdd context에 저장 (product_url, module_title, goodscode)
             bdd_context.store['product_url'] = browser_session.page.url        

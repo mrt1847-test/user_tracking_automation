@@ -53,65 +53,12 @@ class ProductPage(BasePage):
         except Exception as e:
             logger.warning(f"상품 상세 페이지 확인 실패: {e}")
             return False
-    
-    def get_product_name(self) -> str:
-        """상품명 가져오기"""
-        # TODO: 구현
-        return self.get_text(self.PRODUCT_NAME)
-    
-    def contains_product_name(self, product_name: str) -> bool:
-        """상품명에 특정 텍스트가 포함되어 있는지 확인"""
-        # TODO: 구현
-        actual_name = self.get_product_name()
-        return product_name in actual_name
-    
-    def get_product_price(self) -> str:
-        """상품 가격 가져오기"""
-        # TODO: 구현
-        return self.get_text(self.PRODUCT_PRICE)
-    
-    def is_price_displayed(self, expected_price: str) -> bool:
-        """상품 가격이 올바르게 표시되는지 확인"""
-        # TODO: 구현
-        actual_price = self.get_product_price()
-        return expected_price in actual_price
-    
-    def select_option(self) -> None:
-        """상품 옵션 선택"""
-        # TODO: 구현
-        logger.info("상품 옵션 선택")
-    
-    def select_specific_option(self, option_name: str) -> None:
-        """특정 옵션 선택"""
-        # TODO: 구현
-        logger.info(f"옵션 선택: {option_name}")
-    
-    def change_quantity(self) -> None:
-        """수량 변경"""
-        # TODO: 구현
-        logger.info("수량 변경")
-    
-    def change_quantity_to(self, quantity: str) -> None:
-        """수량을 특정 개수로 변경"""
-        # TODO: 구현
-        self.fill(self.QUANTITY_INPUT, quantity)
-        logger.info(f"수량 변경: {quantity}개")
-    
+   
     def wait_for_page_load(self) -> None:
         """페이지 로드 대기"""
         logger.debug("페이지 로드 대기")
         self.page.wait_for_load_state("networkidle")
     
-    def click_add_to_cart_button(self, timeout: int = 10000) -> None:
-        """
-        장바구니 추가 버튼 클릭
-        
-        Args:
-            timeout: 타임아웃 (기본값: 10000ms)
-        """
-        logger.debug("장바구니 추가 버튼 클릭")
-        self.click(self.ADD_TO_CART_BUTTON, timeout=timeout)
-
     def click_buy_now_button(self, timeout: int = 10000) -> None:
         """
         구매하기 버튼 클릭
@@ -197,20 +144,13 @@ class ProductPage(BasePage):
             Locator 객체
         """
         logger.debug(f"모듈 찾기: {module_title}")
-        return self.page.get_by_text(module_title).nth(0)  
-   
-    def get_module_by_spm(self, module_spm: str) -> Locator:
-        """
-        모듈 클래스명으로 모듈 요소 찾기
-        
-        Args:
-            module_class: 모듈 클래스명
-            
-        Returns:
-            Locator 객체
-        """
-        logger.debug(f"모듈 찾기: {module_spm}")
-        return self.page.locator(f'div[data-spm="{module_spm}"]')
+        if module_title == "연관 상품":
+            return self.get_module_by_spmc("relateditem")
+        if module_title == "이마트몰VT":
+            return self.get_module_by_spmc("emartvt").filter(visible=True)
+        if module_title == "이마트몰BT":
+            return self.get_module_by_spmc("emartbt")
+        return self.page.get_by_text(module_title)
 
     def get_product_in_module(self, parent_locator: Locator) -> Locator:
         """
@@ -236,19 +176,7 @@ class ProductPage(BasePage):
             상품 Locator 객체
         """
         logger.debug("모듈 내 상품 요소 찾기")
-        return parent_locator.locator("li").nth(1)
-
-    def get_product_in_related_btn_module(self, parent_locator: Locator) -> Locator:
-        """
-        모듈         
-        Args:
-            parent_locator: 모듈 부모 Locator 객체
-            
-        Returns:
-            상품 Locator 객체
-        """
-        logger.debug("모듈 내 상품 요소 찾기")
-        return parent_locator.locator(".btn_detail")
+        return parent_locator.locator("li").nth(1).locator(".btn_detail")
 
     def get_product_in_emart_module(self, parent_locator: Locator, module_title) -> Locator:
         """
@@ -261,7 +189,7 @@ class ProductPage(BasePage):
             상품 Locator 객체
         """
         logger.debug("모듈 내 상품 요소 찾기")
-        if module_title == "함께 보면 좋은 상품이에요" or module_title == "함께 구매하면 좋은 상품이에요":
+        if module_title == "이마트몰VT" or module_title == "이마트몰BT":
             return parent_locator.locator("li").nth(6)
         return parent_locator.locator("li").nth(6).locator("a").nth(0)
   
