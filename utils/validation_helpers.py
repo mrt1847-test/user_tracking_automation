@@ -436,6 +436,8 @@ def build_expected_from_module_config(
 ) -> Dict[str, Any]:
     """
     module_config.json의 이벤트 타입별 필드를 재귀적으로 순회하여 expected_values 딕셔너리 생성
+    이벤트 타입별 공통 필드와 모듈별 고유 필드를 병합하여 사용
+    
     필드명만 저장하여 validate_payload에서 재귀 탐색으로 찾을 수 있도록 함
     
     Args:
@@ -451,12 +453,32 @@ def build_expected_from_module_config(
     if exclude_fields is None:
         exclude_fields = []
     
+    # 이벤트 타입별 공통 필드와 모듈 필드 병합
+    try:
+        from utils.common_fields import merge_common_fields_with_module_config
+        event_config_key = EVENT_TYPE_CONFIG_KEY_MAP.get(event_type)
+        if event_config_key:
+            # 공통 필드와 모듈 필드 병합
+            merged_config = merge_common_fields_with_module_config(module_config, event_type)
+        else:
+            # 알 수 없는 이벤트 타입이면 기존 방식 사용
+            merged_config = module_config.get(event_config_key, {}) if event_config_key else {}
+    except ImportError:
+        # common_fields 모듈이 없으면 기존 방식 사용
+        merged_config = None
+    
     expected = {}
     
     # 이벤트 타입별 섹션 처리
     event_config_key = EVENT_TYPE_CONFIG_KEY_MAP.get(event_type)
     if event_config_key:
-        event_config = module_config.get(event_config_key, {})
+        if merged_config:
+            # 병합된 config 사용
+            event_config = merged_config
+        else:
+            # 기존 방식: 모듈 config만 사용
+            event_config = module_config.get(event_config_key, {})
+        
         if event_config:
             _process_config_section(event_config, event_type, goodscode, frontend_data, exclude_fields, expected, is_common=False)
     

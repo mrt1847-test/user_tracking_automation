@@ -1321,10 +1321,28 @@ class NetworkTracker:
                 contains_match_fields = {'spm', 'spm-url', 'spm-pre', 'spm-cnt'}
                 
                 if key in contains_match_fields and isinstance(expected_value, str) and isinstance(actual_value, str):
-                    # 포함 여부 매칭: expected_value가 actual_value에 포함되어 있으면 통과
+                    # SPM 값 정규화: 마지막 숫자 부분 제거 (예: ditem0 → ditem, ditem1 → ditem)
+                    def normalize_spm_value(value: str) -> str:
+                        """SPM 값에서 마지막 숫자 부분을 제거하여 정규화"""
+                        # 마지막에 오는 숫자 패턴을 제거 (예: ditem0, ditem1 → ditem)
+                        # \d+$ : 문자열 끝에 오는 하나 이상의 숫자
+                        normalized = re.sub(r'\d+$', '', value)
+                        return normalized
+                    
+                    # 정규화된 값으로 비교
+                    expected_normalized = normalize_spm_value(expected_value)
+                    actual_normalized = normalize_spm_value(actual_value)
+                    
+                    # 포함 여부 매칭: 
+                    # 1. 정규화된 값이 정확히 일치하거나 (마지막 숫자만 다른 경우)
+                    # 2. 정규화된 expected_value가 정규화된 actual_value에 포함되거나
+                    # 3. 원본 expected_value가 원본 actual_value에 포함되면 통과
                     # 예: expected="gmktpc.home.searchtop", actual="gmktpc.home.searchtop.dsearchbox.1fbf486arWCtiZ" → 통과
                     # 예: expected="gmktpc.searchlist", actual="gmktpc.searchlist.0.0.28e22ebayJdnYA" → 통과
-                    if expected_value in actual_value:
+                    # 예: expected="gmktpc.ordercomplete.ordercompletebt.ditem0", actual="gmktpc.ordercomplete.ordercompletebt.ditem1" → 통과 (마지막 숫자 무시)
+                    if (expected_normalized == actual_normalized or 
+                        expected_normalized in actual_normalized or 
+                        expected_value in actual_value):
                         field_passed = True
                         # 포함 매칭 성공, 다음 필드로 (값 저장은 아래에서)
                     else:

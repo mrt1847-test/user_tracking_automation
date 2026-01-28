@@ -18,6 +18,7 @@ from utils.google_sheets_sync import (
     group_by_event_type,
     TRACKING_TYPE_TO_CONFIG_KEY
 )
+from utils.common_fields import load_common_fields_by_event, get_common_fields_for_event_type
 
 
 # 시트에서 제외할 필드명 목록
@@ -266,22 +267,27 @@ def main():
     print(f"구글 시트 연결 중... (Spreadsheet ID: {SPREADSHEET_ID})")
     sync = GoogleSheetsSync(SPREADSHEET_ID, CREDENTIALS_PATH)
     
-    # 워크시트 가져오기 또는 생성 (시트명: {영역}-{모듈명})
-    worksheet_name = f"{args.area}-{args.module}"
+    # 영역 시트 가져오기 또는 생성 (시트명: 영역만, 예: SRP)
+    worksheet_name = args.area
     print(f"워크시트 '{worksheet_name}' 준비 중...")
     worksheet = sync.get_or_create_worksheet(worksheet_name)
     
-    # 워크시트 초기화 (기존 데이터 삭제)
-    try:
-        worksheet.clear()
-        print("기존 데이터 삭제 완료")
-    except Exception as e:
-        print(f"기존 데이터 삭제 중 오류 (무시 가능): {e}")
+    # 표 생성 전에 기존 데이터 읽기 (addTable 시 범위 변경 가능성 대비)
+    all_values = worksheet.get_all_values()
+    data_rows = all_values[1:] if len(all_values) > 1 else []
+    kept = [r for r in data_rows if len(r) >= 1 and (r[0].strip() != args.module)]
     
-    # 각 이벤트 타입별로 처리
-    current_row = 1
+    table_created = sync.ensure_area_table(worksheet, args.area)
+    if not table_created:
+        print("⚠️ 표(Native Table) 생성 실패/건너뜀. 1행 헤더만 쓰고 데이터는 A2:E에 기록합니다. (위 traceback 확인)")
+        sync.ensure_area_header(worksheet)
     
-    # 이벤트 타입 순서 정의 (config JSON 구조에 맞춤)
+    # 공통 필드 로드
+    print("공통 필드 로드 중...")
+    common_fields_data = load_common_fields_by_event()
+    print(f"공통 필드 로드 완료: {len(common_fields_data)}개 이벤트 타입")
+    
+    # 이벤트 타입 순서 (config JSON 구조에 맞춤)
     event_type_order = [
         'Module Exposure',
         'Product Exposure',
@@ -289,45 +295,63 @@ def main():
         'Product ATC Click',
         'Product Minidetail',
         'PDP PV',
-        'PV',  # PV는 선택적
+        'PV',
     ]
     
+    # 등록에서 제외할 이벤트 타입 (관련 로직은 유지)
+    EXCLUDED_EVENT_TYPES = ['PDP PV', 'PV']
+    
+    event_type_rows = []
     for event_type in event_type_order:
         if event_type not in grouped:
             continue
-        
-        print(f"\n[{event_type}] 처리 중...")
+        # 등록에서 제외할 이벤트 타입은 건너뛰기
+        if event_type in EXCLUDED_EVENT_TYPES:
+            print(f"[{event_type}] 등록에서 제외됨 (관련 로직은 유지)")
+            continue
         events = grouped[event_type]
-        
-        # 첫 번째 이벤트의 payload 사용 (대표값으로)
         if not events:
             continue
-        
-        # 이벤트 데이터를 config 형식으로 변환
-        event_data = events[0]  # 첫 번째 이벤트 사용
+        event_data = events[0]
         config_data = process_event_type_payload(event_data, event_type)
-        
-        # JSON 평면화
         flattened = flatten_json(config_data, exclude_keys=['timestamp', 'method', 'url'])
+        if not flattened:
+            continue
         
-        if flattened:
-            # 제외할 필드명 필터링
-            if EXCLUDE_FIELDS:
-                flattened = [item for item in flattened if item.get('field') not in EXCLUDE_FIELDS]
-            
-            # 필드명에 따라 실제 값을 placeholder로 치환
-            for item in flattened:
-                if 'field' in item and 'value' in item:
-                    field_name = item['field']
-                    item['value'] = replace_value_with_placeholder(field_name, item['value'])
-            
-            print(f"  {len(flattened)}개 필드 평면화 완료 (필드명 기반 placeholder 치환 적용)")
-            current_row = sync.write_event_type_table(worksheet, event_type, flattened, current_row)
-            print(f"  시트에 작성 완료 (다음 행: {current_row})")
-        else:
-            print(f"  데이터 없음, 건너뜀")
+        # 공통 필드 제외 (모듈별 고유 필드만 남김)
+        common_fields = get_common_fields_for_event_type(event_type, common_fields_data)
+        common_paths = set(common_fields.keys())
+        flattened = [item for item in flattened if item.get('path') not in common_paths]
+        
+        if EXCLUDE_FIELDS:
+            flattened = [item for item in flattened if item.get('field') not in EXCLUDE_FIELDS]
+        for item in flattened:
+            if 'field' in item and 'value' in item:
+                item['value'] = replace_value_with_placeholder(item['field'], item['value'])
+        event_type_rows.append((event_type, flattened))
+        print(f"[{event_type}] {len(flattened)}개 고유 필드 평면화 완료 (공통 필드 제외)")
     
-    print(f"\n✅ 완료! 시트 '{worksheet_name}'에 데이터 작성 완료")
+    # 데이터만 A2:E에 기록 (1행은 표 헤더, 건드리지 않음)
+    ncols = sync.AREA_NCOLS
+    pad = lambda r: r if len(r) >= ncols else r + [''] * (ncols - len(r))
+    new_rows = sync.build_area_module_rows(args.module, event_type_rows)
+    to_write = [pad(r) for r in kept] + [pad(r) for r in new_rows]
+    
+    sync.clear_area_data_range(worksheet)
+    if to_write:
+        last_col = chr(64 + ncols)
+        worksheet.update(to_write, range_name=f'A2:{last_col}{1 + len(to_write)}', value_input_option='RAW')
+    
+    last_row = 1 + len(to_write)
+    sync.format_area_data_as_text(worksheet, last_row)
+    
+    # 공통 필드 시트에 기록 (이미 있으면 업데이트)
+    if common_fields_data:
+        print("\n공통 필드 시트에 기록 중...")
+        sync.write_common_fields_by_event(common_fields_data)
+        print("공통 필드 시트 기록 완료")
+    
+    print(f"\n✅ 완료! 시트 '{worksheet_name}'에 모듈 '{args.module}' Upsert 완료")
     print(f"구글 시트 URL: https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}")
 
 
