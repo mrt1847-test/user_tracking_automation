@@ -1,18 +1,9 @@
 {
   "module_exposure": {
     "payload": {
-      "gmkey": "EXP",
-      "ts": "mandatory",
-      "rd": "mandatory",
-      "gokey": "mandatory",
-      "cna": "mandatory",
-      "spm-cnt": "gmktpc.searchlist.0",
-      "spm-url": "gmktpc.home.searchtop.dsearchbox",
       "_gr_uid_": "11758850530814005372000000",
-      "uidaplus": "11758850530814005372000000",
-      "logtype": "2",
-      "scr": "mandatory",
       "_p_url": "mandatory",
+      "cna": "mandatory",
       "decoded_gokey": {
         "decoded_gokey": "mandatory",
         "params": {
@@ -96,7 +87,16 @@
           "server_env": "<environment>",
           "spm": "gmktpc.searchlist.topratingitem"
         }
-      }
+      },
+      "gmkey": "EXP",
+      "gokey": "mandatory",
+      "logtype": "2",
+      "rd": "mandatory",
+      "scr": "mandatory",
+      "ts": "mandatory",
+      "uidaplus": "11758850530814005372000000",
+      "spm-cnt": "gmktpc.searchlist.0",
+      "spm-url": "gmktpc.home.searchtop.dsearchbox"
     }
   },
   "product_exposure": {

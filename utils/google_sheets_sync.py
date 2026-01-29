@@ -310,6 +310,21 @@ class GoogleSheetsSync:
         if rows:
             worksheet.append_rows(rows, value_input_option='RAW')
 
+    def list_area_modules(self, worksheet: gspread.Worksheet) -> List[str]:
+        """
+        영역 시트에서 고유 모듈명 목록을 반환 (1행 헤더 제외, A열 기준).
+        Returns:
+            비어있지 않은 고유 모듈명 리스트 (정렬됨)
+        """
+        all_values = worksheet.get_all_values()
+        if not all_values or len(all_values) < 2:
+            return []
+        modules = set()
+        for row in all_values[1:]:
+            if row and len(row) >= 1 and row[0].strip():
+                modules.add(row[0].strip())
+        return sorted(modules)
+
     def read_area_module_data(
         self,
         worksheet: gspread.Worksheet,

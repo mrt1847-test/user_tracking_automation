@@ -1,8 +1,10 @@
 """
 공통 필드 분석 스크립트
 여러 config JSON 파일들을 분석하여 경로, 필드명, 값이 모두 동일한 공통 필드를 찾습니다.
+배열 인덱스(parsed[0], parsed[1] 등)는 무시하고 동일한 공통 필드로 분류합니다.
 """
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Dict, List, Any, Set, Tuple
@@ -13,6 +15,7 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from utils.google_sheets_sync import flatten_json
+from utils.common_fields import normalize_path_for_common
 
 
 def load_all_configs(config_dir: Path) -> List[Tuple[str, Dict[str, Any]]]:
@@ -164,14 +167,14 @@ def find_common_fields(configs: List[Tuple[str, Dict[str, Any]]]) -> Dict[str, D
                 'fields': fields
             })
     
-    # 공통 필드 찾기
+    # 공통 필드 찾기 (경로는 배열 인덱스 무시하고 정규화하여 비교)
     common_fields_by_event: Dict[str, Dict[str, Any]] = {}
-    
+
     for event_type, file_field_lists in event_type_fields.items():
         if not file_field_lists:
             continue
         
-        # 각 필드를 (path, field, value) 튜플로 변환하여 집합으로 관리
+        # 정규화된 경로 기준으로 (normalized_path, field, value) → 파일 집합
         field_sets: Dict[Tuple[str, str, str], Set[str]] = defaultdict(set)
         
         for file_data in file_field_lists:
@@ -180,22 +183,24 @@ def find_common_fields(configs: List[Tuple[str, Dict[str, Any]]]) -> Dict[str, D
                 path = field_data.get('path', '')
                 field = field_data.get('field', '')
                 value = field_data.get('value', '')
-                key = (path, field, value)
+                normalized = normalize_path_for_common(path)
+                key = (normalized, field, value)
                 field_sets[key].add(file_path)
         
         # 모든 파일에서 나타나는 필드만 공통 필드로 인정
         total_files = len(file_field_lists)
         common_fields = {}
         
-        for (path, field, value), files in field_sets.items():
+        for (normalized_path, field, value), files in field_sets.items():
             if len(files) == total_files:
                 # 플레이스홀더 값(<...> 형태)은 공통 필드에서 제외
                 if isinstance(value, str) and value.strip().startswith('<') and value.strip().endswith('>'):
                     continue
                 
-                # 모든 파일에서 나타남
-                if path not in common_fields:
-                    common_fields[path] = {
+                # 저장 시 대표 경로는 [0] 사용 (unflatten 호환)
+                representative_path = re.sub(r'\[\]', '[0]', normalized_path)
+                if representative_path not in common_fields:
+                    common_fields[representative_path] = {
                         'value': value,
                         'count': len(files),
                         'files': sorted(list(files))

@@ -13,7 +13,13 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from utils.google_sheets_sync import flatten_json, unflatten_json
-from utils.common_fields import load_common_fields_by_event, get_common_fields_for_event_type, EVENT_TYPE_TO_CONFIG_KEY
+from utils.common_fields import (
+    load_common_fields_by_event,
+    get_common_fields_for_event_type,
+    EVENT_TYPE_TO_CONFIG_KEY,
+    normalize_path_for_common,
+    common_paths_normalized,
+)
 
 
 def remove_common_fields_from_config(config_data: Dict[str, Any], 
@@ -58,9 +64,9 @@ def remove_common_fields_from_config(config_data: Dict[str, Any],
         data_to_flatten = event_config.get('payload', event_config)
         flattened = flatten_json(data_to_flatten, exclude_keys=['timestamp', 'method', 'url'])
         
-        # 공통 필드 제외
-        common_paths = set(common_fields.keys())
-        unique_flat = [item for item in flattened if item.get('path') not in common_paths]
+        # 공통 필드 제외 (배열 인덱스 무시하고 비교)
+        common_paths_norm = common_paths_normalized(common_fields)
+        unique_flat = [item for item in flattened if normalize_path_for_common(item.get('path')) not in common_paths_norm]
         
         # 중첩 구조로 재구성
         if unique_flat:
@@ -228,10 +234,10 @@ def main():
                     flattened = flatten_json(data_to_flatten, exclude_keys=['timestamp', 'method', 'url'])
                     total_fields += len(flattened)
                     
-                    # 공통 필드 수
+                    # 공통 필드 수 (배열 인덱스 무시하고 비교)
                     common_fields = get_common_fields_for_event_type(event_type, common_fields_data)
-                    common_paths = set(common_fields.keys())
-                    removed_fields += sum(1 for item in flattened if item.get('path') in common_paths)
+                    common_paths_norm = common_paths_normalized(common_fields)
+                    removed_fields += sum(1 for item in flattened if normalize_path_for_common(item.get('path')) in common_paths_norm)
                 
                 print(f"  총 필드: {total_fields}개, 제거될 공통 필드: {removed_fields}개, 남을 고유 필드: {total_fields - removed_fields}개")
                 success_count += 1
