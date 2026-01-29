@@ -122,7 +122,10 @@ def replace_value_with_placeholder(field_name: str, value: Any) -> Any:
         "utparam-url" : "mandatory",
         "search_session_id" : "skip",
         "_pkgSize" : "skip",
-        "pageSize" : "mandatory"
+        "pageSize" : "mandatory",
+        "match_type" : "skip",
+        "cate_leaf_id" : "skip",
+        "self_ab_id" : "skip",
     }
     
     if field_name in field_placeholder_map:
