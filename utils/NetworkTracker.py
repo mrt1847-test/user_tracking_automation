@@ -47,63 +47,7 @@ class NetworkTracker:
         """
         url_lower = url.lower()
         
-        # PV: gif 요청
-        if 'gif' in url_lower:
-            # payload에서 PDP PV인지 판단
-            if payload and isinstance(payload, dict):
-                # 1. _p_ispdp 필드 확인 (1이면 PDP PV)
-                if '_p_ispdp' in payload:
-                    ispdp = payload.get('_p_ispdp')
-                    if str(ispdp) == '1':
-                        return 'PDP PV'
-                
-                # 2. _p_typ 필드 확인 (pdp이면 PDP PV)
-                if '_p_typ' in payload:
-                    ptyp = payload.get('_p_typ', '').lower()
-                    if ptyp == 'pdp':
-                        return 'PDP PV'
-                
-                # 3. decoded_gokey 내부에서 _p_prod 직접 확인
-                decoded_gokey = payload.get('decoded_gokey', {})
-                if decoded_gokey:
-                    params = decoded_gokey.get('params', {})
-                    # params에서 _p_prod 직접 확인
-                    if '_p_prod' in params and params['_p_prod']:
-                        return 'PDP PV'
-                    # 또는 decoded_gokey 내부를 재귀적으로 탐색하여 _p_prod 찾기
-                    def find_p_prod_recursive(obj: Any, visited: Optional[set] = None) -> bool:
-                        """재귀적으로 _p_prod 찾기"""
-                        if visited is None:
-                            visited = set()
-                        if isinstance(obj, (dict, list)):
-                            obj_id = id(obj)
-                            if obj_id in visited:
-                                return False
-                            visited.add(obj_id)
-                        
-                        if isinstance(obj, dict):
-                            if '_p_prod' in obj and obj['_p_prod']:
-                                return True
-                            for value in obj.values():
-                                if find_p_prod_recursive(value, visited):
-                                    return True
-                        elif isinstance(obj, list):
-                            for item in obj:
-                                if find_p_prod_recursive(item, visited):
-                                    return True
-                        
-                        if isinstance(obj, (dict, list)):
-                            visited.discard(id(obj))
-                        return False
-                    
-                    if find_p_prod_recursive(decoded_gokey):
-                        return 'PDP PV'
-                
-                # 4. payload에서 직접 _p_prod 확인 (일부 PV 로그는 payload에 직접 포함)
-                if '_p_prod' in payload and payload['_p_prod']:
-                    return 'PDP PV'
-            return 'PV'
-        
+        # PDP/Click/Exposure 등 경로 기반 분류를 먼저 수행 (PV의 'gif' 검사가 'Gift'에 매칭되는 것 방지)
         # PDP 전용 클릭 이벤트 (Product ATC Click과 별도 이벤트)
         if '/pdp.buynow.click' in url_lower:
             return 'PDP Buynow Click'
@@ -135,6 +79,53 @@ class NetworkTracker:
         # Product Exposure: Product.Exposure.Event 패턴
         if '/product.exposure.event' in url_lower:
             return 'Product Exposure'
+        
+        # PV: gif 요청 (경로 기반 분류 이후에 검사하여 'Gift' 등에 'gif'가 포함되어 PV로 오분류되는 것 방지)
+        if 'gif' in url_lower:
+            # payload에서 PDP PV인지 판단
+            if payload and isinstance(payload, dict):
+                # 1. _p_ispdp 필드 확인 (1이면 PDP PV)
+                if '_p_ispdp' in payload:
+                    ispdp = payload.get('_p_ispdp')
+                    if str(ispdp) == '1':
+                        return 'PDP PV'
+                # 2. _p_typ 필드 확인 (pdp이면 PDP PV)
+                if '_p_typ' in payload:
+                    ptyp = payload.get('_p_typ', '').lower()
+                    if ptyp == 'pdp':
+                        return 'PDP PV'
+                # 3. decoded_gokey 내부에서 _p_prod 직접 확인
+                decoded_gokey = payload.get('decoded_gokey', {})
+                if decoded_gokey:
+                    params = decoded_gokey.get('params', {})
+                    if '_p_prod' in params and params['_p_prod']:
+                        return 'PDP PV'
+                    def find_p_prod_recursive(obj: Any, visited: Optional[set] = None) -> bool:
+                        if visited is None:
+                            visited = set()
+                        if isinstance(obj, (dict, list)):
+                            obj_id = id(obj)
+                            if obj_id in visited:
+                                return False
+                            visited.add(obj_id)
+                        if isinstance(obj, dict):
+                            if '_p_prod' in obj and obj['_p_prod']:
+                                return True
+                            for value in obj.values():
+                                if find_p_prod_recursive(value, visited):
+                                    return True
+                        elif isinstance(obj, list):
+                            for item in obj:
+                                if find_p_prod_recursive(item, visited):
+                                    return True
+                        if isinstance(obj, (dict, list)):
+                            visited.discard(id(obj))
+                        return False
+                    if find_p_prod_recursive(decoded_gokey):
+                        return 'PDP PV'
+                if '_p_prod' in payload and payload['_p_prod']:
+                    return 'PDP PV'
+            return 'PV'
         
         # 기본 Exposure (URL에 exposure 포함하지만 위 패턴에 매칭되지 않음)
         if 'exposure' in url_lower:
