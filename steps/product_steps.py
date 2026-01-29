@@ -130,10 +130,10 @@ def product_page_is_opened(browser_session, bdd_context):
         logger.error(f"상품 페이지 이동 확인 중 예외 발생: {e}", exc_info=True)
         record_frontend_failure(browser_session, bdd_context, str(e), "상품 페이지로 이동되었다")
 
-@then(parsers.parse('"{module_title}"가 출력되었다'))
+@then(parsers.parse('레이어 "{module_title}"가 출력되었다'))
 def product_page_is_opened(browser_session, module_title, bdd_context):
     """
-    연관상품 상세보기 출력 확인 (검증)
+    레이어 출력 확인 (검증)
     PDP PV 로그 수집 관련 로그가 뜰 때까지 대기 (tracker 있으면 수집 확인, 없으면 load 대기)
     실패 시에도 다음 스텝으로 진행
     
@@ -145,14 +145,14 @@ def product_page_is_opened(browser_session, module_title, bdd_context):
         product_page = ProductPage(browser_session.page)
 
         module = product_page.get_module_by_title(module_title)
-        
+        layer = product_page.get_module_parent(module, 1)
         # 검증 (실패 시 예외 발생)
         try:
-            expect(module).to_be_visible()(timeout=5000)
-            logger.info(f"모듈 출력 확인 완료: {module_title}")
+            expect(layer).to_be_visible()
+            logger.info(f"레이어 출력 확인 완료: {module_title}")
         except AssertionError as e:
-            logger.error(f"연관상품 상세보기 출력 확인 실패: {e}")
-            record_frontend_failure(browser_session, bdd_context, f"연관상품 상세보기 출력 확인 실패: {str(e)}", "연관상품 상세보기가 출력되었다")
+            logger.error(f"레이어 출력 확인 실패: {e}")
+            record_frontend_failure(browser_session, bdd_context, f"레이어 출력 확인 실패: {str(e)}", "레이어가 출력되었다")
             # 계속 진행 (PDP PV 로그 수집은 시도)
         
         # 🔥 PDP PV 로그 수집 관련 로그가 뜰 때까지 대기 (tracker 있으면 수집 확인, 없으면 load 대기)
@@ -169,12 +169,11 @@ def product_page_is_opened(browser_session, module_title, bdd_context):
             except Exception as e2:
                 logger.warning(f"load 상태 대기도 실패: {e2}")
         time.sleep(2)
-        logger.info(f"연관상품 상세보기 출력 확인 완료")
+        logger.info(f"레이어 출력 확인 완료")
         
     except Exception as e:
-        logger.error(f"연관상품 상세보기 출력 확인 중 예외 발생: {e}", exc_info=True)
-        record_frontend_failure(browser_session, bdd_context, str(e), "연관상품 상세보기가 출력되었다")
-
+        logger.error(f"레이어 출력 확인 중 예외 발생: {e}", exc_info=True)
+        record_frontend_failure(browser_session, bdd_context, str(e), "레이어가 출력되었다")
 
 @then(parsers.parse('상품명에 "{product_name}"이 포함되어 있다'))
 def product_name_contains(browser_session, product_name):
@@ -253,7 +252,10 @@ def user_confirms_and_clicks_product_in_pdp_module(browser_session, module_title
         ad_check = product_page.check_ad_item_in_module(module_title)
   
         # 모듈 내 상품 찾기
-        parent = product_page.get_module_parent(module, 2)
+        if module_title == "연관상품 상세보기":
+            parent = product_page.get_module_parent(module, 1)
+        else:
+            parent = product_page.get_module_parent(module, 2)   
         product = product_page.get_product_in_module(parent)
         product_page.scroll_product_into_view(product)
     
@@ -302,7 +304,7 @@ def user_confirms_and_clicks_product_in_pdp_module(browser_session, module_title
             logger.info(f"{module_title} 모듈 내 상품 확인 및 클릭 완료: {goodscode}")
         except Exception as e:
             logger.error(f"상품 클릭 실패: {e}", exc_info=True)
-            record_frontend_failure(browser_session, bdd_context, f"상품 클릭 실패: {str(e)}", "사용자가 모듈 내 상품을 확인하고 클릭한다 (type2)")
+            record_frontend_failure(browser_session, bdd_context, f"상품 클릭 실패: {str(e)}", "사용자가 모듈 내 상품을 확인하고 클릭한다")
             # goodscode는 저장 (일부 정보라도 보존)
             if 'goodscode' in locals():
                 bdd_context.store['goodscode'] = goodscode
@@ -312,14 +314,14 @@ def user_confirms_and_clicks_product_in_pdp_module(browser_session, module_title
     except Exception as e:
         # 예상치 못한 예외 처리
         logger.error(f"프론트 동작 중 예외 발생: {e}", exc_info=True)
-        record_frontend_failure(browser_session, bdd_context, str(e), "사용자가 모듈 내 상품을 확인하고 클릭한다 (type2)")
+        record_frontend_failure(browser_session, bdd_context, str(e), "사용자가 모듈 내 상품을 확인하고 클릭한다")
         if 'module_title' not in bdd_context.store:
             bdd_context.store['module_title'] = module_title
 
 @when(parsers.parse('사용자가 이마트몰 PDP에서 "{module_title}" 모듈 내 상품을 확인하고 클릭한다'))
 def user_confirms_and_clicks_product_in_emart_pdp_module(browser_session, module_title, bdd_context):
     """
-    모듈 내 상품 노출 확인하고 클릭 (Atomic POM 조합)
+    이마트몰 모듈 내 상품 노출 확인하고 클릭 (Atomic POM 조합)
     
     Args:
         browser_session: BrowserSession 객체 (page 참조 관리)
@@ -345,7 +347,7 @@ def user_confirms_and_clicks_product_in_emart_pdp_module(browser_session, module
         except AssertionError as e:
             # 실패 정보 저장하되 예외는 다시 발생시키지 않음
             logger.error(f"상품 노출 확인 실패: {e}")
-            record_frontend_failure(browser_session, bdd_context, f"상품 노출 확인 실패: {str(e)}", "사용자가 모듈 내 상품을 확인하고 클릭한다 (type2)")
+            record_frontend_failure(browser_session, bdd_context, f"상품 노출 확인 실패: {str(e)}", "사용자가 이마트몰 모듈 내 상품을 확인하고 클릭한다 (type2)")
             if 'module_title' not in bdd_context.store:
                 bdd_context.store['module_title'] = module_title
             return  # 여기서 종료 (다음 스텝으로 진행)
@@ -371,7 +373,7 @@ def user_confirms_and_clicks_product_in_emart_pdp_module(browser_session, module
             logger.info(f"{module_title} 모듈 내 상품 확인 및 클릭 완료: {goodscode}")
         except Exception as e:
             logger.error(f"상품 클릭 실패: {e}", exc_info=True)
-            record_frontend_failure(browser_session, bdd_context, f"상품 클릭 실패: {str(e)}", "사용자가 모듈 내 상품을 확인하고 클릭한다 (type2)")
+            record_frontend_failure(browser_session, bdd_context, f"상품 클릭 실패: {str(e)}", "사용자가 이마트몰 모듈 내 상품을 확인하고 클릭한다")
             # goodscode는 저장 (일부 정보라도 보존)
             if 'goodscode' in locals():
                 bdd_context.store['goodscode'] = goodscode
@@ -381,7 +383,7 @@ def user_confirms_and_clicks_product_in_emart_pdp_module(browser_session, module
     except Exception as e:
         # 예상치 못한 예외 처리
         logger.error(f"프론트 동작 중 예외 발생: {e}", exc_info=True)
-        record_frontend_failure(browser_session, bdd_context, str(e), "사용자가 모듈 내 상품을 확인하고 클릭한다 (type2)")
+        record_frontend_failure(browser_session, bdd_context, str(e), "사용자가 이마트몰 모듈 내 상품을 확인하고 클릭한다")
         if 'module_title' not in bdd_context.store:
             bdd_context.store['module_title'] = module_title
 
@@ -401,8 +403,8 @@ def user_confirms_and_clicks_product_in_pdp_related_module(browser_session, modu
         # 모듈로 이동
         module = product_page.get_module_by_title(module_title)
         product_page.scroll_module_into_view_bottom(module)
-        time.sleep(2)
-        
+        ad_check = product_page.check_ad_item_in_module(module_title)
+
         # 모듈 내 상품 찾기
         product = product_page.get_product_in_related_module(module)
         product_page.scroll_product_into_view(product)
@@ -424,6 +426,13 @@ def user_confirms_and_clicks_product_in_pdp_related_module(browser_session, modu
         # 상품 코드 가져오기
         goodscode = product_page.get_product_code(product)
 
+        # 모듈별 광고상품 여부 저장장
+        if ad_check == "F":
+            is_ad = product_page.check_ad_tag_in_product(product)
+        else:
+            is_ad = ad_check
+        # 상품 클릭
+
         try:
             # 상품 클릭
             product_page.click_product(product)
@@ -431,6 +440,7 @@ def user_confirms_and_clicks_product_in_pdp_related_module(browser_session, modu
             # bdd context에 저장 (product_url, module_title, goodscode)
             bdd_context.store['product_url'] = browser_session.page.url        
             bdd_context.store['module_title'] = module_title
+            bdd_context.store['is_ad'] = is_ad
             bdd_context.store['goodscode'] = goodscode
 
             logger.info(f"{module_title} 모듈 내 상품 확인 및 클릭 완료: {goodscode}")
@@ -449,3 +459,49 @@ def user_confirms_and_clicks_product_in_pdp_related_module(browser_session, modu
         record_frontend_failure(browser_session, bdd_context, str(e), "사용자가 모듈 내 상품을 확인하고 클릭한다 (type2)")
         if 'module_title' not in bdd_context.store:
             bdd_context.store['module_title'] = module_title
+
+@when(parsers.parse('사용자가 PDP에서 "{module_title}"을 클릭한다'))
+def user_confirms_and_clicks_product_in_pdp_related_detail_module(browser_session, module_title, bdd_context):
+    """
+    모듈 내 상품 노출 확인하고 클릭 (Atomic POM 조합)
+    
+    Args:
+        browser_session: BrowserSession 객체 (page 참조 관리)
+        module_title: 모듈 타이틀
+        bdd_context: BDD context (step 간 데이터 공유용)
+    """
+    try:
+        product_page = ProductPage(browser_session.page)
+
+        # 모듈로 이동
+        module = product_page.get_module_by_title(module_title)
+        product_page.scroll_module_into_view(module)
+        
+        # 모듈 내 상품 찾기
+        product = product_page.get_product_in_related_module(module)
+        product_page.scroll_product_into_view(product)
+
+        # 상품 버튼 호버
+        product_page.hover_product(product)
+
+        # 상품 노출 확인 (실패 시 예외 발생)
+        try:
+            expect(product.first).to_be_visible()
+        except AssertionError as e:
+            # 실패 정보 저장하되 예외는 다시 발생시키지 않음
+            logger.error(f"상품 노출 확인 실패: {e}")
+            record_frontend_failure(browser_session, bdd_context, f"상품 노출 확인 실패: {str(e)}", "사용자가 모듈 내 상품을 클릭한다")
+
+        try:
+            # 상품 클릭
+            product_page.click_product(product)
+            
+            logger.info(f"{module_title} 모듈 내 상품 클릭 완료")
+        except Exception as e:
+            logger.error(f"상품 클릭 실패: {e}", exc_info=True)
+            record_frontend_failure(browser_session, bdd_context, f"상품 클릭 실패: {str(e)}", "사용자가 모듈 내 상품을 클릭한다")        
+
+    except Exception as e:
+        # 예상치 못한 예외 처리
+        logger.error(f"프론트 동작 중 예외 발생: {e}", exc_info=True)
+        record_frontend_failure(browser_session, bdd_context, str(e), "사용자가 모듈 내 상품을 클릭한다")

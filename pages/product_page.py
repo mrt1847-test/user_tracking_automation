@@ -305,6 +305,7 @@ class ProductPage(BasePage):
             "이 브랜드의 인기상품": "N",
             "점포 행사 상품이에요": "N",
             "연관 상품": "N",
+            "연관상품 상세보기": "N",
         }
         
         if modulel_title not in MODULE_AD_CHECK:
