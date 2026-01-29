@@ -134,9 +134,9 @@ class OrderPage(BasePage):
             logger.warning(f"광고 태그 확인 중 오류 발생: {e}")
             return "N"
 
-    def get_product_in_order_complete_module(self, module: Locator, n: Optional[int] = None) -> Locator:
+    def get_atc_button_in_order_complete_module(self, module: Locator, n: Optional[int] = None) -> Locator:
         """
-        모듈 내 상품 요소 찾기
+        모듈 내 담기버튼 요소 찾기
         
         Args:
             module: 모듈 Locator 객체
@@ -146,8 +146,8 @@ class OrderPage(BasePage):
             상품 Locator 객체
         """
         if n is not None:
-            logger.debug(f"모듈 내 {n}번째 상품 요소 찾기")
-            return module.locator("a").nth(n - 1)  # 1부터 시작하는 인덱스를 0부터 시작하는 인덱스로 변환
+            logger.debug(f"모듈 내 {n}번째 담기버튼 요소 찾기")
+            return module.locator(".button__cart", has_text="담기").nth(n - 1)  # 1부터 시작하는 인덱스를 0부터 시작하는 인덱스로 변환
         else:
-            logger.debug("모듈 내 첫 번째 상품 요소 찾기")
-            return module.locator("a").first
+            logger.debug("모듈 내 첫 번째 담기버튼 요소 찾기")
+            return module.locator(".button__cart", has_text="담기").first

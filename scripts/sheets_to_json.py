@@ -15,102 +15,22 @@ sys.path.insert(0, str(project_root))
 from utils.google_sheets_sync import (
     GoogleSheetsSync,
     unflatten_json,
-    TRACKING_TYPE_TO_CONFIG_KEY
+)
+from utils.common_fields import (
+    load_common_fields_by_event,
+    get_common_fields_for_event_type,
+    EVENT_TYPE_TO_CONFIG_KEY,
 )
 
 
-def build_config_structure(
-    event_type_data: Dict[str, Dict[str, Any]],
-    event_type: str
-) -> Dict[str, Any]:
-    """
-    평면화된 데이터를 config JSON 구조로 변환
-    
-    Args:
-        event_type_data: 이벤트 타입별 평면화된 데이터
-        event_type: 이벤트 타입 (예: "Module Exposure")
-        
-    Returns:
-        config JSON 섹션 구조
-    """
-    if not event_type_data:
-        return {}
-    
-    # 평면화된 데이터를 중첩 구조로 변환
-    unflattened = unflatten_json(event_type_data)
-    
-    return unflattened
-
-
-def read_all_event_types(
-    sync: GoogleSheetsSync,
-    worksheet_name: str
-) -> Dict[str, Dict[str, Any]]:
-    """
-    시트에서 모든 이벤트 타입의 데이터 읽기
-    
-    Args:
-        sync: GoogleSheetsSync 인스턴스
-        worksheet_name: 워크시트 이름
-        
-    Returns:
-        {config_key: {path: value}} 형태의 딕셔너리
-    """
-    worksheet = sync.get_or_create_worksheet(worksheet_name)
-    
-    result = {}
-    
-    # 모든 이벤트 타입 순회
-    tracking_types = [
-        'Module Exposure',
-        'Product Exposure',
-        'Product Click',
-        'Product ATC Click',
-        'Product Minidetail',
-        'PDP PV',
-        'PV',
-    ]
-    
-    current_row = 1
-    
-    # 디버깅: 시트의 모든 값 확인
-    all_values = worksheet.get_all_values()
-    print(f"  [디버깅] 시트 총 행 수: {len(all_values)}")
-    if len(all_values) > 0:
-        print(f"  [디버깅] 첫 5개 행 샘플:")
-        for i, row in enumerate(all_values[:5], 1):
-            print(f"    행 {i}: {row[:3]}")  # 처음 3개 컬럼만 출력
-    
-    for tracking_type in tracking_types:
-        # config 키로 변환 (올바른 매핑 사용)
-        config_key = TRACKING_TYPE_TO_CONFIG_KEY.get(tracking_type)
-        if not config_key:
-            print(f"  [디버깅] [{tracking_type}]: config 키를 찾을 수 없음 (건너뜀)")
-            continue
-        
-        print(f"  [디버깅] [{tracking_type}] 검색 시작 (현재 행: {current_row})...")
-        # 이벤트 타입 테이블 읽기
-        data, next_row = sync.read_event_type_table(worksheet, tracking_type, current_row)
-        
-        if data:
-            result[config_key] = data
-            print(f"  ✅ [{tracking_type}] → [{config_key}]: {len(data)}개 필드 읽음")
-        else:
-            print(f"  ⚠️  [{tracking_type}]: 데이터 없음 (헤더를 찾지 못했거나 데이터가 비어있음)")
-        
-        current_row = next_row
-    
-    return result
-
-
 def create_config_json(
-    event_data_dict: Dict[str, Dict[str, Any]]
+    event_data_dict: Dict[str, List[Dict[str, Any]]]
 ) -> Dict[str, Any]:
     """
     이벤트 타입별 데이터를 config JSON 구조로 변환
     
     Args:
-        event_data_dict: {config_key: [{path, value}]} 형태의 딕셔너리
+        event_data_dict: {config_key: [{"path":..., "value":...}, ...]} 형태
         
     Returns:
         config JSON 구조
@@ -180,11 +100,25 @@ def main():
     print(f"구글 시트 연결 중... (Spreadsheet ID: {SPREADSHEET_ID})")
     sync = GoogleSheetsSync(SPREADSHEET_ID, CREDENTIALS_PATH)
     
-    # 시트에서 데이터 읽기 (시트명: {영역}-{모듈명})
-    worksheet_name = f"{args.area}-{args.module}"
-    print(f"시트 '{worksheet_name}'에서 데이터 읽는 중...")
+    # 공통 필드 읽기
+    print("공통 필드 읽는 중...")
+    common_fields_data = sync.read_common_fields_by_event()
+    if common_fields_data:
+        print(f"공통 필드 읽기 완료: {len(common_fields_data)}개 이벤트 타입")
+    else:
+        print("공통 필드 시트가 비어있거나 없습니다. 파일에서 로드 시도...")
+        common_fields_data = load_common_fields_by_event()
+        if common_fields_data:
+            print(f"파일에서 공통 필드 로드 완료: {len(common_fields_data)}개 이벤트 타입")
+    
+    # 영역 시트에서 모듈 데이터 읽기 (시트명: 영역만, 예: SRP)
+    worksheet_name = args.area
+    print(f"\n시트 '{worksheet_name}'에서 모듈 '{args.module}' 데이터 읽는 중...")
     try:
-        event_data_dict = read_all_event_types(sync, worksheet_name)
+        worksheet = sync.get_or_create_worksheet(worksheet_name)
+        event_data_dict = sync.read_area_module_data(worksheet, args.module)
+        for ck, rows in event_data_dict.items():
+            print(f"  ✅ [{ck}]: {len(rows)}개 고유 필드 읽음")
     except Exception as e:
         print(f"❌ 오류: 시트에서 데이터를 읽는 중 예외 발생: {e}")
         import traceback
@@ -195,14 +129,56 @@ def main():
         print("❌ 오류: 시트에서 데이터를 읽을 수 없습니다.")
         print("   가능한 원인:")
         print("   1. 시트가 비어있거나")
-        print("   2. 이벤트 타입 헤더([Module Exposure] 등)를 찾을 수 없거나")
+        print("   2. 해당 모듈 행이 없거나 (모듈명·영역 확인)")
         print("   3. 시트 이름이 올바르지 않습니다")
-        print(f"   시트 이름 확인: '{worksheet_name}'")
+        print(f"   시트 이름: '{worksheet_name}', 모듈: '{args.module}'")
         sys.exit(1)
+    
+    # 공통 필드와 모듈 필드 병합
+    print("\n공통 필드와 모듈 필드 병합 중...")
+    merged_event_data_dict = {}
+    for config_key, module_fields in event_data_dict.items():
+        # config_key를 이벤트 타입으로 변환
+        event_type = None
+        for et, ck in EVENT_TYPE_TO_CONFIG_KEY.items():
+            if ck == config_key:
+                event_type = et
+                break
+        
+        if not event_type:
+            # 알 수 없는 이벤트 타입이면 모듈 필드만 사용
+            merged_event_data_dict[config_key] = module_fields
+            continue
+        
+        # 공통 필드 가져오기
+        common_fields = get_common_fields_for_event_type(event_type, common_fields_data)
+        
+        # 공통 필드를 평면화된 형태로 변환
+        common_flat = []
+        for path, field_data in common_fields.items():
+            common_flat.append({
+                'path': path,
+                'value': str(field_data.get('value', ''))
+            })
+        
+        # 모듈 필드와 병합 (모듈 필드가 우선)
+        module_paths = {item['path'] for item in module_fields}
+        merged_flat = []
+        
+        # 공통 필드 추가 (모듈 필드에 없는 것만)
+        for item in common_flat:
+            if item['path'] not in module_paths:
+                merged_flat.append(item)
+        
+        # 모듈 필드 추가 (모든 모듈 필드는 우선)
+        merged_flat.extend(module_fields)
+        
+        merged_event_data_dict[config_key] = merged_flat
+        print(f"  ✅ [{config_key}]: 공통 필드 {len(common_flat)}개 + 고유 필드 {len(module_fields)}개 = 총 {len(merged_flat)}개")
     
     # config JSON 구조 생성
     print("\nconfig JSON 구조 생성 중...")
-    config_json = create_config_json(event_data_dict)
+    config_json = create_config_json(merged_event_data_dict)
     
     # 출력 디렉토리 생성
     output_path.parent.mkdir(parents=True, exist_ok=True)

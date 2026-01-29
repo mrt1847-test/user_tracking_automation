@@ -1,0 +1,26 @@
+{
+  "scr": {
+    "field": "scr",
+    "value": "mandatory"
+  },
+  "ts": {
+    "field": "ts",
+    "value": "mandatory"
+  },
+  "rd": {
+    "field": "rd",
+    "value": "mandatory"
+  },
+  "uidaplus": {
+    "field": "uidaplus",
+    "value": "11758850530814005372000000"
+  },
+  "cna": {
+    "field": "cna",
+    "value": "mandatory"
+  },
+  "_p_url": {
+    "field": "_p_url",
+    "value": "mandatory"
+  }
+}

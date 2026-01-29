@@ -12,6 +12,7 @@ from google.oauth2.credentials import Credentials as OAuthCredentials
 from gspread.http_client import HTTPClient
 import requests
 import logging
+import traceback
 import urllib3
 
 # SSL 경고 비활성화 (회사 프록시/방화벽 환경에서 자체 서명 인증서 사용 시)
@@ -100,7 +101,7 @@ class GoogleSheetsSync:
             return self.spreadsheet.worksheet(worksheet_name)
         except gspread.exceptions.WorksheetNotFound:
             logger.info(f"워크시트 '{worksheet_name}'를 생성합니다.")
-            return self.spreadsheet.add_worksheet(title=worksheet_name, rows=1000, cols=10)
+            return self.spreadsheet.add_worksheet(title=worksheet_name, rows=3000, cols=10)
     
     def write_event_type_table(self, worksheet: gspread.Worksheet, 
                                event_type: str, data: List[Dict[str, str]], 
@@ -121,17 +122,17 @@ class GoogleSheetsSync:
             return start_row
         
         # 헤더 작성
-        worksheet.update(f'A{start_row}:C{start_row}', [[f'[{event_type}]', '', '']], value_input_option='RAW')
+        worksheet.update([[f'[{event_type}]', '', '']], range_name=f'A{start_row}:C{start_row}', value_input_option='RAW')
         start_row += 1
         
         # 컬럼 헤더
-        worksheet.update(f'A{start_row}:C{start_row}', [['경로', '필드명', '값']], value_input_option='RAW')
+        worksheet.update([['경로', '필드명', '값']], range_name=f'A{start_row}:C{start_row}', value_input_option='RAW')
         start_row += 1
         
         # 데이터 행 작성
         rows = [[item.get('path', ''), item.get('field', ''), item.get('value', '')] for item in data]
         if rows:
-            worksheet.update(f'A{start_row}:C{start_row + len(rows) - 1}', rows, value_input_option='RAW')
+            worksheet.update(rows, range_name=f'A{start_row}:C{start_row + len(rows) - 1}', value_input_option='RAW')
             start_row += len(rows)
         
         # 빈 행 추가
@@ -205,6 +206,338 @@ class GoogleSheetsSync:
                 data.append({'path': path, 'field': field, 'value': value})
         
         return data, current_row + len(data) + 1
+
+    # 영역별 통합 시트용 (모듈 | 이벤트 타입 | 경로 | 필드명 | 값 단일 테이블)
+    # Native Table(addTable) 사용: 1행은 표 헤더로 고정, 데이터만 A2:E에 기록
+
+    AREA_HEADER = ['모듈', '이벤트 타입', '경로', '필드명', '값']
+    AREA_NCOLS = 5
+    TABLE_INITIAL_ROWS = 1000
+
+    def ensure_area_table(self, worksheet: gspread.Worksheet, area_name: str) -> bool:
+        """
+        영역 시트에 Native Table이 없으면 addTable로 생성.
+        범위 A1:E{TABLE_INITIAL_ROWS}, 5열 모두 TEXT, 헤더는 표가 관리.
+        Returns:
+            True if table was created, False if skipped (already exists) or failed.
+        """
+        sheet_id = int(worksheet.id)
+        table = {
+            "name": f"AreaTable_{area_name.replace('-', '_').replace(' ', '_')}",
+            "range": {
+                "sheetId": sheet_id,
+                "startRowIndex": 0,
+                "endRowIndex": self.TABLE_INITIAL_ROWS,
+                "startColumnIndex": 0,
+                "endColumnIndex": self.AREA_NCOLS,
+            },
+            "columnProperties": [
+                {"columnIndex": i, "columnName": name, "columnType": "TEXT"}
+                for i, name in enumerate(self.AREA_HEADER)
+            ],
+        }
+        body = {"requests": [{"addTable": {"table": table}}]}
+        try:
+            self.spreadsheet.batch_update(body)
+            logger.info(f"영역 '{area_name}' 시트에 표 생성 완료 (A1:E{self.TABLE_INITIAL_ROWS})")
+            return True
+        except Exception as e:
+            logger.warning(f"표 생성 실패 (이미 있거나 오류): {e}")
+            traceback.print_exc()
+            return False
+
+    def ensure_area_header(self, worksheet: gspread.Worksheet) -> None:
+        """1행에 헤더(모듈|이벤트 타입|경로|필드명|값) 작성. 표 미사용 시 fallback용."""
+        last_col = chr(64 + self.AREA_NCOLS)
+        try:
+            row1 = worksheet.row_values(1)
+            if row1[: self.AREA_NCOLS] != self.AREA_HEADER:
+                worksheet.update(
+                    [self.AREA_HEADER],
+                    range_name=f"A1:{last_col}1",
+                    value_input_option="RAW",
+                )
+        except Exception:
+            worksheet.update(
+                [self.AREA_HEADER],
+                range_name=f"A1:{last_col}1",
+                value_input_option="RAW",
+            )
+
+    def clear_area_data_range(self, worksheet: gspread.Worksheet) -> None:
+        """데이터 구간 A2:E만 비우기. 1행(표 헤더)은 건드리지 않음."""
+        last_col = chr(64 + self.AREA_NCOLS)
+        try:
+            worksheet.batch_clear([f"A2:{last_col}10000"])
+        except Exception as e:
+            logger.warning(f"데이터 구간 clear 실패 (무시): {e}")
+
+    def build_area_module_rows(
+        self,
+        module: str,
+        event_type_rows: List[Tuple[str, List[Dict[str, str]]]],
+    ) -> List[List[str]]:
+        """
+        (모듈, 이벤트 타입, 경로, 필드명, 값) 행 리스트 생성.
+        write_area_module_table과 동일한 행 포맷, append 대신 한 번에 update용.
+        """
+        rows: List[List[str]] = []
+        for event_type, flat_list in event_type_rows:
+            for item in flat_list:
+                path = item.get("path", "")
+                field = item.get("field", "")
+                value = item.get("value", "")
+                rows.append([module, event_type, path, field, value])
+        return rows
+
+    def write_area_module_table(
+        self,
+        worksheet: gspread.Worksheet,
+        module: str,
+        event_type_rows: List[Tuple[str, List[Dict[str, str]]]],
+    ) -> None:
+        """
+        영역 시트에 (모듈, 이벤트 타입, 경로, 필드명, 값) 행들을 append.
+        event_type_rows: [(event_type, flat_list), ...], flat_list 항목은 path, field, value 사용.
+        """
+        rows: List[List[str]] = []
+        for event_type, flat_list in event_type_rows:
+            for item in flat_list:
+                path = item.get('path', '')
+                field = item.get('field', '')
+                value = item.get('value', '')
+                rows.append([module, event_type, path, field, value])
+        if rows:
+            worksheet.append_rows(rows, value_input_option='RAW')
+
+    def read_area_module_data(
+        self,
+        worksheet: gspread.Worksheet,
+        module: str,
+    ) -> Dict[str, List[Dict[str, str]]]:
+        """
+        영역 시트에서 모듈에 해당하는 행만 추출 후 이벤트 타입별 그룹.
+        반환: {config_key: [{"path":..., "value":...}, ...]}. (필드명은 config 복원에 미사용)
+        """
+        all_values = worksheet.get_all_values()
+        if not all_values:
+            return {}
+        data_rows = all_values[1:]
+        by_event: Dict[str, List[Dict[str, str]]] = {}
+        for row in data_rows:
+            if len(row) < 4:
+                continue
+            mod = row[0].strip()
+            event_type = row[1].strip()
+            path = row[2].strip()
+            # 5열(경로|필드명|값): value=row[4] / 4열(경로|값): value=row[3]
+            value = row[4].strip() if len(row) >= 5 else row[3].strip()
+            if mod != module:
+                continue
+            config_key = TRACKING_TYPE_TO_CONFIG_KEY.get(event_type)
+            if not config_key:
+                continue
+            if config_key not in by_event:
+                by_event[config_key] = []
+            by_event[config_key].append({'path': path, 'value': value})
+        return by_event
+
+    def format_area_data_as_text(self, worksheet: gspread.Worksheet, last_row: int) -> None:
+        """
+        데이터 범위(A2 ~ E{last_row})를 텍스트 포맷으로 지정.
+        표로 변환 시 '값' 열이 숫자 등으로 추론되어 mandatory/skip/JSON 등 입력이
+        막히는 문제를 방지하기 위함.
+        """
+        if last_row < 2:
+            return
+        rng = f'A2:{chr(64 + self.AREA_NCOLS)}{last_row}'
+        try:
+            worksheet.format(rng, {'numberFormat': {'type': 'TEXT', 'pattern': '@'}})
+        except Exception as e:
+            logger.warning(f"영역 데이터 텍스트 포맷 적용 실패 (무시): {e}")
+
+    # 이벤트 타입별 공통 필드 관리용 메서드
+    
+    COMMON_FIELDS_SHEET_NAME = "_Common_Fields"
+    COMMON_FIELDS_HEADER = ['이벤트 타입', '경로', '필드명', '값']
+    COMMON_FIELDS_NCOLS = 4
+    COMMON_FIELDS_TABLE_INITIAL_ROWS = 2000
+
+    def get_or_create_common_fields_worksheet(self) -> gspread.Worksheet:
+        """
+        공통 필드 시트 가져오기 또는 생성
+        
+        Returns:
+            gspread.Worksheet 인스턴스
+        """
+        return self.get_or_create_worksheet(self.COMMON_FIELDS_SHEET_NAME)
+
+    def ensure_common_fields_table(self, worksheet: gspread.Worksheet) -> bool:
+        """
+        공통 필드 시트에 Native Table이 없으면 addTable로 생성.
+        범위 A1:D{COMMON_FIELDS_TABLE_INITIAL_ROWS}, 4열 모두 TEXT, 헤더는 표가 관리.
+        Returns:
+            True if table was created or already exists, False if failed.
+        """
+        # 표가 이미 존재하는지 확인 (에러 메시지로 판단)
+        # Google Sheets API는 표가 이미 있으면 특정 에러를 반환
+        sheet_id = int(worksheet.id)
+        table = {
+            "name": "CommonFieldsTable",
+            "range": {
+                "sheetId": sheet_id,
+                "startRowIndex": 0,
+                "endRowIndex": self.COMMON_FIELDS_TABLE_INITIAL_ROWS,
+                "startColumnIndex": 0,
+                "endColumnIndex": self.COMMON_FIELDS_NCOLS,
+            },
+            "columnProperties": [
+                {"columnIndex": i, "columnName": name, "columnType": "TEXT"}
+                for i, name in enumerate(self.COMMON_FIELDS_HEADER)
+            ],
+        }
+        body = {"requests": [{"addTable": {"table": table}}]}
+        try:
+            self.spreadsheet.batch_update(body)
+            logger.info(f"공통 필드 시트에 표 생성 완료 (A1:D{self.COMMON_FIELDS_TABLE_INITIAL_ROWS})")
+            return True
+        except Exception as e:
+            error_msg = str(e)
+            # 표가 이미 존재하거나 배경색 관련 에러인 경우 정상으로 간주
+            if "already has" in error_msg or "alternating background colors" in error_msg:
+                logger.info("표가 이미 존재합니다. 기존 표를 사용합니다.")
+                return True
+            else:
+                logger.warning(f"표 생성 실패: {e}")
+                traceback.print_exc()
+                return False
+
+    def ensure_common_fields_header(self, worksheet: gspread.Worksheet) -> None:
+        """1행에 헤더(이벤트 타입|경로|필드명|값) 작성. 표 미사용 시 fallback용."""
+        last_col = chr(64 + self.COMMON_FIELDS_NCOLS)
+        try:
+            row1 = worksheet.row_values(1)
+            if row1[: self.COMMON_FIELDS_NCOLS] != self.COMMON_FIELDS_HEADER:
+                worksheet.update(
+                    [self.COMMON_FIELDS_HEADER],
+                    range_name=f"A1:{last_col}1",
+                    value_input_option="RAW",
+                )
+        except Exception:
+            worksheet.update(
+                [self.COMMON_FIELDS_HEADER],
+                range_name=f"A1:{last_col}1",
+                value_input_option="RAW",
+            )
+
+    def clear_common_fields_data_range(self, worksheet: gspread.Worksheet) -> None:
+        """데이터 구간 A2:D만 비우기. 1행(표 헤더)은 건드리지 않음."""
+        last_col = chr(64 + self.COMMON_FIELDS_NCOLS)
+        try:
+            worksheet.batch_clear([f"A2:{last_col}10000"])
+        except Exception as e:
+            logger.warning(f"공통 필드 데이터 구간 clear 실패 (무시): {e}")
+
+    def write_common_fields_by_event(self, common_fields_data: Dict[str, Dict[str, Any]]) -> None:
+        """
+        이벤트 타입별 공통 필드를 시트에 작성 (표 형식 사용)
+        
+        Args:
+            common_fields_data: {event_type: {path: value}} (단순화된 구조) 또는 
+                                {event_type: {path: {"field": "...", "value": "..."}}} (기존 구조)
+        """
+        worksheet = self.get_or_create_common_fields_worksheet()
+        
+        # 표 생성 시도
+        table_created = self.ensure_common_fields_table(worksheet)
+        if not table_created:
+            logger.info("표(Native Table) 생성 실패/건너뜀. 1행 헤더만 쓰고 데이터는 A2:D에 기록합니다.")
+            self.ensure_common_fields_header(worksheet)
+        
+        # 데이터 행 생성
+        rows = []
+        for event_type in sorted(common_fields_data.keys()):
+            fields = common_fields_data[event_type]
+            for path in sorted(fields.keys()):
+                field_value = fields[path]
+                # 단순화된 구조 지원 (값만 저장된 경우와 기존 구조 모두 지원)
+                if isinstance(field_value, dict):
+                    field_name = field_value.get('field', path.split('.')[-1])
+                    value = str(field_value.get('value', ''))
+                else:
+                    # 경로에서 필드명 추출
+                    field_name = path.split('.')[-1] if '.' in path else path
+                    value = str(field_value)
+                
+                rows.append([
+                    event_type,
+                    path,
+                    field_name,
+                    value
+                ])
+        
+        # 데이터만 A2:D에 기록 (1행은 표 헤더, 건드리지 않음)
+        if rows:
+            self.clear_common_fields_data_range(worksheet)
+            last_col = chr(64 + self.COMMON_FIELDS_NCOLS)
+            worksheet.update(rows, range_name=f'A2:{last_col}{1 + len(rows)}', value_input_option='RAW')
+            # 텍스트 포맷 적용
+            self.format_common_fields_as_text(worksheet, 1 + len(rows))
+        
+        logger.info(f"공통 필드 시트에 {len(rows)}개 행 작성 완료")
+
+    def read_common_fields_by_event(self) -> Dict[str, Dict[str, Dict[str, Any]]]:
+        """
+        시트에서 이벤트 타입별 공통 필드 읽기
+        
+        Returns:
+            {event_type: {path: {"field": "...", "value": "..."}}}
+        """
+        try:
+            worksheet = self.get_or_create_common_fields_worksheet()
+        except Exception:
+            return {}
+        
+        all_values = worksheet.get_all_values()
+        if not all_values or len(all_values) < 2:
+            return {}
+        
+        # 헤더 스킵
+        data_rows = all_values[1:]
+        
+        result = {}
+        for row in data_rows:
+            if len(row) < 4:
+                continue
+            event_type = row[0].strip()
+            path = row[1].strip()
+            field = row[2].strip()
+            value = row[3].strip()
+            
+            if not event_type or not path:
+                continue
+            
+            if event_type not in result:
+                result[event_type] = {}
+            
+            result[event_type][path] = {
+                'field': field,
+                'value': value
+            }
+        
+        return result
+
+    def format_common_fields_as_text(self, worksheet: gspread.Worksheet, last_row: int) -> None:
+        """
+        공통 필드 데이터 범위를 텍스트 포맷으로 지정
+        """
+        if last_row < 2:
+            return
+        rng = f'A2:{chr(64 + self.COMMON_FIELDS_NCOLS)}{last_row}'
+        try:
+            worksheet.format(rng, {'numberFormat': {'type': 'TEXT', 'pattern': '@'}})
+        except Exception as e:
+            logger.warning(f"공통 필드 텍스트 포맷 적용 실패 (무시): {e}")
 
 
 def flatten_json(obj: Any, parent_path: str = '', exclude_keys: Optional[List[str]] = None) -> List[Dict[str, str]]:
