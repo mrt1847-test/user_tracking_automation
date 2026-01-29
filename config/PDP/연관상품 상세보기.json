@@ -40,9 +40,7 @@
               "utLogMap": {
                 "parsed": {
                   "ab_buckets": "skip",
-                  "listno": "0",
                   "pageIndex": "0",
-                  "pagePos": "0",
                   "pageSize": "mandatory",
                   "pvid": "mandatory",
                   "x_object_type": "item",
@@ -50,6 +48,8 @@
                   "scene": "",
                   "sub_scene": "",
                   "x_object_id": "<상품번호>",
+                  "pagePos": "0",
+                  "listno": "0",
                   "sort": "",
                   "searchScenario": "",
                   "query": "<검색어>",
@@ -63,7 +63,7 @@
                   "seed_item_id": "",
                   "seed_item_index": "",
                   "seed_item_keyword": "",
-                  "search_session_id": "mandatory"
+                  "search_session_id": "skip"
                 },
                 "raw": "mandatory"
               },
@@ -90,6 +90,8 @@
                   "scene": "",
                   "sub_scene": "",
                   "x_object_id": "<상품번호>",
+                  "pagePos": "1",
+                  "listno": "1",
                   "sort": "",
                   "searchScenario": "",
                   "query": "<검색어>",
@@ -103,7 +105,7 @@
                   "seed_item_id": "",
                   "seed_item_index": "",
                   "seed_item_keyword": "",
-                  "search_session_id": "mandatory"
+                  "search_session_id": "skip"
                 }
               },
               "is_ad": "<is_ad>",
@@ -223,9 +225,7 @@
         "utLogMap": {
           "parsed": {
             "ab_buckets": "skip",
-            "listno": "0",
             "pageIndex": "0",
-            "pagePos": "0",
             "pageSize": "mandatory",
             "pvid": "mandatory",
             "x_object_type": "item",
@@ -233,6 +233,8 @@
             "scene": "",
             "sub_scene": "",
             "x_object_id": "<상품번호>",
+            "pagePos": "0",
+            "listno": "0",
             "sort": "",
             "searchScenario": "",
             "query": "<검색어>",
@@ -246,7 +248,7 @@
             "seed_item_id": "",
             "seed_item_index": "",
             "seed_item_keyword": "",
-            "search_session_id": "mandatory"
+            "search_session_id": "skip"
           },
           "raw": "mandatory"
         },

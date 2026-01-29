@@ -139,9 +139,7 @@
               "utLogMap": {
                 "parsed": {
                   "ab_buckets": "skip",
-                  "listno": "0",
                   "pageIndex": "0",
-                  "pagePos": "0",
                   "pageSize": "mandatory",
                   "pvid": "mandatory",
                   "x_object_type": "item",
@@ -149,23 +147,28 @@
                   "scene": "recommendation",
                   "sub_scene": "vip_vt",
                   "x_object_id": "<상품번호>",
+                  "pagePos": "0",
+                  "listno": "0",
                   "sort": "",
                   "searchScenario": "",
                   "query": "<검색어>",
                   "pvid_sys": "aidc server",
                   "origin_price": "<원가>",
                   "promotion_price": "<할인가>",
-                  "coupon_price": "<쿠폰적용가>",
+                  "coupon_price": "skip",
                   "trafficType": "<trafficType>",
                   "adProduct": "J",
-                  "adSubProduct": "A",
+                  "adSubProduct": [
+                    "A",
+                    "F"
+                  ],
                   "seed_item_id": "4448231882",
                   "seed_item_index": "",
                   "seed_item_keyword": "",
-                  "search_session_id": "mandatory",
-                  "match_type": "ad",
+                  "search_session_id": "skip",
+                  "match_type": "skip",
                   "biz_source": "",
-                  "cate_leaf_id": "0"
+                  "cate_leaf_id": "skip"
                 },
                 "raw": "mandatory"
               },
@@ -291,9 +294,7 @@
         "utLogMap": {
           "parsed": {
             "ab_buckets": "skip",
-            "listno": "0",
             "pageIndex": "0",
-            "pagePos": "0",
             "pageSize": "mandatory",
             "pvid": "mandatory",
             "x_object_type": "item",
@@ -301,23 +302,28 @@
             "scene": "recommendation",
             "sub_scene": "vip_vt",
             "x_object_id": "<상품번호>",
+            "pagePos": "0",
+            "listno": "0",
             "sort": "",
             "searchScenario": "",
             "query": "<검색어>",
             "pvid_sys": "aidc server",
             "origin_price": "<원가>",
             "promotion_price": "<할인가>",
-            "coupon_price": "<쿠폰적용가>",
+            "coupon_price": "skip",
             "trafficType": "<trafficType>",
             "adProduct": "J",
-            "adSubProduct": "A",
+            "adSubProduct": [
+              "A",
+              "F"
+            ],
             "seed_item_id": "4448231882",
             "seed_item_index": "",
             "seed_item_keyword": "",
-            "search_session_id": "mandatory",
-            "match_type": "ad",
+            "search_session_id": "skip",
+            "match_type": "skip",
             "biz_source": "",
-            "cate_leaf_id": "0"
+            "cate_leaf_id": "skip"
           },
           "raw": "mandatory"
         },

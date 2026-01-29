@@ -505,3 +505,63 @@ def user_confirms_and_clicks_product_in_pdp_related_detail_module(browser_sessio
         # 예상치 못한 예외 처리
         logger.error(f"프론트 동작 중 예외 발생: {e}", exc_info=True)
         record_frontend_failure(browser_session, bdd_context, str(e), "사용자가 모듈 내 상품을 클릭한다")
+
+@when(parsers.parse('사용자가 PDP에서 "{button_title}" 버튼을 확인하고 클릭한다'))
+def user_confirms_and_clicks_product_in_pdp_related_module(browser_session, button_title, bdd_context):
+    """
+    PDP 내 버튼 노출 확인하고 클릭 (Atomic POM 조합)
+    
+    Args:
+        browser_session: BrowserSession 객체 (page 참조 관리)
+        button_title: 버튼 타이틀
+        bdd_context: BDD context (step 간 데이터 공유용)
+    """
+    try:
+        product_page = ProductPage(browser_session.page)
+
+        # 버튼으로 이동
+        button = product_page.get_module_by_title(button_title)
+        product_page.scroll_module_into_view(button)
+
+        # 상품 버튼 호버
+        product_page.hover_product(button)
+
+        # 상품 노출 확인 (실패 시 예외 발생)
+        try:
+            expect(button.first).to_be_visible()
+        except AssertionError as e:
+            # 실패 정보 저장하되 예외는 다시 발생시키지 않음
+            logger.error(f"상품 노출 확인 실패: {e}")
+            record_frontend_failure(browser_session, bdd_context, f"상품 노출 확인 실패: {str(e)}", "사용자가 모듈 내 상품을 확인하고 클릭한다 (type2)")
+            if 'module_title' not in bdd_context.store:
+                bdd_context.store['module_title'] = button_title
+            return  # 여기서 종료 (다음 스텝으로 진행)
+    
+        # 상품 코드 가져오기
+        goodscode = product_page.get_product_code(button)
+
+        try:
+            # bdd context에 저장 (product_url, module_title, goodscode)
+            bdd_context.store['product_url'] = browser_session.page.url        
+            bdd_context.store['module_title'] = button_title
+            bdd_context.store['goodscode'] = goodscode
+
+            # 상품 클릭
+            product_page.click_product(button)
+
+            logger.info(f"{button_title} 버튼 확인 및 클릭 완료: {goodscode}")
+        except Exception as e:
+            logger.error(f"상품 클릭 실패: {e}", exc_info=True)
+            record_frontend_failure(browser_session, bdd_context, f"상품 클릭 실패: {str(e)}", "사용자가 모듈 내 상품을 확인하고 클릭한다 (type2)")
+            # goodscode는 저장 (일부 정보라도 보존)
+            if 'goodscode' in locals():
+                bdd_context.store['goodscode'] = goodscode
+            if 'module_title' not in bdd_context.store:
+                bdd_context.store['module_title'] = button_title
+
+    except Exception as e:
+        # 예상치 못한 예외 처리
+        logger.error(f"프론트 동작 중 예외 발생: {e}", exc_info=True)
+        record_frontend_failure(browser_session, bdd_context, str(e), "사용자가 모듈 내 상품을 확인하고 클릭한다 (type2)")
+        if 'module_title' not in bdd_context.store:
+            bdd_context.store['module_title'] = button_title

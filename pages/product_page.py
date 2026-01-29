@@ -146,11 +146,24 @@ class ProductPage(BasePage):
         logger.debug(f"모듈 찾기: {module_title}")
         if module_title == "연관 상품":
             return self.get_module_by_spmc("relateditem")
-        if module_title == "이마트몰VT":
+        elif module_title == "이마트몰VT":
             return self.get_module_by_spmc("emartvt").filter(visible=True)
-        if module_title == "이마트몰BT":
+        elif module_title == "이마트몰BT":
             return self.get_module_by_spmc("emartbt")
-        return self.page.get_by_text(module_title)
+        elif module_title == "일반상품 구매하기":
+            return self.page.locator("#coreInsOrderBtn")
+        elif module_title == "일반상품 장바구니":
+            return self.page.locator("#coreAddCartBtn")
+        elif module_title == "일반상품 선물하기":
+            return self.page.locator("#coreGiftBtn")
+        elif module_title == "연관상품 구매하기":
+            return self.page.locator("#wingInsOrderBtn")
+        elif module_title == "연관상품 장바구니":
+            return self.page.locator("#wingAddCartBtn")
+        elif module_title == "연관상품 선물하기":
+            return self.page.locator("#wingGiftBtn")
+        else:
+            return self.page.get_by_text(module_title)
 
     def get_product_in_module(self, parent_locator: Locator) -> Locator:
         """
