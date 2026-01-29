@@ -1378,6 +1378,9 @@ class NetworkTracker:
                             f"키 '{key}'의 값이 일치하지 않습니다. "
                             f"기대값: {expected_value}, 실제값: {actual_value}"
                         )
+                elif str(expected_value) == str(actual_value):
+                    # 타입만 다르고 값이 동일한 경우 통과 (예: 기대 "0" vs 실제 0)
+                    field_passed = True
                 elif actual_value != expected_value:
                     errors.append(
                         f"키 '{key}'의 값이 일치하지 않습니다. "
