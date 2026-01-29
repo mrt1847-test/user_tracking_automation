@@ -3,9 +3,28 @@
 공통 필드를 로드하고 모듈별 고유 필드와 병합하는 기능 제공
 """
 import json
+import re
 from pathlib import Path
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Set
 from utils.google_sheets_sync import unflatten_json
+
+
+def normalize_path_for_common(path: str) -> str:
+    """
+    공통 필드 비교용 경로 정규화: 배열 인덱스를 무시합니다.
+    예: expdata.parsed[0].exargs._w, expdata.parsed[1].exargs._w → expdata.parsed[].exargs._w
+    """
+    if not path:
+        return path
+    return re.sub(r'\[\d+\]', '[]', path)
+
+
+def common_paths_normalized(common_fields: Dict[str, Any]) -> Set[str]:
+    """
+    공통 필드 키 목록을 정규화한 집합으로 반환.
+    flattened 항목의 path가 이 집합에 포함되는지로 '공통 필드 여부'를 판단할 때 사용.
+    """
+    return {normalize_path_for_common(p) for p in common_fields.keys()}
 
 
 # 이벤트 타입 매핑: tracking_all JSON의 type → config JSON의 섹션 키

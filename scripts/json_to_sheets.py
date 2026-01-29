@@ -18,7 +18,12 @@ from utils.google_sheets_sync import (
     group_by_event_type,
     TRACKING_TYPE_TO_CONFIG_KEY
 )
-from utils.common_fields import load_common_fields_by_event, get_common_fields_for_event_type
+from utils.common_fields import (
+    load_common_fields_by_event,
+    get_common_fields_for_event_type,
+    normalize_path_for_common,
+    common_paths_normalized,
+)
 
 
 # 시트에서 제외할 필드명 목록
@@ -318,10 +323,10 @@ def main():
         if not flattened:
             continue
         
-        # 공통 필드 제외 (모듈별 고유 필드만 남김)
+        # 공통 필드 제외 (모듈별 고유 필드만 남김, 배열 인덱스 무시하고 비교)
         common_fields = get_common_fields_for_event_type(event_type, common_fields_data)
-        common_paths = set(common_fields.keys())
-        flattened = [item for item in flattened if item.get('path') not in common_paths]
+        common_paths_norm = common_paths_normalized(common_fields)
+        flattened = [item for item in flattened if normalize_path_for_common(item.get('path')) not in common_paths_norm]
         
         if EXCLUDE_FIELDS:
             flattened = [item for item in flattened if item.get('field') not in EXCLUDE_FIELDS]
