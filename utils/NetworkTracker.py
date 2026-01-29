@@ -41,7 +41,9 @@ class NetworkTracker:
             payload: 파싱된 payload (goodscode 확인용)
             
         Returns:
-            'PV', 'PDP PV', 'Module Exposure', 'Product Exposure', 'Product Click', 'Product ATC Click', 'Product Minidetail', 또는 'Unknown'
+            'PV', 'PDP PV', 'Module Exposure', 'Product Exposure', 'Product Click', 'Product ATC Click',
+            'PDP Buynow Click', 'PDP ATC Click', 'PDP Gift Click', 'PDP Join Click', 'PDP Rental Click',
+            'Product Minidetail', 또는 'Unknown'
         """
         url_lower = url.lower()
         
@@ -102,8 +104,20 @@ class NetworkTracker:
                     return 'PDP PV'
             return 'PV'
         
-        # Product ATC Click: ATC 관련 URL 패턴
-        if '/pdp.atc.click' in url_lower or '/product.atc.click' in url_lower:
+        # PDP 전용 클릭 이벤트 (Product ATC Click과 별도 이벤트)
+        if '/pdp.buynow.click' in url_lower:
+            return 'PDP Buynow Click'
+        if '/pdp.atc.click' in url_lower:
+            return 'PDP ATC Click'
+        if '/pdp.gift.click' in url_lower:
+            return 'PDP Gift Click'
+        if '/pdp.join.click' in url_lower:
+            return 'PDP Join Click'
+        if '/pdp.rental.click' in url_lower:
+            return 'PDP Rental Click'
+        
+        # Product ATC Click: SRP/LP 등 리스트에서 장바구니 클릭 (/product.atc.click만)
+        if '/product.atc.click' in url_lower:
             return 'Product ATC Click'
         
         # Product Click: Product.Click.Event 패턴
@@ -1133,6 +1147,26 @@ class NetworkTracker:
             해당 goodscode의 Product Minidetail 로그 리스트
         """
         return self.get_logs_by_goodscode(goodscode, 'Product Minidetail')
+    
+    def get_pdp_buynow_click_logs_by_goodscode(self, goodscode: str) -> List[Dict[str, Any]]:
+        """goodscode 기준으로 PDP Buynow Click 로그만 반환"""
+        return self.get_logs_by_goodscode(goodscode, 'PDP Buynow Click')
+    
+    def get_pdp_atc_click_logs_by_goodscode(self, goodscode: str) -> List[Dict[str, Any]]:
+        """goodscode 기준으로 PDP ATC Click 로그만 반환"""
+        return self.get_logs_by_goodscode(goodscode, 'PDP ATC Click')
+    
+    def get_pdp_gift_click_logs_by_goodscode(self, goodscode: str) -> List[Dict[str, Any]]:
+        """goodscode 기준으로 PDP Gift Click 로그만 반환"""
+        return self.get_logs_by_goodscode(goodscode, 'PDP Gift Click')
+    
+    def get_pdp_join_click_logs_by_goodscode(self, goodscode: str) -> List[Dict[str, Any]]:
+        """goodscode 기준으로 PDP Join Click 로그만 반환"""
+        return self.get_logs_by_goodscode(goodscode, 'PDP Join Click')
+    
+    def get_pdp_rental_click_logs_by_goodscode(self, goodscode: str) -> List[Dict[str, Any]]:
+        """goodscode 기준으로 PDP Rental Click 로그만 반환"""
+        return self.get_logs_by_goodscode(goodscode, 'PDP Rental Click')
     
     def get_decoded_gokey_params(self, log: Dict[str, Any], param_key: Optional[str] = None) -> Dict[str, Any]:
         """

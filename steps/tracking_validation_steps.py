@@ -461,6 +461,11 @@ def _save_tracking_logs(bdd_context, tracker, goodscode, module_title):
             ('product_click', 'get_product_click_logs_by_goodscode', None),
             ('product_atc_click', 'get_product_atc_click_logs_by_goodscode', None),
             ('product_minidetail', 'get_product_minidetail_logs_by_goodscode', None),
+            ('pdp_buynow_click', 'get_pdp_buynow_click_logs_by_goodscode', None),
+            ('pdp_atc_click', 'get_pdp_atc_click_logs_by_goodscode', None),
+            ('pdp_gift_click', 'get_pdp_gift_click_logs_by_goodscode', None),
+            ('pdp_join_click', 'get_pdp_join_click_logs_by_goodscode', None),
+            ('pdp_rental_click', 'get_pdp_rental_click_logs_by_goodscode', None),
         ]
         
         for event_type, method_name, method_arg in event_configs:
@@ -490,6 +495,13 @@ def _save_tracking_logs(bdd_context, tracker, goodscode, module_title):
                 logs = get_logs_method(goodscode)
             else:
                 logs = get_logs_method(goodscode)
+            
+            # PDP 5종 클릭 이벤트는 로그가 있을 때만 개별 JSON 저장 (없으면 파일 생성 안 함)
+            pdp_click_save_only_when_exists = {
+                'pdp_buynow_click', 'pdp_atc_click', 'pdp_gift_click', 'pdp_join_click', 'pdp_rental_click'
+            }
+            if event_type in pdp_click_save_only_when_exists and len(logs) == 0:
+                continue
             
             # 로그 저장
             filepath = Path(f'json/tracking_{event_type}_{goodscode}_{timestamp}.json')
@@ -523,6 +535,11 @@ def _save_tracking_logs(bdd_context, tracker, goodscode, module_title):
         all_logs.extend(tracker.get_product_click_logs_by_goodscode(goodscode))
         all_logs.extend(tracker.get_product_atc_click_logs_by_goodscode(goodscode))
         all_logs.extend(tracker.get_product_minidetail_logs_by_goodscode(goodscode))
+        all_logs.extend(tracker.get_pdp_buynow_click_logs_by_goodscode(goodscode))
+        all_logs.extend(tracker.get_pdp_atc_click_logs_by_goodscode(goodscode))
+        all_logs.extend(tracker.get_pdp_gift_click_logs_by_goodscode(goodscode))
+        all_logs.extend(tracker.get_pdp_join_click_logs_by_goodscode(goodscode))
+        all_logs.extend(tracker.get_pdp_rental_click_logs_by_goodscode(goodscode))
         
         if len(all_logs) > 0:
             module_safe = module_title_to_filename(module_title)
