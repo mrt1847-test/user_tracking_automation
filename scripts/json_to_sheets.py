@@ -116,7 +116,7 @@ def replace_value_with_placeholder(field_name: str, value: Any) -> Any:
         "m": "360ee",
         "ism": ["pc", "mac"],
         "b": "mandatory",
-        "pvid" : "mandatory",
+        "pvid" : "skip",
         "_p_catalog" : "skip",
         "_p_group" : "skip",
         "utparam-url" : "mandatory",
