@@ -120,7 +120,7 @@ def replace_value_with_placeholder(field_name: str, value: Any) -> Any:
         "_p_catalog" : "skip",
         "_p_group" : "skip",
         "utparam-url" : "mandatory",
-        "search_session_id" : "mandatory",
+        "search_session_id" : "skip",
         "_pkgSize" : "skip",
         "pageSize" : "mandatory"
     }
