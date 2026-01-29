@@ -127,7 +127,8 @@ def load_module_config(
 
 def _extract_price_info_from_payload(payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """
-    payload에서 가격 정보 추출 (헬퍼 함수)
+    payload에서 가격 정보 추출 (헬퍼 함수).
+    PDP PV / Product Minidetail 등은 decoded_gokey.params 안에 가격이 있음.
     
     Args:
         payload: 로그의 payload 딕셔너리
@@ -136,17 +137,32 @@ def _extract_price_info_from_payload(payload: Dict[str, Any]) -> Optional[Dict[s
         가격 정보 딕셔너리 (origin_price, promotion_price, coupon_price) 또는 None
     """
     price_info = {}
-    
-    # payload 최상위에서 직접 가격 정보 추출
-    if 'origin_price' in payload:
-        price_info['origin_price'] = str(payload['origin_price'])
-    if 'promotion_price' in payload:
-        price_info['promotion_price'] = str(payload['promotion_price'])
-    if 'coupon_price' in payload:
-        # coupon_price가 빈 문자열이거나 None이어도 추가 (빈 값도 유효한 값)
-        coupon_price_value = payload['coupon_price']
-        price_info['coupon_price'] = str(coupon_price_value) if coupon_price_value is not None else ''
-    
+
+    def _set_if_present(source: Dict[str, Any], key: str, out_key: str, allow_empty: bool = False) -> None:
+        if key not in source:
+            return
+        val = source[key]
+        if val is None and allow_empty:
+            price_info[out_key] = ''
+        elif val is not None:
+            price_info[out_key] = str(val)
+
+    # 1) payload 최상위에서 직접 추출
+    _set_if_present(payload, 'origin_price', 'origin_price')
+    _set_if_present(payload, 'promotion_price', 'promotion_price')
+    _set_if_present(payload, 'coupon_price', 'coupon_price', allow_empty=True)
+
+    # 2) PDP PV / Product Minidetail: decoded_gokey.params 에서 추출 (최상위에 없을 때만)
+    params = (payload.get('decoded_gokey') or {}).get('params')
+    if isinstance(params, dict):
+        if 'origin_price' not in price_info:
+            _set_if_present(params, 'origin_price', 'origin_price')
+        if 'promotion_price' not in price_info:
+            _set_if_present(params, 'promotion_price', 'promotion_price')
+        if 'coupon_price' not in price_info and 'coupon_price' in params:
+            v = params['coupon_price']
+            price_info['coupon_price'] = str(v) if v is not None else ''
+
     return price_info if price_info else None
 
 
@@ -376,17 +392,15 @@ def replace_placeholders(value: Any, goodscode: str, frontend_data: Optional[Dic
         
         # frontend_data에서 값 가져오기
         if frontend_data:
-            # <검색어> placeholder 치환 (keyword 또는 category_id 사용)
+            # <검색어> placeholder 치환 (keyword 또는 category_id 사용, 없으면 공란)
             if '<검색어>' in value:
-                # keyword가 있으면 우선 사용, 없으면 category_id 사용
-                search_value = None
                 if 'keyword' in frontend_data and frontend_data['keyword']:
                     search_value = str(frontend_data['keyword'])
                 elif 'category_id' in frontend_data and frontend_data['category_id']:
                     search_value = str(frontend_data['category_id'])
-                
-                if search_value:
-                    value = value.replace('<검색어>', search_value)
+                else:
+                    search_value = ''
+                value = value.replace('<검색어>', search_value)
             
             # <원가> placeholder 치환
             if '<원가>' in value and 'origin_price' in frontend_data:
@@ -435,50 +449,30 @@ def build_expected_from_module_config(
     exclude_fields: Optional[List[str]] = None
 ) -> Dict[str, Any]:
     """
-    module_config.json의 이벤트 타입별 필드를 재귀적으로 순회하여 expected_values 딕셔너리 생성
-    이벤트 타입별 공통 필드와 모듈별 고유 필드를 병합하여 사용
-    
-    필드명만 저장하여 validate_payload에서 재귀 탐색으로 찾을 수 있도록 함
-    
+    모듈 config 파일(예: config/SRP/4.5 이상.json)의 이벤트 타입별 필드만 사용하여 expected_values 생성.
+    공통 필드는 병합하지 않음 (sheets_to_json에서 이미 병합된 config 파일을 사용하므로 중복 제거).
+
+    필드명만 저장하여 validate_payload에서 재귀 탐색으로 찾을 수 있도록 함.
+
     Args:
         module_config: 모듈 설정 딕셔너리 (module_exposure, product_exposure 등 포함)
         event_type: 이벤트 타입 ('Module Exposure', 'Product Exposure', 'Product Click' 등)
         goodscode: 상품 번호
         frontend_data: 프론트에서 읽은 데이터 (price, keyword, is_ad 등)
         exclude_fields: 제외할 필드 목록
-    
+
     Returns:
         expected_values 딕셔너리 (필드명: 값 형태)
     """
     if exclude_fields is None:
         exclude_fields = []
-    
-    # 이벤트 타입별 공통 필드와 모듈 필드 병합
-    try:
-        from utils.common_fields import merge_common_fields_with_module_config
-        event_config_key = EVENT_TYPE_CONFIG_KEY_MAP.get(event_type)
-        if event_config_key:
-            # 공통 필드와 모듈 필드 병합
-            merged_config = merge_common_fields_with_module_config(module_config, event_type)
-        else:
-            # 알 수 없는 이벤트 타입이면 기존 방식 사용
-            merged_config = module_config.get(event_config_key, {}) if event_config_key else {}
-    except ImportError:
-        # common_fields 모듈이 없으면 기존 방식 사용
-        merged_config = None
-    
+
     expected = {}
-    
-    # 이벤트 타입별 섹션 처리
     event_config_key = EVENT_TYPE_CONFIG_KEY_MAP.get(event_type)
     if event_config_key:
-        if merged_config:
-            # 병합된 config 사용
-            event_config = merged_config
-        else:
-            # 기존 방식: 모듈 config만 사용
-            event_config = module_config.get(event_config_key, {})
-        
+        # 모듈 config만 사용 (공통 필드 병합 없음)
+        event_config = module_config.get(event_config_key, {})
+
         if event_config:
             _process_config_section(event_config, event_type, goodscode, frontend_data, exclude_fields, expected, is_common=False)
     

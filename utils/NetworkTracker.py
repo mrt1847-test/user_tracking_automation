@@ -1179,7 +1179,7 @@ class NetworkTracker:
             AssertionError: 검증 실패 시
         """
         def find_value_recursive(obj: Any, target_key: str, visited: Optional[set] = None) -> Optional[Any]:
-            """재귀적으로 키를 찾아서 값 반환"""
+            """재귀적으로 키를 찾아서 값 반환. key[N] 형태는 부모 키의 배열 N번째 요소로 해석."""
             if visited is None:
                 visited = set()
             
@@ -1188,6 +1188,16 @@ class NetworkTracker:
                 if obj_id in visited:
                     return None
                 visited.add(obj_id)
+            
+            # key[N] 형태: payload에는 필드가 배열로 있음 (예: device_model: ["Windows", "Macintosh"])
+            # config는 flatten 시 device_model[0], device_model[1]로 저장되므로 이 둘을 매칭
+            array_index_match = re.match(r'^(.+)\[(\d+)\]$', target_key)
+            if array_index_match:
+                base_key, index_str = array_index_match.group(1), array_index_match.group(2)
+                idx = int(index_str)
+                base_value = find_value_recursive(obj, base_key, visited)
+                if base_value is not None and isinstance(base_value, list) and 0 <= idx < len(base_value):
+                    return base_value[idx]
             
             if isinstance(obj, dict):
                 if target_key in obj:
@@ -1199,6 +1209,15 @@ class NetworkTracker:
                         return result
                 
                 for value in obj.values():
+                    # 문자열이 JSON 객체/배열이면 파싱 후 탐색 (utLogMap.parsed 등이 문자열로 올 때 coupon_price 등 발견)
+                    if isinstance(value, str) and value.strip().startswith(('{', '[')):
+                        try:
+                            parsed = json.loads(value)
+                            result = find_value_recursive(parsed, target_key, visited)
+                            if result is not None:
+                                return result
+                        except (json.JSONDecodeError, TypeError):
+                            pass
                     result = find_value_recursive(value, target_key, visited)
                     if result is not None:
                         return result
