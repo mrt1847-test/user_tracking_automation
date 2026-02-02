@@ -522,11 +522,7 @@ def user_confirms_and_clicks_product_in_pdp_related_module(browser_session, butt
         # 버튼으로 이동
         button = product_page.get_module_by_title(button_title)
         product_page.scroll_module_into_view(button)
-
-            # 연관상품 선택 클릭
-        if "연관상품" in button_title:
-            product_page.select_button_click_in_detail_page()        
-        
+            
         # 버튼 노출 확인 (실패 시 예외 발생)
         try:
             expect(button.first).to_be_visible()
@@ -539,8 +535,11 @@ def user_confirms_and_clicks_product_in_pdp_related_module(browser_session, butt
             return  # 여기서 종료 (다음 스텝으로 진행)
     
         # 상품 코드 가져오기
-        
-        goodscode = product_page.get_product_code(button)
+        if "연관상품" in button_title:
+            product_page.select_button_click_in_detail_page()
+            goodscode = product_page.get_product_code_in_detail_page()
+        else:
+            goodscode = product_page.get_product_code(button)
 
         try:
             # bdd context에 저장 (product_url, module_title, goodscode)

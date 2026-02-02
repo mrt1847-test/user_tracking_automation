@@ -360,3 +360,13 @@ class ProductPage(BasePage):
         except Exception as e:
             logger.warning(f"광고 태그 확인 중 오류 발생: {e}")
             return "N"
+
+    def get_product_code_in_detail_page(self) -> Optional[str]:
+        """
+        연관상품 상세보기 상품 코드 가져오기
+        
+        Returns:
+            상품 코드 (data-montelena-goodscode 속성 값)
+        """
+        logger.debug("상품 코드 가져오기")
+        return self.page.locator(".relate-item_detail_info_area").locator(".add-interest").get_attribute("data-montelena-goodscode")
