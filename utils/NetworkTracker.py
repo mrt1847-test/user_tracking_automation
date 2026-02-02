@@ -3,12 +3,17 @@ import json
 import time
 import logging
 import copy
-from urllib.parse import unquote
+from urllib.parse import unquote, urlparse, parse_qs
 from typing import Dict, List, Optional, Any, Tuple
 from playwright.sync_api import Page, Request, BrowserContext
 
 # 로거 설정
 logger = logging.getLogger(__name__)
+
+# goodscode 추출 시 시도할 파라미터 키 목록 (중복 제거용)
+_GOODSCODE_PARAM_KEYS = ('goodscode', 'goodsCode', 'goods_code', 'goodscd', 'goodsCd')
+# PDP 클릭 이벤트 타입 (goodscode 없을 때 fallback 포함용)
+_PDP_CLICK_TYPES = ('PDP Buynow Click', 'PDP ATC Click', 'PDP Gift Click', 'PDP Join Click', 'PDP Rental Click')
 
 
 class NetworkTracker:
@@ -262,16 +267,50 @@ class NetworkTracker:
             logger.debug(f'expdata 디코딩 중 오류: {e}')
             return None
     
+    def _parse_json_param(self, value: str) -> Optional[Any]:
+        """
+        URL 인코딩된 JSON 문자열을 디코딩 후 파싱 (clk_itm_info, utparam-url 등)
+        
+        Args:
+            value: URL 인코딩된 JSON 문자열 (단일/다중 인코딩 가능)
+            
+        Returns:
+            파싱된 dict/list 또는 None
+        """
+        if not value or not isinstance(value, str):
+            return None
+        decoded = value
+        for _ in range(3):
+            try:
+                decoded = unquote(decoded)
+                parsed = json.loads(decoded)
+                if isinstance(parsed, (dict, list)):
+                    return parsed
+            except (json.JSONDecodeError, TypeError):
+                continue
+        return None
+    
+    def _looks_like_json_string(self, value: str) -> bool:
+        """문자열이 JSON 배열/객체 형태로 보이는지 확인 (불필요한 파싱 시도 방지)"""
+        if not value or not isinstance(value, str):
+            return False
+        s = value.strip()
+        if s.startswith(('[', '{')):
+            return True
+        try:
+            u = unquote(value).strip()
+            return u.startswith(('[', '{'))
+        except Exception:
+            return False
+    
     def _decode_gokey(self, gokey: str) -> Dict[str, Any]:
         """
         gokey 문자열을 디코딩하고 파싱 (다단계 중첩 구조 지원)
         
-        구조:
-        - Payload (최상위)
-        - gokey (1차 중첩 - URL 인코딩)
-        - expdata (2차 중첩 - JSON 문자열)
-        - params-exp (3차 중첩 - URL 인코딩, expdata 내부)
-        - utLogMap (4차 중첩 - 다중 인코딩된 JSON)
+        - expdata, params-clk, params-exp: 전용 디코더 사용 (구조가 특수함).
+        - 그 외 키 중 값이 JSON 배열/객체 형태([ 또는 {로 시작)인 경우: 범용 _parse_json_param으로
+          파싱하여 nested dict/list로 저장. 이후 _find_value_recursive가 _p_prod/x_object_id 등을
+          경로 무관하게 재귀 탐색하므로, clk_itm_info·utparam-url 등 새 키가 추가되어도 코드 수정 불필요.
         
         Args:
             gokey: URL 인코딩된 gokey 문자열
@@ -308,6 +347,10 @@ class NetworkTracker:
                             'raw': decoded_value,
                             'parsed': decoded_params
                         }
+                    # 그 외: JSON 형태로 보이는 문자열은 범용 파싱 → 재귀 탐색(_find_value_recursive)이 _p_prod/x_object_id 등 자동 발견
+                    elif isinstance(decoded_value, str) and self._looks_like_json_string(decoded_value):
+                        parsed_any = self._parse_json_param(decoded_value)
+                        params[decoded_key] = {'raw': decoded_value, 'parsed': parsed_any} if parsed_any is not None else decoded_value
                     else:
                         params[decoded_key] = decoded_value
             
@@ -636,13 +679,27 @@ class NetworkTracker:
         
         return None
     
+    def _get_goodscode_from_url_query(self, url_str: str, decode_first: bool = False) -> Optional[str]:
+        """URL(또는 URL 인코딩 문자열)의 쿼리에서 goodscode 파라미터 추출"""
+        if not url_str:
+            return None
+        try:
+            s = unquote(url_str) if decode_first else url_str
+            qs = parse_qs(urlparse(s).query)
+            for key in _GOODSCODE_PARAM_KEYS:
+                if key in qs and qs[key]:
+                    val = qs[key][0] if isinstance(qs[key], list) else qs[key]
+                    if val:
+                        return str(val)
+        except Exception:
+            pass
+        return None
+    
     def _extract_goodscode_from_log(self, log: Dict[str, Any]) -> Optional[str]:
         """
         로그에서 goodscode 추출 (다단계 중첩 구조 지원)
-        - Exposure: expdata -> exargs -> params-exp -> _p_prod 또는 utLogMap.x_object_id
-        - Click: params-clk -> _p_prod 또는 utLogMap.x_object_id
-        
-        _p_prod와 x_object_id 둘 다 확인하여, 둘 중 하나라도 존재하면 반환
+        - decoded_gokey 내부는 재귀 탐색으로 _p_prod/x_object_id 자동 발견
+        - payload._p_url, log.url 쿼리에서도 추출
         
         Args:
             log: 로그 딕셔너리
@@ -663,34 +720,33 @@ class NetworkTracker:
                 return str(value)
         
         # 2. payload에서 직접 확인 (다양한 키 이름 시도)
-        for key in ['goodscode', 'goodsCode', 'goods_code', 'goodscd', 'goodsCd']:
-            if key in payload:
-                value = payload[key]
-                if value:
-                    return str(value)
+        for key in _GOODSCODE_PARAM_KEYS:
+            if key in payload and payload[key]:
+                return str(payload[key])
         
-        # 3. decoded_gokey 내부를 재귀적으로 탐색
-        # _p_prod를 우선적으로 찾고, 없으면 x_object_id 찾기
+        # 3. decoded_gokey 내부를 재귀적으로 탐색 (_p_prod 우선, 없으면 x_object_id)
         decoded_gokey = payload.get('decoded_gokey', {})
         if decoded_gokey:
-            # _p_prod 우선 탐색
             result = self._find_value_recursive(decoded_gokey, ['_p_prod'])
             if result:
                 return result
-            
-            # x_object_id 탐색
             result = self._find_value_recursive(decoded_gokey, ['x_object_id'])
             if result:
                 return result
         
-        # 4. decoded_gokey의 params에서 직접 확인 (다양한 키 이름 시도)
+        # 4. decoded_gokey.params에서 직접 확인
         params = decoded_gokey.get('params', {})
-        for key in ['goodscode', 'goodsCode', 'goods_code', 'goodscd', 'goodsCd']:
-            if key in params:
-                value = params[key]
-                if value:
-                    return str(value)
+        for key in _GOODSCODE_PARAM_KEYS:
+            if key in params and params[key]:
+                return str(params[key])
         
+        # 5. payload._p_url 또는 log.url 쿼리에서 goodscode 추출
+        res = self._get_goodscode_from_url_query(payload.get('_p_url') or '', decode_first=True)
+        if res:
+            return res
+        res = self._get_goodscode_from_url_query(log.get('url') or '')
+        if res:
+            return res
         return None
     
     def _extract_gmkt_area_code_from_log(self, log: Dict[str, Any]) -> Optional[str]:
@@ -787,7 +843,10 @@ class NetworkTracker:
             
             # 그 외의 경우: 기존 방식으로 goodscode 추출 및 비교
             log_goodscode = self._extract_goodscode_from_log(log)
-            if log_goodscode and log_goodscode == goodscode:
+            if log_goodscode and str(log_goodscode) == str(goodscode):
+                filtered_logs.append(log)
+            # PDP 클릭 이벤트는 payload에 gokey/goodscode가 없을 수 있음. 단일 goodscode 검증 시 해당 로그 포함
+            elif request_type in _PDP_CLICK_TYPES and log_goodscode is None:
                 filtered_logs.append(log)
         
         return filtered_logs
