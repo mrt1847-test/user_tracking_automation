@@ -548,6 +548,7 @@ def user_confirms_and_clicks_product_in_pdp_related_module(browser_session, butt
 
             # 상품 클릭
             product_page.click_product(button)
+            time.sleep(2)
 
             logger.info(f"{button_title} 버튼 확인 및 클릭 완료: {goodscode}")
         except Exception as e:
@@ -565,3 +566,32 @@ def user_confirms_and_clicks_product_in_pdp_related_module(browser_session, butt
         record_frontend_failure(browser_session, bdd_context, str(e), "사용자가 모듈 내 상품을 확인하고 클릭한다 (type2)")
         if 'module_title' not in bdd_context.store:
             bdd_context.store['module_title'] = button_title
+
+@then(parsers.parse('페이지가 "{module_title}"로 이동되었다'))
+def other_page_is_opened(browser_session, bdd_context, module_title):
+    """
+    상품 페이지 이동 확인 (검증)
+    PDP PV 로그 수집 관련 로그가 뜰 때까지 대기 (tracker 있으면 수집 확인, 없으면 load 대기)
+    실패 시에도 다음 스텝으로 진행
+    
+    Args:
+        browser_session: BrowserSession 객체 (page 참조 관리)
+        bdd_context: BDD context (step 간 데이터 공유용)
+    """
+    try:
+        product_page = ProductPage(browser_session.page)
+        
+        product_page.verify_keyword_in_url(module_title)
+        try:
+            browser_session.page.wait_for_load_state("networkidle", timeout=10000)
+            logger.debug("networkidle 상태 대기 완료")
+        except Exception as e:
+            logger.warning(f"networkidle 대기 실패, load 상태로 대기: {e}")
+            browser_session.page.wait_for_load_state("load", timeout=30000)
+
+        time.sleep(1)
+        logger.info(f"페이지 이동 확인 완료: {module_title}")
+        
+    except Exception as e:
+        logger.error(f"페이지 이동 확인 중 예외 발생: {e}")
+        record_frontend_failure(browser_session, bdd_context, str(e), "상품 페이지로 이동되었다")

@@ -7,6 +7,7 @@ Feature: G마켓 PDP 트래킹 로그 정합성 검증
     And 상품 "<goodscode>"의 상세페이지로 접속했음
     When 사용자가 PDP에서 "연관 상품"을 클릭한다
     And 사용자가 PDP에서 "<module_title>" 버튼을 확인하고 클릭한다
+    Then 페이지가 "<module_title>"로 이동되었다
     Then 모든 트래킹 로그를 JSON 파일로 저장함
 
     Examples:
@@ -22,6 +23,7 @@ Feature: G마켓 PDP 트래킹 로그 정합성 검증
     And 네트워크 트래킹이 시작되었음
     And 상품 "<goodscode>"의 상세페이지로 접속했음
     When 사용자가 PDP에서 "<module_title>" 버튼을 확인하고 클릭한다
+    Then 페이지가 "<module_title>"로 이동되었다
     Then 모든 트래킹 로그를 JSON 파일로 저장함
 
     Examples:
@@ -29,3 +31,4 @@ Feature: G마켓 PDP 트래킹 로그 정합성 검증
       | 4448231882 | 일반상품 구매하기 | C1166905        |              |               |
       | 4448231882 | 일반상품 장바구니 |                 | C1166904     |               |
       | 4448231882 | 일반상품 선물하기 |                 |              | C1166903      |
+
