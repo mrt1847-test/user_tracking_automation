@@ -127,17 +127,17 @@ class GoogleSheetsSync:
             return start_row
         
         # 헤더 작성
-        worksheet.update([[f'[{event_type}]', '', '']], range_name=f'A{start_row}:C{start_row}', value_input_option='RAW')
+        worksheet.update([[f'[{event_type}]', '', '']], range_name=f'A{start_row}', value_input_option='RAW')
         start_row += 1
         
         # 컬럼 헤더
-        worksheet.update([['경로', '필드명', '값']], range_name=f'A{start_row}:C{start_row}', value_input_option='RAW')
+        worksheet.update([['경로', '필드명', '값']], range_name=f'A{start_row}', value_input_option='RAW')
         start_row += 1
         
         # 데이터 행 작성
         rows = [[item.get('path', ''), item.get('field', ''), item.get('value', '')] for item in data]
         if rows:
-            worksheet.update(rows, range_name=f'A{start_row}:C{start_row + len(rows) - 1}', value_input_option='RAW')
+            worksheet.update(rows, range_name=f'A{start_row}', value_input_option='RAW')
             start_row += len(rows)
         
         # 빈 행 추가
@@ -253,19 +253,18 @@ class GoogleSheetsSync:
 
     def ensure_area_header(self, worksheet: gspread.Worksheet) -> None:
         """1행에 헤더(모듈|이벤트 타입|경로|필드명|값) 작성. 표 미사용 시 fallback용."""
-        last_col = chr(64 + self.AREA_NCOLS)
         try:
             row1 = worksheet.row_values(1)
             if row1[: self.AREA_NCOLS] != self.AREA_HEADER:
                 worksheet.update(
                     [self.AREA_HEADER],
-                    range_name=f"A1:{last_col}1",
+                    range_name="A1",
                     value_input_option="RAW",
                 )
         except Exception:
             worksheet.update(
                 [self.AREA_HEADER],
-                range_name=f"A1:{last_col}1",
+                range_name="A1",
                 value_input_option="RAW",
             )
 
@@ -434,19 +433,18 @@ class GoogleSheetsSync:
 
     def ensure_common_fields_header(self, worksheet: gspread.Worksheet) -> None:
         """1행에 헤더(이벤트 타입|경로|필드명|값) 작성. 표 미사용 시 fallback용."""
-        last_col = chr(64 + self.COMMON_FIELDS_NCOLS)
         try:
             row1 = worksheet.row_values(1)
             if row1[: self.COMMON_FIELDS_NCOLS] != self.COMMON_FIELDS_HEADER:
                 worksheet.update(
                     [self.COMMON_FIELDS_HEADER],
-                    range_name=f"A1:{last_col}1",
+                    range_name="A1",
                     value_input_option="RAW",
                 )
         except Exception:
             worksheet.update(
                 [self.COMMON_FIELDS_HEADER],
-                range_name=f"A1:{last_col}1",
+                range_name="A1",
                 value_input_option="RAW",
             )
 
@@ -499,8 +497,7 @@ class GoogleSheetsSync:
         # 데이터만 A2:D에 기록 (1행은 표 헤더, 건드리지 않음)
         if rows:
             self.clear_common_fields_data_range(worksheet)
-            last_col = chr(64 + self.COMMON_FIELDS_NCOLS)
-            worksheet.update(rows, range_name=f'A2:{last_col}{1 + len(rows)}', value_input_option='RAW')
+            worksheet.update(rows, range_name='A2', value_input_option='RAW')
             # 텍스트 포맷 적용
             self.format_common_fields_as_text(worksheet, 1 + len(rows))
         

@@ -152,15 +152,22 @@ def when_user_confirms_and_clicks_product_in_order_history(browser_session, modu
         except Exception as e:
             logger.warning(f"담기 얼럿 닫기 실패: {e}")
 
-        # 상품 클릭 및 상품 페이지 로드 대기
-        my_page.click_product_in_order_history_by_goodscode(str(goodscode))
-        time.sleep(1)
-        browser_session.page.wait_for_load_state("domcontentloaded", timeout=15000)
+        # 상품 클릭 — 새 탭이 열리면 전환, 같은 탭 이동이면 URL 전환 대기 (SearchPage.click_product_and_wait_new_page와 동일 패턴)
+        try:
+            new_page = my_page.click_product_in_order_history_and_wait_new_page(str(goodscode))
+            browser_session.switch_to(new_page)
+            product_url = new_page.url
+            logger.debug("주문내역 상품 클릭: 새 탭 열림, 전환 완료")
+        except Exception:
+            # 같은 탭에서 이동 (클릭은 이미 메서드 내부에서 실행됨, URL 전환만 대기)
+            browser_session.page.wait_for_url(f"*{goodscode}*", timeout=15000)
+            product_url = browser_session.page.url
+            logger.debug("주문내역 상품 클릭: 같은 탭 이동, URL 전환 대기 완료")
 
         # bdd context에 저장 (module_title, goodscode, product_url, is_ad)
         bdd_context.store["module_title"] = module_title
         bdd_context.store["goodscode"] = goodscode
-        bdd_context.store["product_url"] = browser_session.page.url
+        bdd_context.store["product_url"] = product_url
         bdd_context.store["is_ad"] = is_ad
         logger.info(f"{module_title} 내 상품 확인 및 클릭 완료: goodscode={goodscode}")
 
