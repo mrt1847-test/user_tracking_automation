@@ -575,6 +575,7 @@ class SearchPage(BasePage):
             "먼저 둘러보세요": "Y",
             "오늘의 상품이에요": "Y",
             "최상단 클릭아이템": "N",
+            "주문내역": "N",
         }
         
         if modulel_title not in MODULE_AD_CHECK:

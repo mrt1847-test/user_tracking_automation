@@ -24,6 +24,11 @@ logger = logging.getLogger(__name__)
 TRACKING_TYPE_TO_CONFIG_KEY = {
     'PV': 'pv',
     'PDP PV': 'pdp_pv',
+    'PDP Buynow Click': 'pdp_buynow_click',
+    'PDP ATC Click': 'pdp_atc_click',
+    'PDP Gift Click': 'pdp_gift_click',
+    'PDP Join Click': 'pdp_join_click',
+    'PDP Rental Click': 'pdp_rental_click',
     'Module Exposure': 'module_exposure',
     'Product Exposure': 'product_exposure',
     'Product Click': 'product_click',
