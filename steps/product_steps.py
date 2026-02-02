@@ -536,6 +536,7 @@ def user_confirms_and_clicks_product_in_pdp_related_module(browser_session, butt
     
         # 상품 코드 가져오기
         if "연관상품" in button_title:
+            time.sleep(2)
             product_page.select_button_click_in_detail_page()
             goodscode = product_page.get_product_code_in_detail_page()
         else:
@@ -548,6 +549,8 @@ def user_confirms_and_clicks_product_in_pdp_related_module(browser_session, butt
             bdd_context.store['goodscode'] = goodscode
 
             # 버튼 클릭
+            
+
             product_page.click_product(button)
             time.sleep(2)
 
@@ -584,19 +587,15 @@ def other_page_is_opened(browser_session, bdd_context, module_title):
         
         if "장바구니" in module_title:
             product_page.verify_product_in_cart()
-                
+            
         else:
             product_page.verify_keyword_in_url(module_title)
-
-        
-        
-        try:
-            browser_session.page.wait_for_load_state("networkidle", timeout=10000)
-            logger.debug("networkidle 상태 대기 완료")
-        except Exception as e:
-            logger.warning(f"networkidle 대기 실패, load 상태로 대기: {e}")
-            browser_session.page.wait_for_load_state("load", timeout=30000)
-
+            try:
+                browser_session.page.wait_for_load_state("networkidle", timeout=10000)
+                logger.debug("networkidle 상태 대기 완료")
+            except Exception as e:
+                logger.warning(f"networkidle 대기 실패, load 상태로 대기: {e}")
+                browser_session.page.wait_for_load_state("load", timeout=30000)    
         time.sleep(1)
         logger.info(f"페이지 이동 확인 완료: {module_title}")
         
