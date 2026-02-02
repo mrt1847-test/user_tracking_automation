@@ -466,8 +466,7 @@ def product_page_is_opened(browser_session, bdd_context):
         
         # bdd context에서 값 가져오기 (store 또는 딕셔너리 방식 모두 지원)
         goodscode = bdd_context.store.get('goodscode') or bdd_context.get('goodscode')
-        url = bdd_context.store.get('product_url') or browser_session.page.url
-        
+
         if not goodscode:
             # goodscode가 없으면 이전 스텝에서 실패했을 가능성
             logger.warning("goodscode가 설정되지 않았습니다. 이전 스텝에서 실패했을 수 있습니다.")
@@ -475,22 +474,12 @@ def product_page_is_opened(browser_session, bdd_context):
             bdd_context['frontend_error_message'] = "goodscode가 설정되지 않았습니다."
             return
         
-        # 검증 (실패 시 예외 발생)
+        # 먼저 상품 페이지로 이동할 때까지 대기 (클릭 직후 검증하면 아직 주문내역 URL이라 실패함)
         try:
-            if url:
-                search_page.verify_product_code_in_url(url, goodscode)
-            else:
-                # URL이 없으면 현재 페이지 URL에서 확인
-                current_url = browser_session.page.url
-                search_page.verify_product_code_in_url(current_url, goodscode)
-        except AssertionError as e:
-            logger.error(f"상품 페이지 이동 확인 실패: {e}")
-            record_frontend_failure(browser_session, bdd_context, f"상품 페이지 이동 확인 실패: {str(e)}", "상품 페이지로 이동되었다")
-            # 계속 진행 (PDP PV 로그 수집은 시도)
-        
-        # 🔥 PDP PV 로그 수집 관련 로그가 뜰 때까지 대기 (tracker 있으면 수집 확인, 없으면 load 대기)
-        tracker = bdd_context.get("tracker") or bdd_context.store.get("tracker")
-
+            browser_session.page.wait_for_url(f"*{goodscode}*", timeout=15000)
+            logger.debug("상품 페이지 URL 전환 대기 완료")
+        except Exception as e:
+            logger.warning(f"URL 전환 대기 실패: {e}")
         try:
             browser_session.page.wait_for_load_state("networkidle", timeout=10000)
             logger.debug("networkidle 상태 대기 완료 (tracker 없음, PDP PV 대체 대기)")
@@ -502,6 +491,15 @@ def product_page_is_opened(browser_session, bdd_context):
             except Exception as e2:
                 logger.warning(f"load 상태 대기도 실패: {e2}")
         time.sleep(2)
+
+        # 검증 (실패 시 예외 발생) — 네비게이션 대기 후 현재 URL로 확인
+        try:
+            current_url = browser_session.page.url
+            search_page.verify_product_code_in_url(current_url, goodscode)
+        except AssertionError as e:
+            logger.error(f"상품 페이지 이동 확인 실패: {e}")
+            record_frontend_failure(browser_session, bdd_context, f"상품 페이지 이동 확인 실패: {str(e)}", "상품 페이지로 이동되었다")
+            # 계속 진행 (PDP PV 로그 수집은 시도)
         logger.info(f"상품 페이지 이동 확인 완료: {goodscode} (PDP PV 로그 수집 대기 완료)")
         
     except Exception as e:

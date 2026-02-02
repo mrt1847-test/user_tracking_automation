@@ -356,8 +356,7 @@ def main():
     
     sync.clear_area_data_range(worksheet)
     if to_write:
-        last_col = chr(64 + ncols)
-        worksheet.update(to_write, range_name=f'A2:{last_col}{1 + len(to_write)}', value_input_option='RAW')
+        worksheet.update(to_write, range_name='A2', value_input_option='RAW')
     
     last_row = 1 + len(to_write)
     sync.format_area_data_as_text(worksheet, last_row)
