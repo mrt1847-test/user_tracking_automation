@@ -14,19 +14,22 @@ _URLS = {
         "base": "https://www-dev.gmarket.co.kr",
         "item": "https://item-dev.gmarket.co.kr",
         "cart": "https://cart-dev.gmarket.co.kr",
-        "checkout": "https://checkout-dev.gmarket.co.kr"
+        "checkout": "https://checkout-dev.gmarket.co.kr",
+        "my": "https://my-dev.gmarket.co.kr/ko/pc/main"
     },
     "stg": {
         "base": "https://www-stg.gmarket.co.kr",
         "item": "https://item-stg.gmarket.co.kr",
         "cart": "https://cart-av.gmarket.co.kr",
-        "checkout": "https://checkout-av.gmarket.co.kr"
+        "checkout": "https://checkout-av.gmarket.co.kr",
+        "my": "https://my-av.gmarket.co.kr/ko/pc/main"
     },
     "prod": {
         "base": "https://www.gmarket.co.kr",
         "item": "https://item.gmarket.co.kr",
         "cart": "https://cart.gmarket.co.kr",
-        "checkout": "https://checkout.gmarket.co.kr"
+        "checkout": "https://checkout.gmarket.co.kr",
+        "my": "https://my.gmarket.co.kr/ko/pc/main"
     }
 }
 
@@ -89,6 +92,14 @@ def _get_checkout_base_url() -> str:
     return _env_urls['checkout']
 
 
+def _get_my_url() -> str:
+    """My(마이) 페이지 URL 반환 (환경별)"""
+    global _env_urls
+    if _env_urls is None:
+        _env_urls = _get_environment_urls()
+    return _env_urls['my']
+
+
 def base_url() -> str:
     """기본 URL 반환"""
     return _get_base_url()
@@ -107,6 +118,21 @@ def cart_base_url() -> str:
 def checkout_base_url() -> str:
     """주문/결제 기본 URL 반환"""
     return _get_checkout_base_url()
+
+
+def my_url(spm: str = None) -> str:
+    """My(마이) 페이지 URL 반환 (환경별: dev/stg/prod)
+
+    Args:
+        spm: SPM 파라미터 (선택적, 예: gmktpc.home.0.0.30e8486aTyuqoh)
+
+    Returns:
+        My 페이지 URL (spm 있으면 ?spm=... 쿼리 추가)
+    """
+    base = _get_my_url()
+    if spm:
+        return f"{base}?spm={spm}"
+    return base
 
 
 def search_url(keyword: str, spm: str = None) -> str:

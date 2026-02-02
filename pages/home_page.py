@@ -147,3 +147,8 @@ class HomePage(BasePage):
         logger.info("장바구니 버튼 클릭")
         self.click("[title='장바구니']")
 
+    def click_my_page(self) -> None:
+        """마이페이지 버튼 클릭"""
+        logger.info("마이페이지 버튼 클릭")
+        self.click("[title='나의 쇼핑정보']")
+

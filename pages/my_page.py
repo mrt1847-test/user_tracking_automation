@@ -36,10 +36,11 @@ class MyPage(BasePage):
 
     def click_order_history(self):
         """
-        주문내역 버튼 클릭
+        주문내역 메뉴 클릭 (주문 목록 페이지로 이동하는 링크)
+        <a href=".../ko/pc/list/all" class="link__menu"><span class="text__menu">주문내역</span></a>
         """
         logger.info("주문내역 버튼 클릭")
-        self.page.locator(".text__menu:has-text('주문내역')").click()
+        self.page.locator("a.link__menu[href*='ko/pc/list/all']").click()
 
     def is_order_history_page_displayed(self):
         """
@@ -76,4 +77,56 @@ class MyPage(BasePage):
         """
         logger.debug(f"주문내역에서 상품코드로 상품 클릭: {goodscode}")
         self.page.locator(f".box__order-item box__thumbnail img[data-montelena-goodscode='{goodscode}']").click()
+
+    def get_order_history_product_locator(self, goodscode: str) -> Locator:
+        """
+        주문내역에서 상품코드에 해당하는 상품 Locator 반환 (ad 태그 확인 등에 사용)
+        """
+        return self.page.locator(
+            f".box__order-item box__thumbnail img[data-montelena-goodscode='{goodscode}']"
+        )
+
+    def check_ad_item_in_order_history_module(self, module_title: str) -> str:
+        """
+        주문내역 등 My 페이지 모듈 내 광고상품 노출 여부 확인
+        (SearchPage.check_ad_item_in_srp_lp_module과 형식 통일)
+
+        Args:
+            module_title: 모듈 타이틀 (예: "주문내역")
+
+        Returns:
+            "Y", "N", 또는 "F" (F인 경우 상품별 check_ad_tag 필요)
+        """
+        logger.debug(f"주문내역 모듈 내 광고상품 노출 확인: {module_title}")
+        MODULE_AD_CHECK = {
+            "주문내역": "N",
+        }
+        if module_title not in MODULE_AD_CHECK:
+            raise ValueError(f"모듈 타이틀 {module_title} 확인 불가")
+        return MODULE_AD_CHECK[module_title]
+
+    def check_ad_tag_in_order_history_product(self, product_locator: Locator) -> str:
+        """
+        주문내역 상품 내 광고 태그 노출 확인
+        (SearchPage.check_ad_tag_in_srp_lp_product와 형식 통일)
+
+        Args:
+            product_locator: 상품 Locator 객체 (주문내역 내 상품)
+
+        Returns:
+            "Y" 또는 "N"
+        """
+        logger.debug("주문내역 상품 내 광고 태그 노출 확인")
+        try:
+            # 주문내역 상품 컨테이너에서 광고 레이어 등 확인 (DOM 구조에 맞게 추후 구현)
+            item_container = product_locator.locator(
+                "xpath=ancestor::div[contains(@class, 'box__order-item')]"
+            )
+            ads_layer = item_container.locator("div.box__ads-layer")
+            if ads_layer.count() > 0:
+                return "Y"
+            return "N"
+        except Exception as e:
+            logger.warning(f"주문내역 광고 태그 확인 중 오류: {e}")
+            return "N"
 

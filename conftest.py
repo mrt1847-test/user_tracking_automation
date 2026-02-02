@@ -549,27 +549,31 @@ def pytest_bdd_after_step(request, feature, scenario, step, step_func, step_func
                     logger.debug(f"step_func_args[{arg_name}] = {arg_value} (타입: {type(arg_value).__name__})")
         
         # 1. step_func_args에서 TC 번호 파라미터 찾기 (tc_id, tc_module_exposure, tc_product_exposure 등)
+        # 검증 스텝에서 tc_id(또는 tc_*)가 비어 있으면 이 스텝은 TestRail에 기록하지 않음 (폴백 사용 금지)
+        validation_step_had_empty_tc = False
         if step_func_args:
             for arg_name, arg_value in step_func_args.items():
+                if arg_name == 'bdd_context':
+                    continue
                 # TC 번호 형식 확인 (C로 시작하는 문자열)
                 if isinstance(arg_value, str):
                     arg_value_stripped = arg_value.strip()
                     # C로 시작하고 뒤에 숫자가 오는 경우
                     if arg_value_stripped.startswith("C") and len(arg_value_stripped) > 1:
                         try:
-                            # C 뒤의 부분이 숫자인지 확인
                             if arg_value_stripped[1:].isdigit():
                                 step_case_id = arg_value_stripped
                                 logger.debug(f"step_func_args에서 TC 번호 발견: {arg_name}={step_case_id} (스텝: {step.name})")
                                 break
                         except (ValueError, IndexError):
                             pass
-                    # 디버깅: 검증 스텝인데 TC 번호가 없는 경우
-                    elif "정합성 검증" in step.name and arg_name == "tc_id":
+                    # 검증 스텝이고 이 스텝의 TC 파라미터(tc_id, tc_*)가 비어있음 → 폴백 사용 안 함
+                    elif "정합성 검증" in step.name and (arg_name == "tc_id" or arg_name.startswith("tc_")):
+                        validation_step_had_empty_tc = True
                         logger.warning(f"검증 스텝 '{step.name}'에서 tc_id 파라미터 값이 TC 번호 형식이 아닙니다: '{arg_value_stripped}'")
         
-        # 2. step_func_args에서 bdd_context를 통해 TC 번호 찾기
-        if step_case_id is None and step_func_args:
+        # 2. step_func_args에서 bdd_context를 통해 TC 번호 찾기 (검증 스텝에서 tc가 비어있으면 폴백 사용 안 함)
+        if step_case_id is None and step_func_args and not (validation_step_had_empty_tc):
             bdd_context = step_func_args.get('bdd_context')
             if bdd_context:
                 logger.debug(f"bdd_context 타입: {type(bdd_context).__name__}, hasattr('get'): {hasattr(bdd_context, 'get')}")
@@ -712,8 +716,11 @@ def pytest_bdd_after_step(request, feature, scenario, step, step_func, step_func
             logger.debug(f"TC 번호는 있지만 testrail_run_id가 None입니다. step_case_id={step_case_id}, testrail_run_id={testrail_run_id}")
             print(f"[TestRail] 스텝 '{step.name}' TC 번호 발견: {step_case_id} (TestRail 연동 미활성화)")
         elif not step_case_id:
-            # TC 번호가 없는 경우
-            logger.debug(f"TC 번호를 찾을 수 없습니다. step_func_args={step_func_args is not None}, step_status={step_status}")
+            # TC 번호가 없는 경우 (검증 스텝에서 tc_id가 비어 있으면 의도적으로 기록하지 않음)
+            if validation_step_had_empty_tc:
+                logger.debug(f"검증 스텝에서 tc_id가 비어 있어 TestRail 기록을 건너뜁니다. 스텝={step.name}")
+            else:
+                logger.debug(f"TC 번호를 찾을 수 없습니다. step_func_args={step_func_args is not None}, step_status={step_status}")
         
         # TC 번호가 없지만 실패한 프론트 동작 스텝인 경우 - 스크린샷만 저장 (참고용)
         if step_status == "failed" and not step_case_id:
