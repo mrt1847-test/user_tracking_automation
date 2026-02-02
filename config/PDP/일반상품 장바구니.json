@@ -1,0 +1,217 @@
+{
+  "module_exposure": {
+    "payload": {
+      "_gr_uid_": "11758850530814005372000000",
+      "_p_url": "mandatory",
+      "cna": "mandatory",
+      "decoded_gokey": {
+        "decoded_gokey": "mandatory",
+        "params": {
+          "_eventType": "IObserver",
+          "_f_t": "false",
+          "_g_encode": "utf-8",
+          "_h": "mandatory",
+          "_is_auto_exp": "1",
+          "_method": "POST",
+          "_rate": "mandatory",
+          "_viewability": "intersection",
+          "_w": "mandatory",
+          "_x": "mandatory",
+          "_y": "mandatory",
+          "b": "mandatory",
+          "cache": "mandatory",
+          "cguid": "11758850530814005372000000",
+          "customSdkId": "",
+          "device_model": [
+            "Windows",
+            "Macintosh"
+          ],
+          "is_auto": "1",
+          "ism": [
+            "pc",
+            "mac"
+          ],
+          "jsver": "aplus.js",
+          "language": [
+            "ko-KR",
+            "en-US"
+          ],
+          "lstag": "-1",
+          "lver": "1.13.26-1",
+          "m": "360ee",
+          "o": [
+            "win10",
+            "mac"
+          ],
+          "os": [
+            "Windows",
+            "Mac OS X"
+          ],
+          "os_version": [
+            "win10",
+            "10.15.7"
+          ],
+          "p": "1",
+          "params-exp": {
+            "parsed": {
+              "ab_buckets": "skip",
+              "gmkt_area_code": "",
+              "gmkt_page_id": "",
+              "module_index": "mandatory",
+              "section_index": ""
+            },
+            "raw": "mandatory"
+          },
+          "pguid": "skip",
+          "platformType": [
+            "pc",
+            "mac"
+          ],
+          "s": "1280x720",
+          "scm": "",
+          "scr": "mandatory",
+          "sguid": "skip",
+          "st_page_id": "mandatory",
+          "stag": "-1",
+          "tag": "1",
+          "uidaplus": "11758850530814005372000000",
+          "w": [
+            "webkit",
+            "chrome"
+          ],
+          "spm-url": "",
+          "spm-pre": "",
+          "spm-cnt": "gmktpc.pdp.0",
+          "pid": "item_gmarket_co_kr",
+          "channel_code": "",
+          "server_env": "<environment>",
+          "spm": "gmktpc.pdp.vipvt"
+        }
+      },
+      "gmkey": "EXP",
+      "gokey": "mandatory",
+      "logtype": "2",
+      "rd": "mandatory",
+      "scr": "mandatory",
+      "ts": "mandatory",
+      "uidaplus": "11758850530814005372000000",
+      "spm-cnt": "gmktpc.pdp.0"
+    }
+  },
+  "pdp_atc_click": {
+    "payload": {
+      "gmkey": "CLK",
+      "ts": "mandatory",
+      "rd": "mandatory",
+      "gokey": "mandatory",
+      "cna": "mandatory",
+      "spm-cnt": "gmktpc.pdp.0",
+      "_gr_uid_": "11758850530814005372000000",
+      "uidaplus": "11758850530814005372000000",
+      "logtype": "2",
+      "scr": "mandatory",
+      "_p_url": "mandatory",
+      "decoded_gokey": {
+        "decoded_gokey": "mandatory",
+        "params": {
+          "uidaplus": "11758850530814005372000000",
+          "spm-url": "",
+          "spm-pre": "",
+          "spm-cnt": "gmktpc.pdp.0",
+          "_f_t": "false",
+          "pid": "item_gmarket_co_kr",
+          "cguid": "11758850530814005372000000",
+          "pguid": "skip",
+          "sguid": "skip",
+          "channel_code": "",
+          "st_page_id": "mandatory",
+          "server_env": "<environment>",
+          "_p_group_typ": "0",
+          "gmkt_page_id": "",
+          "ab_buckets": "skip",
+          "spm": "gmktpc.pdp.buyarea_atc.d0",
+          "clk_itm_info": {
+            "raw": "mandatory",
+            "parsed[0]": {
+              "_p_prod": "<상품번호>",
+              "_p_sku_id": "",
+              "_p_sku_info": "",
+              "_p_catalog": "skip",
+              "_p_group": "skip",
+              "quantity": "1",
+              "_p_parent_sku_id": "",
+              "_p_parent_sku_info": "",
+              "itm_price": "25900"
+            }
+          },
+          "gmkt_area_code": "200000516",
+          "_p_prod_main": "",
+          "module_index": "mandatory",
+          "utparam-url": {
+            "raw": "mandatory",
+            "parsed": {
+              "x_object_id": "<상품번호>",
+              "x_object_type": "item",
+              "pvid": "skip",
+              "pvid_sys": "gmarket server",
+              "origin_price": "<원가>",
+              "promotion_price": "<할인가>",
+              "coupon_price": "<쿠폰적용가>",
+              "trafficType": "<trafficType>",
+              "ad_product": "",
+              "ad_sub_product": "",
+              "ab_buckets": "skip",
+              "query": "<검색어>",
+              "search_session_id": "skip"
+            }
+          },
+          "cache": "mandatory",
+          "jsver": "aplus.js",
+          "lver": "1.13.26-1",
+          "customSdkId": "",
+          "platformType": [
+            "pc",
+            "mac"
+          ],
+          "device_model": [
+            "Windows",
+            "Macintosh"
+          ],
+          "os": [
+            "Windows",
+            "Mac OS X"
+          ],
+          "os_version": [
+            "win10",
+            "10.15.7"
+          ],
+          "language": [
+            "ko-KR",
+            "en-US"
+          ],
+          "o": [
+            "win10",
+            "mac"
+          ],
+          "w": [
+            "webkit",
+            "chrome"
+          ],
+          "s": "1280x720",
+          "scr": "mandatory",
+          "m": "360ee",
+          "ism": [
+            "pc",
+            "mac"
+          ],
+          "p": "1",
+          "b": "mandatory",
+          "tag": "1",
+          "stag": "-1",
+          "lstag": "-1",
+          "_g_encode": "utf-8"
+        }
+      }
+    }
+  }
+}

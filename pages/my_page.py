@@ -3,7 +3,7 @@ import logging
 import json
 from pages.base_page import BasePage
 from playwright.sync_api import Page, Locator, expect
-from utils.urls import my_url
+# from utils.urls import my_url
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -19,13 +19,13 @@ class MyPage(BasePage):
         """
         super().__init__(page)
 
-    def go_to_my_page_by_url(self):
-        """
-        마이 페이지 URL로 이동
-        """
-        logger.debug("마이 페이지로 이동")
-        self.page.goto(my_url(), wait_until="domcontentloaded", timeout=30000)
-        logger.info("v 페이지 이동 완료")
+    # def go_to_my_page_by_url(self):
+    #     """
+    #     마이 페이지 URL로 이동
+    #     """
+    #     logger.debug("마이 페이지로 이동")
+    #     self.page.goto(my_url(), wait_until="domcontentloaded", timeout=30000)
+    #     logger.info("v 페이지 이동 완료")
 
     def is_my_page_displayed(self):
         """

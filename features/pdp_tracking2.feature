@@ -9,9 +9,9 @@ Feature: G마켓 PDP 트래킹 로그 정합성 검증
     And 사용자가 PDP에서 "<module_title>" 버튼을 확인하고 클릭한다
     Then 버튼 "<module_title>"가 클릭되었다
     Then 모든 트래킹 로그를 JSON 파일로 저장함
-    Then PDP Buynow Click 로그가 정합성 검증을 통과해야 함 (TC: <tc_buynow_click>)
-    Then PDP ATC Click 로그가 정합성 검증을 통과해야 함 (TC: <tc_atc_click>)
-    Then PDP Gift Click 로그가 정합성 검증을 통과해야 함 (TC: <tc_gift_click>)
+    And PDP Buynow Click 로그가 정합성 검증을 통과해야 함 (TC: <tc_buynow_click>)
+    And PDP ATC Click 로그가 정합성 검증을 통과해야 함 (TC: <tc_atc_click>)
+    And PDP Gift Click 로그가 정합성 검증을 통과해야 함 (TC: <tc_gift_click>)
 
     Examples:
       | goodscode  | module_title     | tc_buynow_click | tc_atc_click | tc_gift_click |
@@ -27,9 +27,9 @@ Feature: G마켓 PDP 트래킹 로그 정합성 검증
     When 사용자가 PDP에서 "<module_title>" 버튼을 확인하고 클릭한다
     Then 버튼 "<module_title>"가 클릭되었다
     Then 모든 트래킹 로그를 JSON 파일로 저장함
-    Then PDP Buynow Click 로그가 정합성 검증을 통과해야 함 (TC: <tc_buynow_click>)
-    Then PDP ATC Click 로그가 정합성 검증을 통과해야 함 (TC: <tc_atc_click>)
-    Then PDP Gift Click 로그가 정합성 검증을 통과해야 함 (TC: <tc_gift_click>)
+    And PDP Buynow Click 로그가 정합성 검증을 통과해야 함 (TC: <tc_buynow_click>)
+    And PDP ATC Click 로그가 정합성 검증을 통과해야 함 (TC: <tc_atc_click>)
+    And PDP Gift Click 로그가 정합성 검증을 통과해야 함 (TC: <tc_gift_click>)
 
     Examples:
       | goodscode  | module_title     | tc_buynow_click | tc_atc_click | tc_gift_click |

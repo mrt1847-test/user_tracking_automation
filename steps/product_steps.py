@@ -537,7 +537,8 @@ def user_confirms_and_clicks_product_in_pdp_related_module(browser_session, butt
         # 상품 코드 가져오기
         if "연관상품" in button_title:
             product_page.select_button_click_in_detail_page()
-            goodscode = product_page.get_product_code_in_detail_page()
+            goodscode = product_page.get_product_code(button)
+            # goodscode = product_page.get_product_code_in_detail_page()
         else:
             goodscode = product_page.get_product_code(button)
 
