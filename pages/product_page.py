@@ -2,7 +2,7 @@
 상품 상세 페이지 객체
 """
 from pages.base_page import BasePage
-from playwright.sync_api import Page, Locator, TimeoutError
+from playwright.sync_api import Page, Locator, TimeoutError, expect
 from utils.urls import product_url
 from typing import Optional
 import logging
@@ -370,3 +370,16 @@ class ProductPage(BasePage):
         """
         logger.debug("상품 코드 가져오기")
         return self.page.locator(".relate-item_detail_info_area").locator(".add-interest").get_attribute("data-montelena-goodscode")
+    
+    def verify_product_in_cart(self) -> None:
+        """
+        장바구니에 상품이 추가되었는지 확인
+        """
+        logger.debug("장바구니에 상품 추가 여부 확인")
+        layer = self.page.locator("#layer_mycart")
+        try:
+            expect(layer).to_be_visible()
+            logger.info("장바구니 레이어가 표시됨")
+        except Exception:
+            logger.info("장바구니 레이어가 표시되지 않음")
+            

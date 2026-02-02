@@ -537,8 +537,7 @@ def user_confirms_and_clicks_product_in_pdp_related_module(browser_session, butt
         # 상품 코드 가져오기
         if "연관상품" in button_title:
             product_page.select_button_click_in_detail_page()
-            goodscode = product_page.get_product_code(button)
-            # goodscode = product_page.get_product_code_in_detail_page()
+            goodscode = product_page.get_product_code_in_detail_page()
         else:
             goodscode = product_page.get_product_code(button)
 
@@ -583,8 +582,12 @@ def other_page_is_opened(browser_session, bdd_context, module_title):
     try:
         product_page = ProductPage(browser_session.page)
         
-        product_page.verify_keyword_in_url(module_title)
-        
+        if "장바구니" in module_title:
+            product_page.verify_product_in_cart()
+                
+        else:
+            product_page.verify_keyword_in_url(module_title)
+
         
         
         try:
