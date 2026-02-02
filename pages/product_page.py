@@ -53,7 +53,7 @@ class ProductPage(BasePage):
         except Exception as e:
             logger.warning(f"상품 상세 페이지 확인 실패: {e}")
             return False
-   
+       
     def wait_for_page_load(self) -> None:
         """페이지 로드 대기"""
         logger.debug("페이지 로드 대기")
@@ -128,6 +128,15 @@ class ProductPage(BasePage):
         self.page.get_by_text("선택", exact=True).nth(0).click()
         logger.debug("n번쨰 그룹상품 선택택 완료")
 
+    def select_button_click_in_detail_page(self) -> None:
+        """
+        연관상품 상세보기 선택 버튼 클릭
+        
+        """
+
+        # 선택 버튼 클릭
+        self.page.locator(".vip-detailoption_wrap").locator(".bt_select").click()
+        logger.debug("연관상품 상세보기 선택 버튼 클릭 완료")
        
     # ============================================
     # 모듈 및 상품 관련 메서드 (Atomic POM)
