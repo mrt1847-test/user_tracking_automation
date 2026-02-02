@@ -229,6 +229,10 @@ def process_event_type_payload(event_data: Dict[str, Any], event_type: str) -> D
         # pdp_pv는 payload 전체 사용
         return {'payload': payload}
     
+    elif event_type in ('PDP Buynow Click', 'PDP ATC Click', 'PDP Gift Click', 'PDP Join Click', 'PDP Rental Click'):
+        # PDP 클릭 5종: payload 전체 사용 (gokey, decoded_gokey, _p_url 등)
+        return {'payload': payload}
+    
     else:
         # 기본적으로 payload 전체 사용
         return {'payload': payload} if payload else {}
@@ -303,6 +307,11 @@ def main():
         'Product ATC Click',
         'Product Minidetail',
         'PDP PV',
+        'PDP Buynow Click',
+        'PDP ATC Click',
+        'PDP Gift Click',
+        'PDP Join Click',
+        'PDP Rental Click',
         'PV',
     ]
     

@@ -3,6 +3,7 @@ pytest_plugins = [
     "steps.home_steps",
     "steps.login_steps",
     "steps.srp_lp_steps",
+    "steps.my_steps",
     "steps.product_steps",
     "steps.cart_steps",
     "steps.checkout_steps",

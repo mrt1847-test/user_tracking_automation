@@ -35,6 +35,11 @@ EVENT_TYPE_TO_CONFIG_KEY = {
     'Product ATC Click': 'product_atc_click',
     'Product Minidetail': 'product_minidetail',
     'PDP PV': 'pdp_pv',
+    'PDP Buynow Click': 'pdp_buynow_click',
+    'PDP ATC Click': 'pdp_atc_click',
+    'PDP Gift Click': 'pdp_gift_click',
+    'PDP Join Click': 'pdp_join_click',
+    'PDP Rental Click': 'pdp_rental_click',
     'PV': 'pv',
 }
 

@@ -38,8 +38,11 @@ def create_config_json(
     config = {}
     
     # payload 구조를 유지해야 하는 이벤트 타입들
-    # module_exposure, product_atc_click, product_minidetail, pdp_pv 등은 payload 전체를 사용
-    payload_preserving_types = ['module_exposure', 'product_atc_click', 'product_minidetail', 'pdp_pv']
+    # module_exposure, product_atc_click, product_minidetail, pdp_pv, pdp_buynow_click 등은 payload 전체를 사용
+    payload_preserving_types = [
+        'module_exposure', 'product_atc_click', 'product_minidetail', 'pdp_pv',
+        'pdp_buynow_click', 'pdp_atc_click', 'pdp_gift_click', 'pdp_join_click', 'pdp_rental_click',
+    ]
     
     for config_key, flat_data in event_data_dict.items():
         if not flat_data:
@@ -72,7 +75,10 @@ def merge_module_with_common(
     모듈 필드와 공통 필드를 병합 (payload prefix 등 처리 포함).
     """
     merged_event_data_dict = {}
-    payload_preserving_types = ['module_exposure', 'product_atc_click', 'product_minidetail', 'pdp_pv']
+    payload_preserving_types = [
+        'module_exposure', 'product_atc_click', 'product_minidetail', 'pdp_pv',
+        'pdp_buynow_click', 'pdp_atc_click', 'pdp_gift_click', 'pdp_join_click', 'pdp_rental_click',
+    ]
 
     for config_key, module_fields in event_data_dict.items():
         event_type = None
