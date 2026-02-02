@@ -350,9 +350,10 @@ def main():
     
     # 데이터만 A2:E에 기록 (1행은 표 헤더, 건드리지 않음)
     ncols = sync.AREA_NCOLS
-    pad = lambda r: r if len(r) >= ncols else r + [''] * (ncols - len(r))
+    # 컬럼 수를 정확히 ncols로 맞춤 (부족하면 채우고, 초과하면 자름)
+    trim = lambda r: (r + [''] * (ncols - len(r)))[:ncols]
     new_rows = sync.build_area_module_rows(args.module, event_type_rows)
-    to_write = [pad(r) for r in kept] + [pad(r) for r in new_rows]
+    to_write = [trim(r) for r in kept] + [trim(r) for r in new_rows]
     
     sync.clear_area_data_range(worksheet)
     if to_write:
