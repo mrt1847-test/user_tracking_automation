@@ -36,10 +36,11 @@ class MyPage(BasePage):
 
     def click_order_history(self):
         """
-        주문내역 버튼 클릭
+        주문내역 메뉴 클릭 (주문 목록 페이지로 이동하는 링크)
+        <a href=".../ko/pc/list/all" class="link__menu"><span class="text__menu">주문내역</span></a>
         """
         logger.info("주문내역 버튼 클릭")
-        self.page.locator(".text__menu:has-text('주문내역')").click()
+        self.page.locator("a.link__menu[href*='ko/pc/list/all']").click()
 
     def is_order_history_page_displayed(self):
         """
