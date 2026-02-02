@@ -406,6 +406,180 @@ def then_product_atc_click_logs_should_pass_validation(tc_id, bdd_context):
         # 예외를 다시 발생시키지 않음 (다음 스텝 계속 실행)
 
 
+@then(parsers.re(r'Product Minidetail 로그가 정합성 검증을 통과해야 함 \(TC: (?P<tc_id>.*)\)'))
+def then_product_minidetail_logs_should_pass_validation(tc_id, bdd_context):
+    """Product Minidetail 로그 정합성 검증 (가격 관련 필드 제외, module_config.json에 정의된 경우만)"""
+    logger.debug(f"then_product_minidetail_logs_should_pass_validation 실행: tc_id={tc_id}")
+    if not tc_id or tc_id.strip() == '':
+        logger.info("TC 번호가 비어있어 Product Minidetail 로그 검증을 건너뜁니다.")
+        return
+    try:
+        tracker, goodscode, module_title, frontend_data, area = _get_common_context(bdd_context)
+        bdd_context['testrail_tc_id'] = tc_id
+        _check_and_validate_event_logs(
+            tc_id=tc_id,
+            event_type='Product Minidetail',
+            event_config_key='product_minidetail',
+            tracker=tracker,
+            goodscode=goodscode,
+            module_title=module_title,
+            frontend_data=frontend_data,
+            area=area,
+            bdd_context=bdd_context
+        )
+    except Exception as e:
+        error_message = f"[TestRail TC: {tc_id}] Product Minidetail 로그 검증 중 예외 발생: {str(e)}"
+        logger.error(error_message, exc_info=True)
+        bdd_context['testrail_tc_id'] = tc_id
+        bdd_context['validation_failed'] = True
+        bdd_context['validation_error_message'] = error_message
+
+
+@then(parsers.re(r'PDP Buynow Click 로그가 정합성 검증을 통과해야 함 \(TC: (?P<tc_id>.*)\)'))
+def then_pdp_buynow_click_logs_should_pass_validation(tc_id, bdd_context):
+    """PDP Buynow Click 로그 정합성 검증 (module_config.json에 정의된 경우만)"""
+    logger.debug(f"then_pdp_buynow_click_logs_should_pass_validation 실행: tc_id={tc_id}")
+    if not tc_id or tc_id.strip() == '':
+        logger.info("TC 번호가 비어있어 PDP Buynow Click 로그 검증을 건너뜁니다.")
+        return
+    try:
+        tracker, goodscode, module_title, frontend_data, area = _get_common_context(bdd_context)
+        bdd_context['testrail_tc_id'] = tc_id
+        _check_and_validate_event_logs(
+            tc_id=tc_id,
+            event_type='PDP Buynow Click',
+            event_config_key='pdp_buynow_click',
+            tracker=tracker,
+            goodscode=goodscode,
+            module_title=module_title,
+            frontend_data=frontend_data,
+            area=area,
+            bdd_context=bdd_context
+        )
+    except Exception as e:
+        error_message = f"[TestRail TC: {tc_id}] PDP Buynow Click 로그 검증 중 예외 발생: {str(e)}"
+        logger.error(error_message, exc_info=True)
+        bdd_context['testrail_tc_id'] = tc_id
+        bdd_context['validation_failed'] = True
+        bdd_context['validation_error_message'] = error_message
+
+
+@then(parsers.re(r'PDP ATC Click 로그가 정합성 검증을 통과해야 함 \(TC: (?P<tc_id>.*)\)'))
+def then_pdp_atc_click_logs_should_pass_validation(tc_id, bdd_context):
+    """PDP ATC Click 로그 정합성 검증 (module_config.json에 정의된 경우만)"""
+    logger.debug(f"then_pdp_atc_click_logs_should_pass_validation 실행: tc_id={tc_id}")
+    if not tc_id or tc_id.strip() == '':
+        logger.info("TC 번호가 비어있어 PDP ATC Click 로그 검증을 건너뜁니다.")
+        return
+    try:
+        tracker, goodscode, module_title, frontend_data, area = _get_common_context(bdd_context)
+        bdd_context['testrail_tc_id'] = tc_id
+        _check_and_validate_event_logs(
+            tc_id=tc_id,
+            event_type='PDP ATC Click',
+            event_config_key='pdp_atc_click',
+            tracker=tracker,
+            goodscode=goodscode,
+            module_title=module_title,
+            frontend_data=frontend_data,
+            area=area,
+            bdd_context=bdd_context
+        )
+    except Exception as e:
+        error_message = f"[TestRail TC: {tc_id}] PDP ATC Click 로그 검증 중 예외 발생: {str(e)}"
+        logger.error(error_message, exc_info=True)
+        bdd_context['testrail_tc_id'] = tc_id
+        bdd_context['validation_failed'] = True
+        bdd_context['validation_error_message'] = error_message
+
+
+@then(parsers.re(r'PDP Gift Click 로그가 정합성 검증을 통과해야 함 \(TC: (?P<tc_id>.*)\)'))
+def then_pdp_gift_click_logs_should_pass_validation(tc_id, bdd_context):
+    """PDP Gift Click 로그 정합성 검증 (module_config.json에 정의된 경우만)"""
+    logger.debug(f"then_pdp_gift_click_logs_should_pass_validation 실행: tc_id={tc_id}")
+    if not tc_id or tc_id.strip() == '':
+        logger.info("TC 번호가 비어있어 PDP Gift Click 로그 검증을 건너뜁니다.")
+        return
+    try:
+        tracker, goodscode, module_title, frontend_data, area = _get_common_context(bdd_context)
+        bdd_context['testrail_tc_id'] = tc_id
+        _check_and_validate_event_logs(
+            tc_id=tc_id,
+            event_type='PDP Gift Click',
+            event_config_key='pdp_gift_click',
+            tracker=tracker,
+            goodscode=goodscode,
+            module_title=module_title,
+            frontend_data=frontend_data,
+            area=area,
+            bdd_context=bdd_context
+        )
+    except Exception as e:
+        error_message = f"[TestRail TC: {tc_id}] PDP Gift Click 로그 검증 중 예외 발생: {str(e)}"
+        logger.error(error_message, exc_info=True)
+        bdd_context['testrail_tc_id'] = tc_id
+        bdd_context['validation_failed'] = True
+        bdd_context['validation_error_message'] = error_message
+
+
+@then(parsers.re(r'PDP Join Click 로그가 정합성 검증을 통과해야 함 \(TC: (?P<tc_id>.*)\)'))
+def then_pdp_join_click_logs_should_pass_validation(tc_id, bdd_context):
+    """PDP Join Click 로그 정합성 검증 (module_config.json에 정의된 경우만)"""
+    logger.debug(f"then_pdp_join_click_logs_should_pass_validation 실행: tc_id={tc_id}")
+    if not tc_id or tc_id.strip() == '':
+        logger.info("TC 번호가 비어있어 PDP Join Click 로그 검증을 건너뜁니다.")
+        return
+    try:
+        tracker, goodscode, module_title, frontend_data, area = _get_common_context(bdd_context)
+        bdd_context['testrail_tc_id'] = tc_id
+        _check_and_validate_event_logs(
+            tc_id=tc_id,
+            event_type='PDP Join Click',
+            event_config_key='pdp_join_click',
+            tracker=tracker,
+            goodscode=goodscode,
+            module_title=module_title,
+            frontend_data=frontend_data,
+            area=area,
+            bdd_context=bdd_context
+        )
+    except Exception as e:
+        error_message = f"[TestRail TC: {tc_id}] PDP Join Click 로그 검증 중 예외 발생: {str(e)}"
+        logger.error(error_message, exc_info=True)
+        bdd_context['testrail_tc_id'] = tc_id
+        bdd_context['validation_failed'] = True
+        bdd_context['validation_error_message'] = error_message
+
+
+@then(parsers.re(r'PDP Rental Click 로그가 정합성 검증을 통과해야 함 \(TC: (?P<tc_id>.*)\)'))
+def then_pdp_rental_click_logs_should_pass_validation(tc_id, bdd_context):
+    """PDP Rental Click 로그 정합성 검증 (module_config.json에 정의된 경우만)"""
+    logger.debug(f"then_pdp_rental_click_logs_should_pass_validation 실행: tc_id={tc_id}")
+    if not tc_id or tc_id.strip() == '':
+        logger.info("TC 번호가 비어있어 PDP Rental Click 로그 검증을 건너뜁니다.")
+        return
+    try:
+        tracker, goodscode, module_title, frontend_data, area = _get_common_context(bdd_context)
+        bdd_context['testrail_tc_id'] = tc_id
+        _check_and_validate_event_logs(
+            tc_id=tc_id,
+            event_type='PDP Rental Click',
+            event_config_key='pdp_rental_click',
+            tracker=tracker,
+            goodscode=goodscode,
+            module_title=module_title,
+            frontend_data=frontend_data,
+            area=area,
+            bdd_context=bdd_context
+        )
+    except Exception as e:
+        error_message = f"[TestRail TC: {tc_id}] PDP Rental Click 로그 검증 중 예외 발생: {str(e)}"
+        logger.error(error_message, exc_info=True)
+        bdd_context['testrail_tc_id'] = tc_id
+        bdd_context['validation_failed'] = True
+        bdd_context['validation_error_message'] = error_message
+
+
 @then("모든 트래킹 로그를 JSON 파일로 저장함")
 def then_save_all_tracking_logs_to_json(bdd_context):
     """모든 트래킹 로그를 JSON 파일로 저장"""

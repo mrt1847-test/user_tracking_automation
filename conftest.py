@@ -931,7 +931,7 @@ def pytest_sessionstart(session):
     print(f"[TestRail] 총 {len(all_case_ids)}개 케이스 수집 완료")
     
     # 4. Run 생성
-    run_name = f"Gmarket Regression test dweb {datetime.now():%Y-%m-%d %H:%M:%S}"
+    run_name = f"GUT Automation test dweb {datetime.now():%Y-%m-%d %H:%M:%S}"
     payload = {
         "suite_id": TESTRAIL_SUITE_ID,
         "name": run_name,

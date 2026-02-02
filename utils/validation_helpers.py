@@ -17,6 +17,11 @@ EVENT_TYPE_METHODS = {
     'Product Click': 'get_product_click_logs_by_goodscode',
     'Product ATC Click': 'get_product_atc_click_logs_by_goodscode',
     'Product Minidetail': 'get_product_minidetail_logs_by_goodscode',
+    'PDP Buynow Click': 'get_pdp_buynow_click_logs_by_goodscode',
+    'PDP ATC Click': 'get_pdp_atc_click_logs_by_goodscode',
+    'PDP Gift Click': 'get_pdp_gift_click_logs_by_goodscode',
+    'PDP Join Click': 'get_pdp_join_click_logs_by_goodscode',
+    'PDP Rental Click': 'get_pdp_rental_click_logs_by_goodscode',
 }
 
 
@@ -29,7 +34,15 @@ EVENT_TYPE_CONFIG_KEY_MAP = {
     'Product Minidetail': 'product_minidetail',
     'PDP PV': 'pdp_pv',
     'PV': 'pv',  # PV는 특별한 구조가 없을 수 있음
+    'PDP Buynow Click': 'pdp_buynow_click',
+    'PDP ATC Click': 'pdp_atc_click',
+    'PDP Gift Click': 'pdp_gift_click',
+    'PDP Join Click': 'pdp_join_click',
+    'PDP Rental Click': 'pdp_rental_click',
 }
+
+# Product Minidetail 검증 시 제외할 가격 관련 필드
+MINIDETAIL_PRICE_EXCLUDE_FIELDS = ['origin_price', 'promotion_price', 'coupon_price']
 
 
 def module_title_to_filename(module_title: str) -> str:
@@ -248,6 +261,16 @@ def get_event_logs(tracker: NetworkTracker, event_type: str, goodscode: str, mod
         logs = tracker.get_product_atc_click_logs_by_goodscode(goodscode)
     elif event_type == 'Product Minidetail':
         logs = tracker.get_product_minidetail_logs_by_goodscode(goodscode)
+    elif event_type == 'PDP Buynow Click':
+        logs = tracker.get_pdp_buynow_click_logs_by_goodscode(goodscode)
+    elif event_type == 'PDP ATC Click':
+        logs = tracker.get_pdp_atc_click_logs_by_goodscode(goodscode)
+    elif event_type == 'PDP Gift Click':
+        logs = tracker.get_pdp_gift_click_logs_by_goodscode(goodscode)
+    elif event_type == 'PDP Join Click':
+        logs = tracker.get_pdp_join_click_logs_by_goodscode(goodscode)
+    elif event_type == 'PDP Rental Click':
+        logs = tracker.get_pdp_rental_click_logs_by_goodscode(goodscode)
     else:
         logs = []
     
@@ -556,6 +579,15 @@ def validate_event_type_logs(
     # module_config.json에 이벤트 타입별 섹션이 없으면 검증 스킵
     if event_config_key and event_config_key not in module_config_data:
         return True, [], {}  # config에 정의되지 않은 이벤트는 검증하지 않음
+    
+    # Product Minidetail: 가격 관련 필드 검증 건너뛰기
+    if event_type == 'Product Minidetail':
+        exclude_fields = list(exclude_fields) if exclude_fields else []
+        for f in MINIDETAIL_PRICE_EXCLUDE_FIELDS:
+            if f not in exclude_fields:
+                exclude_fields.append(f)
+    elif exclude_fields is None:
+        exclude_fields = []
     
     # 로그 가져오기
     logs = get_event_logs(tracker, event_type, goodscode, module_config_data)
