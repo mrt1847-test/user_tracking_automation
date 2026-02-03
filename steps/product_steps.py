@@ -539,6 +539,9 @@ def user_confirms_and_clicks_product_in_pdp_related_module(browser_session, butt
             time.sleep(2)
             product_page.select_button_click_in_detail_page()
             goodscode = product_page.get_product_code_in_detail_page()
+        elif "상담신청" in button_title:
+            product_page.select_group_product(1)
+            goodscode = product_page.get_product_code(button)
         else:
             goodscode = product_page.get_product_code(button)
 
@@ -549,15 +552,13 @@ def user_confirms_and_clicks_product_in_pdp_related_module(browser_session, butt
             bdd_context.store['goodscode'] = goodscode
 
             # 버튼 클릭
-            
-
             product_page.click_product(button)
             time.sleep(2)
 
             logger.info(f"{button_title} 버튼 확인 및 클릭 완료: {goodscode}")
         except Exception as e:
             logger.error(f"상품 클릭 실패: {e}", exc_info=True)
-            record_frontend_failure(browser_session, bdd_context, f"상품 클릭 실패: {str(e)}", "사용자가 모듈 내 상품을 확인하고 클릭한다 (type2)")
+            record_frontend_failure(browser_session, bdd_context, f"상품 클릭 실패: {str(e)}", "사용자가 모듈 내 상품을 확인하고 클릭한다")
             # goodscode는 저장 (일부 정보라도 보존)
             if 'goodscode' in locals():
                 bdd_context.store['goodscode'] = goodscode
@@ -567,7 +568,7 @@ def user_confirms_and_clicks_product_in_pdp_related_module(browser_session, butt
     except Exception as e:
         # 예상치 못한 예외 처리
         logger.error(f"프론트 동작 중 예외 발생: {e}", exc_info=True)
-        record_frontend_failure(browser_session, bdd_context, str(e), "사용자가 모듈 내 상품을 확인하고 클릭한다 (type2)")
+        record_frontend_failure(browser_session, bdd_context, str(e), "사용자가 모듈 내 상품을 확인하고 클릭한다")
         if 'module_title' not in bdd_context.store:
             bdd_context.store['module_title'] = button_title
 
@@ -585,9 +586,8 @@ def other_page_is_opened(browser_session, bdd_context, module_title):
     try:
         product_page = ProductPage(browser_session.page)
         
-        if "장바구니" in module_title:
-            product_page.verify_product_in_cart()
-            
+        if "장바구니" in module_title or module_title == "상담신청":
+            product_page.verify_display_layer(module_title)    
         else:
             product_page.verify_keyword_in_url(module_title)
             try:
@@ -600,5 +600,40 @@ def other_page_is_opened(browser_session, bdd_context, module_title):
         logger.info(f"페이지 이동 확인 완료: {module_title}")
         
     except Exception as e:
-        logger.error(f"페이지 이동 확인 중 예외 발생: {e}")
+        logger.error(f"페이지 이동 확인 중 예외 발생: {e}", exc_info=True)
         record_frontend_failure(browser_session, bdd_context, str(e), "상품 페이지로 이동되었다")
+
+@when("사용자가 상품 옵션을 입력한다")
+def user_inputs_product_option(browser_session):
+    """
+    사용자가 상품 옵션(수량 등) 입력
+    
+    Args:
+        browser_session: BrowserSession 객체 (page 참조 관리)
+    """
+    product_page = ProductPage(browser_session.page)
+    try:
+        # 첫 번째 옵션 영역으로 스크롤
+        option = product_page.option_area_locator(0)
+        product_page.scroll_module_into_view(option)
+        time.sleep(1)
+        # 선택형 옵션 입력
+        for i in range(10):
+            if product_page.is_in_select_option(option, i):
+                product_page.select_option_box(option, i)
+            else:    
+                break
+        # 선택형 옵션 입력 완료 후 텍스트형 옵션 입력
+        for j in range(10):
+            if product_page.is_in_text_option(option, j):
+                product_page.fill_in_text_option(option, j, "테스트")
+            else:
+                product_page.get_by_text_and_click_where("입력한 정보로 선택", 0)    
+                break
+        time.sleep(1)
+        logger.info("상품 옵션 입력 완료")
+
+    except Exception as e:
+        logger.error(f"상품 옵션 입력 실패: {e}", exc_info=True)
+        raise e
+  

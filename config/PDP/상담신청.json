@@ -1,0 +1,118 @@
+{
+  "pdp_rental_click": {
+    "payload": {
+      "gmkey": "CLK",
+      "ts": "mandatory",
+      "rd": "mandatory",
+      "gokey": "mandatory",
+      "cna": "mandatory",
+      "spm-cnt": "gmktpc.pdp.0",
+      "_gr_uid_": "11758850530814005372000000",
+      "uidaplus": "11758850530814005372000000",
+      "logtype": "2",
+      "scr": "mandatory",
+      "_p_url": "mandatory",
+      "decoded_gokey": {
+        "decoded_gokey": "mandatory",
+        "params": {
+          "uidaplus": "11758850530814005372000000",
+          "spm-url": "",
+          "spm-pre": "",
+          "spm-cnt": "gmktpc.pdp.0",
+          "_f_t": "false",
+          "pid": "item_gmarket_co_kr",
+          "cguid": "11758850530814005372000000",
+          "pguid": "skip",
+          "sguid": "skip",
+          "channel_code": "",
+          "st_page_id": "mandatory",
+          "server_env": "<environment>",
+          "_p_group_typ": "1",
+          "gmkt_page_id": "",
+          "ab_buckets": "skip",
+          "spm": "gmktpc.pdp.buyarea_consultation.d0",
+          "clk_itm_info": {
+            "raw": "mandatory",
+            "parsed[0]": {
+              "_p_prod": "<상품번호>",
+              "_p_sku_id": "",
+              "_p_sku_info": "",
+              "_p_catalog": "skip",
+              "_p_group": "skip",
+              "quantity": "1",
+              "_p_parent_sku_id": "",
+              "_p_parent_sku_info": "",
+              "itm_price": "18900"
+            }
+          },
+          "gmkt_area_code": "200000519",
+          "_p_prod_main": "2698619898",
+          "module_index": "mandatory",
+          "utparam-url": {
+            "raw": "mandatory",
+            "parsed": {
+              "x_object_id": "<상품번호>",
+              "x_object_type": "item",
+              "pvid": "skip",
+              "pvid_sys": "gmarket server",
+              "origin_price": "<원가>",
+              "promotion_price": "<할인가>",
+              "coupon_price": "<쿠폰적용가>",
+              "trafficType": "<trafficType>",
+              "ad_product": "",
+              "ad_sub_product": "",
+              "ab_buckets": "skip",
+              "query": "<검색어>",
+              "search_session_id": "skip"
+            }
+          },
+          "cache": "mandatory",
+          "jsver": "aplus.js",
+          "lver": "1.13.26-1",
+          "customSdkId": "",
+          "platformType": [
+            "pc",
+            "mac"
+          ],
+          "device_model": [
+            "Windows",
+            "Macintosh"
+          ],
+          "os": [
+            "Windows",
+            "Mac OS X"
+          ],
+          "os_version": [
+            "win10",
+            "10.15.7"
+          ],
+          "language": [
+            "ko-KR",
+            "en-US"
+          ],
+          "o": [
+            "win10",
+            "mac"
+          ],
+          "w": [
+            "webkit",
+            "chrome"
+          ],
+          "s": "1280x720",
+          "scr": "mandatory",
+          "m": "360ee",
+          "ism": [
+            "pc",
+            "mac"
+          ],
+          "p": "1",
+          "b": "mandatory",
+          "tag": "1",
+          "stag": "-1",
+          "lstag": "-1",
+          "_g_encode": "utf-8"
+        }
+      }
+    }
+  }
+}

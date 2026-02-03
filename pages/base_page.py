@@ -620,7 +620,7 @@ class BasePage:
             page_type: 페이지 타입 ("구매하기", "선물하기")
         """
         keyword = ""
-        if "구매하기" in page_type:
+        if "구매하기" in page_type or page_type == "가입신청":
             keyword = "checkout"
         elif "선물하기" in page_type:
             keyword = "gift"

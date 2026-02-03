@@ -1,0 +1,105 @@
+{
+  "pdp_join_click": {
+    "payload": {
+      "gmkey": "CLK",
+      "ts": "mandatory",
+      "rd": "mandatory",
+      "gokey": "mandatory",
+      "cna": "mandatory",
+      "spm-cnt": "gmktpc.pdp.0",
+      "_gr_uid_": "11758850530814005372000000",
+      "uidaplus": "11758850530814005372000000",
+      "logtype": "2",
+      "scr": "mandatory",
+      "_p_url": "mandatory",
+      "decoded_gokey": {
+        "decoded_gokey": "mandatory",
+        "params": {
+          "uidaplus": "11758850530814005372000000",
+          "spm-url": "",
+          "spm-pre": "",
+          "spm-cnt": "gmktpc.pdp.0",
+          "_f_t": "false",
+          "pid": "item_gmarket_co_kr",
+          "cguid": "11758850530814005372000000",
+          "pguid": "skip",
+          "sguid": "skip",
+          "channel_code": "",
+          "st_page_id": "mandatory",
+          "server_env": "<environment>",
+          "_p_group_typ": "0",
+          "gmkt_page_id": "",
+          "ab_buckets": "skip",
+          "spm": "gmktpc.pdp.buyarea_signup.d0",
+          "clk_itm_info": "[{\"_p_prod\":\"2529094051\",\"_p_sku_id\":\"89426957437_67344109500_67344109506_67344109515_67344109509\",\"_p_sku_info\":\"89426957437\u001e모델명\u001e갤럭시 S25 울트라\u001f67344109500\u001e개통자 성함\u001e테스트\u001f67344109506\u001e현재 통신사\u001e테스트\u001f67344109515\u001e희망 요금제\u001e테스트\u001f67344109509\u001e희망 통신사\u001e테스트\",\"_p_catalog\":\"\",\"_p_group\":\"\",\"quantity\":1,\"_p_parent_sku_id\":\"\",\"_p_parent_sku_info\":\"\",\"itm_price\":1}]",
+          "gmkt_area_code": "200000519",
+          "_p_prod_main": "",
+          "module_index": "mandatory",
+          "utparam-url": {
+            "raw": "mandatory",
+            "parsed": {
+              "x_object_id": "<상품번호>",
+              "x_object_type": "item",
+              "pvid": "skip",
+              "pvid_sys": "gmarket server",
+              "origin_price": "<원가>",
+              "promotion_price": "<할인가>",
+              "coupon_price": "<쿠폰적용가>",
+              "trafficType": "<trafficType>",
+              "ad_product": "",
+              "ad_sub_product": "",
+              "ab_buckets": "skip",
+              "query": "<검색어>",
+              "search_session_id": "skip"
+            }
+          },
+          "cache": "mandatory",
+          "jsver": "aplus.js",
+          "lver": "1.13.26-1",
+          "customSdkId": "",
+          "platformType": [
+            "pc",
+            "mac"
+          ],
+          "device_model": [
+            "Windows",
+            "Macintosh"
+          ],
+          "os": [
+            "Windows",
+            "Mac OS X"
+          ],
+          "os_version": [
+            "win10",
+            "10.15.7"
+          ],
+          "language": [
+            "ko-KR",
+            "en-US"
+          ],
+          "o": [
+            "win10",
+            "mac"
+          ],
+          "w": [
+            "webkit",
+            "chrome"
+          ],
+          "s": "1280x720",
+          "scr": "mandatory",
+          "m": "360ee",
+          "ism": [
+            "pc",
+            "mac"
+          ],
+          "p": "1",
+          "b": "mandatory",
+          "tag": "1",
+          "stag": "-1",
+          "lstag": "-1",
+          "_g_encode": "utf-8"
+        }
+      }
+    }
+  }
+}

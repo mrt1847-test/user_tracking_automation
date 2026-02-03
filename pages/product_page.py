@@ -153,26 +153,32 @@ class ProductPage(BasePage):
             Locator 객체
         """
         logger.debug(f"모듈 찾기: {module_title}")
-        if module_title == "연관 상품":
-            return self.get_module_by_spmc("relateditem")
-        elif module_title == "이마트몰VT":
-            return self.get_module_by_spmc("emartvt").filter(visible=True)
-        elif module_title == "이마트몰BT":
-            return self.get_module_by_spmc("emartbt")
-        elif module_title == "일반상품 구매하기":
-            return self.page.locator("#coreInsOrderBtn")
-        elif module_title == "일반상품 장바구니":
-            return self.page.locator("#coreAddCartBtn")
-        elif module_title == "일반상품 선물하기":
-            return self.page.locator("#coreGiftBtn")
-        elif module_title == "연관상품 구매하기":
-            return self.page.locator("#wingInsOrderBtn")
-        elif module_title == "연관상품 장바구니":
-            return self.page.locator("#wingAddCartBtn")
-        elif module_title == "연관상품 선물하기":
-            return self.page.locator("#wingGiftBtn")
-        else:
-            return self.page.get_by_text(module_title)
+        spmc_map = {
+                "연관 상품": "relateditem",
+                "이마트몰VT": "emartvt",
+                "이마트몰BT": "emartbt",
+        }
+        
+        # 2. 로케이터(ID) 관련 매핑
+        locator_map = {
+            "일반상품 구매하기": "#coreInsOrderBtn",
+            "일반상품 장바구니": "#coreAddCartBtn",
+            "일반상품 선물하기": "#coreGiftBtn",
+            "연관상품 구매하기": "#wingInsOrderBtn",
+            "연관상품 장바구니": "#wingAddCartBtn",
+            "연관상품 선물하기": "#wingGiftBtn",
+            "가입신청": "#coreInsOrderBtn",
+            "상담신청": "#coreInsOrderBtn",
+        }
+
+        if module_title in spmc_map:
+            res = self.get_module_by_spmc(spmc_map[module_title])
+            return res.filter(visible=True) if module_title == "이마트몰VT" else res
+
+        if module_title in locator_map:
+            return self.page.locator(locator_map[module_title])
+
+        return self.page.get_by_text(module_title)
 
     def get_product_in_module(self, parent_locator: Locator) -> Locator:
         """
@@ -371,15 +377,115 @@ class ProductPage(BasePage):
         logger.debug("상품 코드 가져오기")
         return self.page.locator(".relate-item_detail_info_area").locator(".add-interest").get_attribute("data-montelena-goodscode")
     
-    def verify_product_in_cart(self) -> None:
+    def verify_display_layer(self, module_title: str) -> None:
         """
-        장바구니에 상품이 추가되었는지 확인
+        레이어가 출력되었는지 확인
         """
-        logger.debug("장바구니에 상품 추가 여부 확인")
-        layer = self.page.locator("#layer_mycart")
+        logger.debug(f"레이어 출력 여부 확인: {module_title}")
+        if module_title == "장바구니":
+            layer = self.page.locator("#layer_mycart")
+        elif module_title == "상담신청":
+            layer = self.page.locator("#box__layer-iframe--rental-counsel")
+        else:
+            logger.warning(f"지원되지 않는 레이어 타이틀: {module_title}")
+            return
+        
         try:
             expect(layer).to_be_visible()
-            logger.info("장바구니 레이어가 표시됨")
+            logger.info(f"{module_title} 레이어가 표시됨")
         except Exception:
-            logger.info("장바구니 레이어가 표시되지 않음")
+            logger.warning(f"{module_title} 레이어가 표시되지 않음")
+
+    def fill_in_text_option(self, locator: Locator, cnt: int, option_text: str) -> None:
+        """
+        텍스트 옵션 입력
+        
+        Args:
+            cnt: 옵션 번호 (1부터 시작)
+            option_text: 입력할 옵션 텍스트
+        """
+        logger.debug(f"옵션 입력: {cnt} - {option_text}")
+        option_selector = locator.locator(f"#optOrderTxtOptValue_{cnt}")
+        option_selector.fill(option_text)
+        logger.info("옵션 입력 완료")
+
+    def is_in_text_option(self, locator: Locator, cnt: int) -> bool:
+        """
+        텍스트 입력 옵션 있는지 확인
+        
+        Args:
+            cnt: 옵션 번호 (1부터 시작)
             
+        Returns:
+            True: 텍스트 입력 옵션 있음
+            False: 텍스트 입력 옵션 없음
+        """
+        logger.debug(f"텍스트 입력 옵션 있는지 확인: {cnt}")
+        option_box = locator.locator(f"#optOrderTxtOptValue_{cnt}")
+        if option_box.count() > 0:
+            logger.info(f"{cnt}번 텍스트 입력 옵션 있음")
+            return True
+        else:
+            logger.info(f"{cnt}번 텍스트 입력 옵션 없음")
+            return False
+    
+    def select_option_box(self, locator: Locator,cnt: int) -> None:
+        """
+        셀렉트 박스 옵션 선택
+        
+        Args:
+            cnt: 옵션 번호 (1부터 시작)
+            option_value: 선택할 옵션 값
+        """
+        logger.debug(f"셀렉트 박스 옵션 선택: {cnt}")
+        option_box = locator.locator(f"#optOrderSelOptNo_{cnt}").locator("xpath=/..")
+        option_selector = option_box.locator("li").nth(0)
+        option_box.click()
+        option_selector.click()
+        logger.info("셀렉트 박스 옵션 선택 완료")
+
+    def is_in_select_option(self, locator: Locator, cnt: int) -> bool:
+        """
+        셀렉트 박스 옵션 있는지 확인
+        
+        Args:
+            cnt: 옵션 번호 (1부터 시작)
+            
+        Returns:
+            True: 셀렉트 박스 옵션 있음
+            False: 셀렉트 박스 옵션 없음
+        """
+        logger.debug(f"셀렉트 박스 옵션 있는지 확인: {cnt}")
+        option_box = locator.locator(f"#optOrderSelOptNo_{cnt}")
+        if option_box.count() > 0:
+            logger.info(f"{cnt}번 셀렉트 박스 옵션 있음")
+            return True
+        else:
+            logger.info(f"{cnt}번 셀렉트 박스 옵션 없음")
+            return False
+        
+    def option_area_locator(self, cnt: int) -> Locator:
+        """
+        옵션 영역 Locator 반환
+        
+        Args:
+            cnt: 옵션 번호 (0부터 시작)
+        
+        Returns:
+            옵션 영역 Locator 객체
+        """
+        logger.debug("옵션 영역 Locator 반환")
+        return self.page.locator(".item_option_area").nth(cnt)
+    
+    def get_by_text_and_click_where(self, text: str, exact: bool = False, timeout: Optional[int] = None, cnt: int = 0) -> None:
+        """
+        텍스트 기반 로케이터로 요소 찾아서 클릭
+        
+        Args:
+            text: 텍스트
+            exact: 정확히 일치해야 하는지
+            timeout: 타임아웃 (기본값: self.timeout)
+        """
+        timeout = timeout or self.timeout
+        logger.debug(f"텍스트 기반 클릭: text={text}")
+        self.get_by_text(text, exact=exact).nth(cnt).click(timeout=timeout)
