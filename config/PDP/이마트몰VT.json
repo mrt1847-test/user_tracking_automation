@@ -85,7 +85,7 @@
           "pid": "item_gmarket_co_kr",
           "channel_code": "",
           "server_env": "<environment>",
-          "spm": "gmktpc.pdp.emartvt"
+          "spm": "gmktpc.pdp.emartevent"
         }
       },
       "gmkey": "EXP",
@@ -143,7 +143,25 @@
                   "pageSize": "mandatory",
                   "pvid": "skip",
                   "x_object_type": "item",
-                  "x_sku_id": "0",
+                  "x_sku_id": "0"
+                },
+                "raw": "mandatory"
+              }
+            },
+            "raw": "mandatory"
+          }
+        },
+        "scm": ""
+      },
+      "raw": "mandatory",
+      "parsed[6]": {
+        "exargs": {
+          "params-exp": {
+            "parsed": {
+              "gmkt_area_code": "200009156",
+              "_p_prod": "<상품번호>",
+              "utLogMap": {
+                "parsed": {
                   "scene": "recommendation",
                   "sub_scene": "vip_vt",
                   "x_object_id": "<상품번호>",
@@ -159,7 +177,7 @@
                   "trafficType": "<trafficType>",
                   "adProduct": "",
                   "adSubProduct": "",
-                  "seed_item_id": "2519122999",
+                  "seed_item_id": "2522715372",
                   "seed_item_index": "",
                   "seed_item_keyword": "",
                   "search_session_id": "skip",
@@ -168,21 +186,15 @@
                   "biz_source": "emart",
                   "cate_leaf_id": "skip",
                   "self_ab_id": "skip"
-                },
-                "raw": "mandatory"
+                }
               },
-              "gmkt_area_code": "200009156",
-              "_p_prod": "<상품번호>",
               "is_ad": "<is_ad>",
               "item_status": "1"
-            },
-            "raw": "mandatory"
+            }
           }
         },
-        "scm": "",
         "spm": "gmktpc.pdp.emartvt.ditem0"
-      },
-      "raw": "mandatory"
+      }
     },
     "gmkey": "EXP",
     "gokey": "mandatory",
@@ -313,7 +325,7 @@
             "trafficType": "<trafficType>",
             "adProduct": "",
             "adSubProduct": "",
-            "seed_item_id": "2519122999",
+            "seed_item_id": "2522715372",
             "seed_item_index": "",
             "seed_item_keyword": "",
             "search_session_id": "skip",

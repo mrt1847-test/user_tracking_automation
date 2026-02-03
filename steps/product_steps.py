@@ -154,23 +154,7 @@ def product_page_is_opened(browser_session, module_title, bdd_context):
             logger.error(f"레이어 출력 확인 실패: {e}")
             record_frontend_failure(browser_session, bdd_context, f"레이어 출력 확인 실패: {str(e)}", "레이어가 출력되었다")
             # 계속 진행 (PDP PV 로그 수집은 시도)
-        
-        # 🔥 PDP PV 로그 수집 관련 로그가 뜰 때까지 대기 (tracker 있으면 수집 확인, 없으면 load 대기)
-        tracker = bdd_context.get("tracker") or bdd_context.store.get("tracker")
-
-        try:
-            browser_session.page.wait_for_load_state("networkidle", timeout=10000)
-            logger.debug("networkidle 상태 대기 완료 (tracker 없음, PDP PV 대체 대기)")
-        except Exception as e:
-            logger.warning(f"networkidle 대기 실패, load 상태로 대기: {e}")
-            try:
-                browser_session.page.wait_for_load_state("load", timeout=30000)
-                logger.debug("load 상태 대기 완료")
-            except Exception as e2:
-                logger.warning(f"load 상태 대기도 실패: {e2}")
-        time.sleep(2)
-        logger.info(f"레이어 출력 확인 완료")
-        
+                
     except Exception as e:
         logger.error(f"레이어 출력 확인 중 예외 발생: {e}", exc_info=True)
         record_frontend_failure(browser_session, bdd_context, str(e), "레이어가 출력되었다")
@@ -249,7 +233,9 @@ def user_confirms_and_clicks_product_in_pdp_module(browser_session, module_title
         # 모듈로 이동
         module = product_page.get_module_by_title(module_title)
         product_page.scroll_module_into_view(module)
+        time.sleep(2)
         ad_check = product_page.check_ad_item_in_module(module_title)
+        
   
         # 모듈 내 상품 찾기
         if module_title == "연관상품 상세보기":
@@ -295,7 +281,7 @@ def user_confirms_and_clicks_product_in_pdp_module(browser_session, module_title
                 # bdd context에 저장 (product_url)
                 bdd_context.store['product_url'] = browser_session.page.url
                 
-
+            time.sleep(2)
             # bdd context에 저장 (module_title, goodscode)        
             bdd_context.store['module_title'] = module_title
             bdd_context.store['is_ad'] = is_ad
@@ -333,13 +319,14 @@ def user_confirms_and_clicks_product_in_emart_pdp_module(browser_session, module
 
         # 모듈로 이동
         module = product_page.get_module_by_title(module_title)
-        product_page.scroll_module_into_view(module)
+        product_page.scroll_module_into_view_bottom(module)
+        time.sleep(2)
         ad_check = product_page.check_ad_item_in_module(module_title)
 
         # 모듈 내 상품 찾기
         parent = product_page.get_module_parent(module, 2)
         product = product_page.get_product_in_emart_module(parent, module_title)
-        product_page.scroll_product_into_view(product)
+        product_page.scroll_product_into_view_bottom(product)
     
         # 상품 노출 확인 (실패 시 예외 발생)
         try:
@@ -355,7 +342,7 @@ def user_confirms_and_clicks_product_in_emart_pdp_module(browser_session, module
         # 상품 코드 가져오기
         goodscode = product_page.get_product_code(product)
 
-        # 모듈별 광고상품 여부 저장장
+        # 모듈별 광고상품 여부 저장
         if ad_check == "F":
             is_ad = product_page.check_ad_tag_in_product(product)
         else:
@@ -403,11 +390,12 @@ def user_confirms_and_clicks_product_in_pdp_related_module(browser_session, modu
         # 모듈로 이동
         module = product_page.get_module_by_title(module_title)
         product_page.scroll_module_into_view_bottom(module)
+        time.sleep(2)
         ad_check = product_page.check_ad_item_in_module(module_title)
 
         # 모듈 내 상품 찾기
         product = product_page.get_product_in_related_module(module)
-        product_page.scroll_product_into_view(product)
+        product_page.scroll_product_into_view_bottom(product)
 
         # 상품 버튼 호버
         product_page.hover_product(product)
@@ -476,7 +464,7 @@ def user_confirms_and_clicks_product_in_pdp_related_detail_module(browser_sessio
         # 모듈로 이동
         module = product_page.get_module_by_title(module_title)
         product_page.scroll_module_into_view(module)
-        
+        time.sleep(2)
         # 모듈 내 상품 찾기
         product = product_page.get_product_in_related_module(module)
         product_page.scroll_product_into_view(product)
@@ -522,7 +510,7 @@ def user_confirms_and_clicks_product_in_pdp_related_module(browser_session, butt
         # 버튼으로 이동
         button = product_page.get_module_by_title(button_title)
         product_page.scroll_module_into_view(button)
-            
+        time.sleep(2)    
         # 버튼 노출 확인 (실패 시 예외 발생)
         try:
             expect(button.first).to_be_visible()
@@ -627,8 +615,10 @@ def user_inputs_product_option(browser_session):
         for j in range(10):
             if product_page.is_in_text_option(option, j):
                 product_page.fill_in_text_option(option, j, "테스트")
-            else:
+            elif j!=0:
                 product_page.get_by_text_and_click_where("입력한 정보로 선택", 0)    
+                break
+            else:
                 break
         time.sleep(1)
         logger.info("상품 옵션 입력 완료")

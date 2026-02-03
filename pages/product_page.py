@@ -153,32 +153,28 @@ class ProductPage(BasePage):
             Locator 객체
         """
         logger.debug(f"모듈 찾기: {module_title}")
-        spmc_map = {
-                "연관 상품": "relateditem",
-                "이마트몰VT": "emartvt",
-                "이마트몰BT": "emartbt",
-        }
-        
-        # 2. 로케이터(ID) 관련 매핑
-        locator_map = {
-            "일반상품 구매하기": "#coreInsOrderBtn",
-            "일반상품 장바구니": "#coreAddCartBtn",
-            "일반상품 선물하기": "#coreGiftBtn",
-            "연관상품 구매하기": "#wingInsOrderBtn",
-            "연관상품 장바구니": "#wingAddCartBtn",
-            "연관상품 선물하기": "#wingGiftBtn",
-            "가입신청": "#coreInsOrderBtn",
-            "상담신청": "#coreInsOrderBtn",
-        }
-
-        if module_title in spmc_map:
-            res = self.get_module_by_spmc(spmc_map[module_title])
-            return res.filter(visible=True) if module_title == "이마트몰VT" else res
-
-        if module_title in locator_map:
-            return self.page.locator(locator_map[module_title])
-
-        return self.page.get_by_text(module_title)
+        if module_title == "연관 상품":
+            return self.get_module_by_spmc("relateditem")
+        elif module_title == "이마트몰VT":
+            return self.get_module_by_spmc("emartvt").filter(visible=True)
+        elif module_title == "이마트몰BT":
+            return self.get_module_by_spmc("emartbt")
+        elif module_title == "일반상품 구매하기":
+            return self.page.locator("#coreInsOrderBtn")
+        elif module_title == "일반상품 장바구니":
+            return self.page.locator("#coreAddCartBtn")
+        elif module_title == "일반상품 선물하기":
+            return self.page.locator("#coreGiftBtn")
+        elif module_title == "연관상품 구매하기":
+            return self.page.locator("#wingInsOrderBtn")
+        elif module_title == "연관상품 장바구니":
+            return self.page.locator("#wingAddCartBtn")
+        elif module_title == "연관상품 선물하기":
+            return self.page.locator("#wingGiftBtn")
+        elif module_title == "가입신청" or module_title == "상담신청":
+            return self.page.locator("#coreInsOrderBtn")        
+        else:
+            return self.page.get_by_text(module_title)
 
     def get_product_in_module(self, parent_locator: Locator) -> Locator:
         """

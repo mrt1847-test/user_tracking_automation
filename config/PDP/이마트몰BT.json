@@ -159,15 +159,13 @@
                   "trafficType": "<trafficType>",
                   "adProduct": "",
                   "adSubProduct": "",
-                  "seed_item_id": "2519122999",
+                  "seed_item_id": "2522715372",
                   "seed_item_index": "",
                   "seed_item_keyword": "",
                   "search_session_id": "skip",
-                  "self_app_id": "49817",
                   "match_type": "skip",
                   "biz_source": "emart",
-                  "cate_leaf_id": "skip",
-                  "self_ab_id": "skip"
+                  "cate_leaf_id": "skip"
                 },
                 "raw": "mandatory"
               },
@@ -313,15 +311,13 @@
             "trafficType": "<trafficType>",
             "adProduct": "",
             "adSubProduct": "",
-            "seed_item_id": "2519122999",
+            "seed_item_id": "2522715372",
             "seed_item_index": "",
             "seed_item_keyword": "",
             "search_session_id": "skip",
-            "self_app_id": "49817",
             "match_type": "skip",
             "biz_source": "emart",
-            "cate_leaf_id": "skip",
-            "self_ab_id": "skip"
+            "cate_leaf_id": "skip"
           },
           "raw": "mandatory"
         },
