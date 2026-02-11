@@ -10,8 +10,8 @@ Feature: G마켓 My 트래킹 로그 정합성 검증
     When 사용자가 "주문내역" 내 상품을 확인하고 클릭한다
     Then 상품 페이지로 이동되었다
     Then 모든 트래킹 로그를 JSON 파일로 저장함
-    Then Module Exposure 로그가 정합성 검증을 통과해야 함 (TC: <tc_module_exposure>)
-    And Product Exposure 로그가 정합성 검증을 통과해야 함 (TC: <tc_product_exposure>)
-    And Product Click 로그가 정합성 검증을 통과해야 함 (TC: <tc_product_click>)
-    And Product ATC Click 로그가 정합성 검증을 통과해야 함 (TC: <tc_atc_click>)
+    Then Module Exposure 로그가 정합성 검증을 통과해야 함 (TC: C1166946)
+    And Product Exposure 로그가 정합성 검증을 통과해야 함 (TC: 	C1166947)
+    And Product Click 로그가 정합성 검증을 통과해야 함 (TC: C1166950)
+    And Product ATC Click 로그가 정합성 검증을 통과해야 함 (TC: C1166949)
 

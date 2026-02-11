@@ -14,8 +14,8 @@ Feature: G마켓 CART 트래킹 로그 정합성 검증
     When 모듈 내 장바구니 버튼 클릭
     Then 장바구니 담기 완료되었다
     Then 모든 트래킹 로그를 JSON 파일로 저장함
-    Then Module Exposure 로그가 정합성 검증을 통과해야 함 (TC: <tc_module_exposure>)
-    And Product Exposure 로그가 정합성 검증을 통과해야 함 (TC: <tc_product_exposure>)
-    And Product Click 로그가 정합성 검증을 통과해야 함 (TC: <tc_product_click>)
-    And Product ATC Click 로그가 정합성 검증을 통과해야 함 (TC: <tc_atc_click>)
+    Then Module Exposure 로그가 정합성 검증을 통과해야 함 (TC: C1166933)
+    And Product Exposure 로그가 정합성 검증을 통과해야 함 (TC: C1166934)
+    And Product Click 로그가 정합성 검증을 통과해야 함 (TC: C1166936)
+    And Product ATC Click 로그가 정합성 검증을 통과해야 함 (TC: C1166937)
 

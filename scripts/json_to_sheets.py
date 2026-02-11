@@ -34,8 +34,9 @@ EXCLUDE_FIELDS = [
 
 # SPM 필드별 점(.) 개수 설정 (해당 개수까지만 유지)
 SPM_DOT_COUNT = {
-    'spm-cnt': 2,  # spm-cnt는 점 2개까지 유지 (예: gmktpc.searchlist)
+    'spm-cnt': 3,  # spm-cnt는 점 2개까지 유지 (예: gmktpc.searchlist)
     'spm-url': 3,  # spm-url은 점 3개까지 유지 (예: gmktpc.home.searchtop)
+    'spm-pre': 3,  # spm-pre는 점 3개까지 유지 (예: gmktpc.home)
 }
 
 def truncate_spm_value(value: str, max_dots: int) -> str:

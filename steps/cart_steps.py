@@ -102,7 +102,6 @@ def cart_page_has_module(browser_session, module_title, bdd_context):
         # 모듈이 존재하는지 확인 (count == 0이면 모듈이 없음)
         module_count = module.count()
         logger.info(f"모듈 존재 확인: {module_count}")
-        time.sleep(100)
         if module_count == 0:
             # 모듈이 없으면 skip 플래그 설정 (시나리오는 계속 진행)
             skip_reason = f"'{module_title}' 모듈이 검색 결과에 없습니다."
