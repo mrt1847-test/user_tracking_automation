@@ -48,3 +48,4 @@ class ListPage(BasePage):
         """
         logger.debug(f"URL에 카테고리 ID 포함 확인: {category_id}")
         assert f'category={category_id}' in url, f"카테고리 ID {category_id}가 URL에 포함되어야 합니다"
+
