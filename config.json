@@ -4,7 +4,7 @@
     ],
     "driver": "Chrome",
     "match_rate": 0.88,
-    "testrail_report": "N",
+    "testrail_report": "Y",
     "milestone_id": "1564",
     "project_id": "212",
     "section_id": "69853",

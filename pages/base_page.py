@@ -2,12 +2,12 @@
 Base Page Object 클래스
 모든 Page Object의 기본이 되는 클래스
 """
-from playwright.sync_api import Page, Locator
+from playwright.sync_api import Page, Locator, expect
 from typing import Optional
 from urllib.parse import unquote, parse_qs, urlparse
 import logging
 import time
-
+import re
 logger = logging.getLogger(__name__)
 
 
@@ -315,6 +315,21 @@ class BasePage:
             logger.warning(f"scroll_into_view_if_needed 실패, 강제 스크롤 시도: {e}")
             module_locator.evaluate("el => el.scrollIntoView({behavior: 'smooth', block: 'center'})")
 
+    def scroll_module_into_view_bottom(self, module_locator: Locator) -> None:
+        """
+        모듈을 뷰포트로 스크롤
+
+        Args:
+            module_locator: 모듈 Locator 객체
+        """
+        logger.debug("모듈 스크롤")
+        try:
+            module_locator.evaluate("el => el.scrollIntoView({ block: 'end', inline: 'nearest' })")
+        except Exception as e:
+            logger.warning(f"scroll_into_view_if_needed 실패, 강제 스크롤 시도: {e}")
+            module_locator.evaluate("el => el.scrollIntoView({behavior: 'smooth', block: 'center'})")
+        
+
     def get_module_parent(self, module_locator: Locator, n: int) -> Locator:
         """
         모듈의 n번째 부모 요소 찾기
@@ -347,6 +362,20 @@ class BasePage:
         except Exception as e:
             logger.warning(f"scroll_into_view_if_needed 실패, 강제 스크롤 시도: {e}")
             product_locator.evaluate("el => el.scrollIntoView({behavior: 'smooth', block: 'center'})")
+
+    def scroll_product_into_view_bottom(self, product_locator: Locator) -> None:
+        """
+        상품 요소를 뷰포트로 스크롤
+
+        Args:
+            product_locator: 상품 Locator 객체
+        """
+        logger.debug("상품 요소 스크롤")
+        try:
+            product_locator.scroll_into_view_if_needed()
+        except Exception as e:
+            logger.warning(f"scroll_into_view_if_needed 실패, 강제 스크롤 시도: {e}")
+            product_locator.evaluate("el => el.scrollIntoView({behavior: 'smooth', block: 'end'})")            
 
     def get_product_code(self, product_locator: Locator) -> Optional[str]:
         """
@@ -582,3 +611,34 @@ class BasePage:
         """
         logger.debug(f"페이지에서 spmc로 모듈 찾기: {module_spmc}")
         return self.page.locator(f".module-exp-spm-c[data-spm='{module_spmc}']")
+    
+    def verify_keyword_in_url(self, page_type: str, timeout: int = 10000) -> None:
+        """
+        URL에 특정 키워드가 포함되어 있는지 확인 (Assert)
+        
+        Args:
+            page_type: 페이지 타입 ("구매하기", "선물하기")
+        """
+        keyword = ""
+        if "구매하기" in page_type or page_type == "가입신청":
+            keyword = "checkout"
+        elif "선물하기" in page_type:
+            keyword = "gift"
+        else:
+            # 시나리오에 정의되지 않은 타입이 들어올 경우
+            raise ValueError(f"정의되지 않은 페이지 타입입니다: {page_type}")
+        logger.debug(f"URL에 특정 키워드 포함 확인: {keyword}")
+        try:
+            # re.IGNORECASE를 추가하여 대소문자 구분 없이 더 견고하게 검증합니다.
+            expect(self.page).to_have_url(
+                re.compile(f".*{keyword}.*", re.IGNORECASE), 
+                timeout=timeout
+            )
+            logger.info(f"URL 검증 성공: {page_type} 페이지 이동 확인 완료")
+            
+        except AssertionError:
+            actual_url = self.page.url
+            error_msg = f"URL 검증 실패 | 기대 키워드: {keyword} ({page_type}) | 현재 URL: {actual_url}"
+            logger.error(error_msg)
+            # record_frontend_failure가 있다면 여기서 호출하면 좋습니다.
+            raise AssertionError(error_msg)
