@@ -31,7 +31,7 @@
           "gmkt_page_id": "",
           "ab_buckets": "skip",
           "spm": "gmktpc.pdp.buyarea_signup.d0",
-          "clk_itm_info": "[{\"_p_prod\":\"2529094051\",\"_p_sku_id\":\"89426957437_67344109500_67344109506_67344109515_67344109509\",\"_p_sku_info\":\"89426957437\u001e모델명\u001e갤럭시 S25 울트라\u001f67344109500\u001e개통자 성함\u001e테스트\u001f67344109506\u001e현재 통신사\u001e테스트\u001f67344109515\u001e희망 요금제\u001e테스트\u001f67344109509\u001e희망 통신사\u001e테스트\",\"_p_catalog\":\"\",\"_p_group\":\"\",\"quantity\":1,\"_p_parent_sku_id\":\"\",\"_p_parent_sku_info\":\"\",\"itm_price\":1}]",
+          "clk_itm_info": "mandatory",
           "gmkt_area_code": "200000519",
           "_p_prod_main": "",
           "module_index": "mandatory",

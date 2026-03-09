@@ -626,67 +626,67 @@ def _save_tracking_logs(bdd_context, tracker, goodscode, module_title):
             if module_exposure:
                 module_spm = _find_spm_recursive(module_exposure)
         
-        # 각 이벤트 타입별 로그 저장
-        event_configs = [
-            ('pv', 'get_pv_logs', None),
-            ('pdp_pv', 'get_pdp_pv_logs', None),
-            ('module_exposure', 'get_module_exposure_logs_by_spm', None),
-            ('product_exposure', 'get_product_exposure_logs_by_goodscode', None),
-            ('product_click', 'get_product_click_logs_by_goodscode', None),
-            ('product_atc_click', 'get_product_atc_click_logs_by_goodscode', None),
-            ('product_minidetail', 'get_product_minidetail_logs_by_goodscode', None),
-            ('pdp_buynow_click', 'get_pdp_buynow_click_logs_by_goodscode', None),
-            ('pdp_atc_click', 'get_pdp_atc_click_logs_by_goodscode', None),
-            ('pdp_gift_click', 'get_pdp_gift_click_logs_by_goodscode', None),
-            ('pdp_join_click', 'get_pdp_join_click_logs_by_goodscode', None),
-            ('pdp_rental_click', 'get_pdp_rental_click_logs_by_goodscode', None),
-        ]
+        # # 각 이벤트 타입별 로그 저장
+        # event_configs = [
+        #     ('pv', 'get_pv_logs', None),
+        #     ('pdp_pv', 'get_pdp_pv_logs', None),
+        #     ('module_exposure', 'get_module_exposure_logs_by_spm', None),
+        #     ('product_exposure', 'get_product_exposure_logs_by_goodscode', None),
+        #     ('product_click', 'get_product_click_logs_by_goodscode', None),
+        #     ('product_atc_click', 'get_product_atc_click_logs_by_goodscode', None),
+        #     ('product_minidetail', 'get_product_minidetail_logs_by_goodscode', None),
+        #     ('pdp_buynow_click', 'get_pdp_buynow_click_logs_by_goodscode', None),
+        #     ('pdp_atc_click', 'get_pdp_atc_click_logs_by_goodscode', None),
+        #     ('pdp_gift_click', 'get_pdp_gift_click_logs_by_goodscode', None),
+        #     ('pdp_join_click', 'get_pdp_join_click_logs_by_goodscode', None),
+        #     ('pdp_rental_click', 'get_pdp_rental_click_logs_by_goodscode', None),
+        # ]
         
-        for event_type, method_name, method_arg in event_configs:
-            get_logs_method = getattr(tracker, method_name)
+        # for event_type, method_name, method_arg in event_configs:
+        #     get_logs_method = getattr(tracker, method_name)
             
-            # PV, PDP PV는 goodscode 없이 호출
-            if method_name in ['get_pv_logs', 'get_pdp_pv_logs']:
-                if method_name == 'get_pv_logs':
-                    logs = get_logs_method()
-                else:
-                    logs = tracker.get_pdp_pv_logs_by_goodscode(goodscode)
-            elif method_name == 'get_module_exposure_logs_by_spm':
-                # Module Exposure는 spm으로 필터링
-                if module_spm:
-                    logs = get_logs_method(module_spm)
-                else:
-                    logs = tracker.get_logs('Module Exposure')
-                    logger.warning(f"모듈 '{module_title}'의 SPM 값이 없어 전체 Module Exposure 로그를 사용합니다.")
-            elif method_name == 'get_product_exposure_logs_by_goodscode':
-                # Product Exposure는 spm으로 추가 필터링
-                if module_spm:
-                    logs = get_logs_method(goodscode, module_spm)
-                else:
-                    logs = get_logs_method(goodscode)
-            elif method_name == 'get_product_click_logs_by_goodscode':
-                # Product Click은 goodscode로만 필터링
-                logs = get_logs_method(goodscode)
-            else:
-                logs = get_logs_method(goodscode)
+        #     # PV, PDP PV는 goodscode 없이 호출
+        #     if method_name in ['get_pv_logs', 'get_pdp_pv_logs']:
+        #         if method_name == 'get_pv_logs':
+        #             logs = get_logs_method()
+        #         else:
+        #             logs = tracker.get_pdp_pv_logs_by_goodscode(goodscode)
+        #     elif method_name == 'get_module_exposure_logs_by_spm':
+        #         # Module Exposure는 spm으로 필터링
+        #         if module_spm:
+        #             logs = get_logs_method(module_spm)
+        #         else:
+        #             logs = tracker.get_logs('Module Exposure')
+        #             logger.warning(f"모듈 '{module_title}'의 SPM 값이 없어 전체 Module Exposure 로그를 사용합니다.")
+        #     elif method_name == 'get_product_exposure_logs_by_goodscode':
+        #         # Product Exposure는 spm으로 추가 필터링
+        #         if module_spm:
+        #             logs = get_logs_method(goodscode, module_spm)
+        #         else:
+        #             logs = get_logs_method(goodscode)
+        #     elif method_name == 'get_product_click_logs_by_goodscode':
+        #         # Product Click은 goodscode로만 필터링
+        #         logs = get_logs_method(goodscode)
+        #     else:
+        #         logs = get_logs_method(goodscode)
             
-            # PDP 5종 클릭 이벤트는 로그가 있을 때만 개별 JSON 저장 (없으면 파일 생성 안 함)
-            pdp_click_save_only_when_exists = {
-                'pdp_buynow_click', 'pdp_atc_click', 'pdp_gift_click', 'pdp_join_click', 'pdp_rental_click'
-            }
-            if event_type in pdp_click_save_only_when_exists and len(logs) == 0:
-                continue
+        #     # PDP 5종 클릭 이벤트는 로그가 있을 때만 개별 JSON 저장 (없으면 파일 생성 안 함)
+        #     pdp_click_save_only_when_exists = {
+        #         'pdp_buynow_click', 'pdp_atc_click', 'pdp_gift_click', 'pdp_join_click', 'pdp_rental_click'
+        #     }
+        #     if event_type in pdp_click_save_only_when_exists and len(logs) == 0:
+        #         continue
             
-            # 로그 저장
-            filepath = Path(f'json/tracking_{event_type}_{goodscode}_{timestamp}.json')
-            filepath.parent.mkdir(parents=True, exist_ok=True)
-            with open(filepath, 'w', encoding='utf-8') as f:
-                json.dump(logs, f, ensure_ascii=False, indent=2, default=str)
+        #     # 로그 저장
+        #     filepath = Path(f'json/tracking_{event_type}_{goodscode}_{timestamp}.json')
+        #     filepath.parent.mkdir(parents=True, exist_ok=True)
+        #     with open(filepath, 'w', encoding='utf-8') as f:
+        #         json.dump(logs, f, ensure_ascii=False, indent=2, default=str)
             
-            if len(logs) > 0:
-                logger.info(f"{event_type} 로그 저장 완료: {filepath.resolve()} (로그 개수: {len(logs)})")
-            else:
-                logger.warning(f"{event_type} 로그가 없어 빈 파일로 저장했습니다: {filepath.resolve()}")
+        #     if len(logs) > 0:
+        #         logger.info(f"{event_type} 로그 저장 완료: {filepath.resolve()} (로그 개수: {len(logs)})")
+        #     else:
+        #         logger.warning(f"{event_type} 로그가 없어 빈 파일로 저장했습니다: {filepath.resolve()}")
         
         # 전체 로그 저장
         all_logs = []

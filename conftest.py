@@ -903,35 +903,36 @@ def pytest_sessionstart(session):
         for s in all_sections[:10]:
             print(f"  - ID: {s.get('id')}, Name: {s.get('name')}, Parent ID: {s.get('parent_id')}")
     
-    # 2. 지정된 섹션과 모든 하위 섹션 ID 찾기 (중복 제거)
+    # 2. 지정된 섹션과 모든 하위 섹션 ID 찾기 → 서브트리 집합 (O(1) 조회용)
     all_section_ids = get_all_subsection_ids(section_id_int, all_sections)
-    # 중복 제거 (혹시 모를 중복 방지)
     all_section_ids = list(dict.fromkeys(all_section_ids))  # 순서 유지하면서 중복 제거
+    subtree_section_ids = set(all_section_ids)
     print(f"[TestRail] 섹션 ID {section_id_int}와 하위 섹션 {len(all_section_ids) - 1}개 발견 (중복 제거됨): {all_section_ids}")
     
-    # 3. 각 섹션의 케이스 가져오기 (중복 섹션 ID는 건너뛰기)
+    # 3. 스위트 전체 케이스 한 번에 가져오기 (페이지네이션) 후 로컬 필터링
     all_case_ids = []
-    processed_sections = set()  # 이미 처리한 섹션 ID 추적
-    for section_id in all_section_ids:
-        # 이미 처리한 섹션이면 건너뛰기
-        if section_id in processed_sections:
-            continue
-        processed_sections.add(section_id)
-        
+    limit = 250
+    offset = 0
+    base_cases_url = f"get_cases/{TESTRAIL_PROJECT_ID}&suite_id={TESTRAIL_SUITE_ID}&limit={limit}&offset="
+    while True:
         try:
-            cases = testrail_get(
-                f"get_cases/{TESTRAIL_PROJECT_ID}&suite_id={TESTRAIL_SUITE_ID}&section_id={section_id}"
-            )
-            section_case_ids = [c["id"] for c in cases]
-            all_case_ids.extend(section_case_ids)
-            case_id_map[section_id] = section_case_ids
-            if section_case_ids:
-                print(f"[TestRail] 섹션 {section_id}: {len(section_case_ids)}개 케이스 발견")
+            cases = testrail_get(base_cases_url + str(offset))
         except Exception as e:
-            logger.warning(f"섹션 {section_id}의 케이스 가져오기 실패: {e}")
-    
-    # 중복 제거 (같은 케이스가 여러 섹션에 있을 수 있음)
-    all_case_ids = list(set(all_case_ids))
+            logger.warning(f"스위트 전체 케이스 가져오기 실패 (offset={offset}): {e}")
+            break
+        if not cases:
+            break
+        for c in cases:
+            sid = c.get("section_id")
+            if sid is not None and sid in subtree_section_ids:
+                case_id = c["id"]
+                all_case_ids.append(case_id)
+                case_id_map.setdefault(sid, []).append(case_id)
+        if len(cases) < limit:
+            break
+        offset += limit
+    # 중복 제거 (같은 케이스가 여러 번 나올 수 있음)
+    all_case_ids = list(dict.fromkeys(all_case_ids))
     
     if not all_case_ids:
         raise RuntimeError(f"[TestRail] section_id '{section_id_int}'와 하위 섹션에 케이스가 없습니다.")

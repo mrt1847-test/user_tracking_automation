@@ -465,6 +465,20 @@ class SearchPage(BasePage):
         """
         logger.debug("상품 클릭 및 새 탭 대기")
 
+        # 팝업 닫기 시도를 제일 처음에 수행
+        try:
+            popup_close_button = self.page.locator(".button__popup-close")
+            if popup_close_button.count() > 0:
+                try:
+                    popup_close_button.first.click(force=True, timeout=2000)
+                except Exception as ep:
+                    logger.warning(f"팝업 닫기 버튼 클릭 실패: {ep}")
+                else:
+                    logger.debug("팝업 닫기 버튼 클릭 완료")
+                time.sleep(2)
+        except Exception as e0:
+            logger.warning(f"팝업 닫기 시도 중 오류: {e0}")
+
         time.sleep(3)
         
         # 일반 클릭 시도
@@ -476,23 +490,18 @@ class SearchPage(BasePage):
             logger.debug(f"새 탭 생성됨: {new_page.url}")
         except Exception as e:
             logger.warning(f"일반 클릭 실패, 팝업 닫기 후 재시도: {e}")
-            # 팝업이 있을 수 있으므로 닫기 버튼 클릭 후 다시 시도
+            # 팝업이 다시 떴을 수 있으므로 닫기 버튼 클릭 후 다시 시도
             try:
                 popup_close_button = self.page.locator(".button__popup-close")
                 if popup_close_button.count() > 0:
                     try:
                         popup_close_button.first.click(force=True, timeout=2000)
-                    except Exception as e:
-                        logger.warning(f"팝업 닫기 버튼 클릭 실패: {e}")
-
+                    except Exception as ep2:
+                        logger.warning(f"팝업 닫기 버튼 클릭 실패: {ep2}")
                     logger.debug("팝업 닫기 버튼 클릭 완료")
-                    # 잠시 대기 (팝업이 닫히는 시간)
                     time.sleep(2)
-            
-                # 다시 일반 클릭 시도
                 with self.page.context.expect_page(timeout=10000) as new_page_info:
                     product_locator.click(force=True, timeout=3000)
-                
                 new_page = new_page_info.value
                 logger.debug(f"팝업 닫기 후 새 탭 생성됨: {new_page.url}")
             except Exception as e2:
