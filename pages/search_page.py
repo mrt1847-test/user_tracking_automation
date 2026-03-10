@@ -479,7 +479,7 @@ class SearchPage(BasePage):
         except Exception as e0:
             logger.warning(f"팝업 닫기 시도 중 오류: {e0}")
 
-        time.sleep(3)
+        time.sleep(1)
         
         # 일반 클릭 시도
         try:
