@@ -101,8 +101,8 @@ python scripts/json_to_sheets.py \
 
 ### 모드: 단일 모듈 vs 시트 단위
 
-- **단일 모듈 변환**: `--area` + `--module` 지정 → 해당 모듈만 `config/{area}/{module}.json` 한 개 생성
-- **시트 단위 변환**: `--sheet` + `--area` 지정 → 해당 시트 전체를 읽어, 시트에 있는 **모든 모듈**마다 `config/{area}/{모듈명}.json` 파일 생성
+- **단일 모듈 변환**: `--area` + `--module` 지정 → 해당 모듈만 `tracking_schemas/{area}/{module}.json` 한 개 생성
+- **시트 단위 변환**: `--sheet` + `--area` 지정 → 해당 시트 전체를 읽어, 시트에 있는 **모든 모듈**마다 `tracking_schemas/{area}/{모듈명}.json` 파일 생성
 
 ### 사용법 (단일 모듈)
 
@@ -110,7 +110,7 @@ python scripts/json_to_sheets.py \
 python scripts/sheets_to_json.py \
   --module "먼저 둘러보세요" \
   --area SRP \
-  [--output config/SRP/먼저\ 둘러보세요.json] \
+  [--output tracking_schemas/SRP/먼저\ 둘러보세요.json] \
   [--overwrite]
 ```
 
@@ -123,7 +123,7 @@ python scripts/sheets_to_json.py \
   [--overwrite]
 ```
 
-- 시트 `SRP`의 1행(헤더)을 제외한 **모듈** 열(A열)에서 고유 모듈명을 수집한 뒤, 각 모듈별로 `config/SRP/{모듈명}.json` 파일을 생성합니다.
+- 시트 `SRP`의 1행(헤더)을 제외한 **모듈** 열(A열)에서 고유 모듈명을 수집한 뒤, 각 모듈별로 `tracking_schemas/SRP/{모듈명}.json` 파일을 생성합니다.
 - `--overwrite`를 주지 않으면 이미 존재하는 파일은 건너뛰고, 없는 모듈만 새로 씁니다.
 
 ### 인자 설명
@@ -131,7 +131,7 @@ python scripts/sheets_to_json.py \
 - `--sheet`: 시트 단위 변환 모드. 지정 시 `--module`은 무시되며, `--area`만 필요.
 - `--module`: 모듈명 (단일 모듈 모드에서 필수, 예: "먼저 둘러보세요")
 - `--area`: 영역명 (필수, SRP, PDP, HOME, CART 등)
-- `--output`: 출력 JSON 파일 경로 (단일 모듈 모드에서만 사용, 기본값: `config/{area}/{module}.json`)
+- `--output`: 출력 JSON 파일 경로 (단일 모듈 모드에서만 사용, 기본값: `tracking_schemas/{area}/{module}.json`)
 - `--overwrite`: 기존 파일이 있으면 덮어쓰기 (기본값: False). 시트 단위 모드에서는 모든 생성 대상 파일에 적용.
 
 **시트명 형식**: 영역 시트(`SRP`, `LP` 등)를 읽습니다. 단일 모듈 모드에서는 `--module`과 같은 모듈 행만 추출하고, 시트 단위 모드에서는 시트에 있는 모든 모듈을 자동으로 찾아 각각 JSON 파일로 저장합니다.
@@ -152,7 +152,7 @@ python scripts/sheets_to_json.py \
 
 1. 구글 시트에서 **영역 시트** 선택 (예: `SRP`)
 2. 1행(헤더) 제외, **모듈** 열(A열)에서 비어 있지 않은 고유 모듈명 목록 수집
-3. 각 모듈에 대해: 해당 모듈 행만 필터 → 이벤트 타입별 그룹 → 공통 필드 병합 → JSON 재구성 → `config/{area}/{모듈명}.json` 저장
+3. 각 모듈에 대해: 해당 모듈 행만 필터 → 이벤트 타입별 그룹 → 공통 필드 병합 → JSON 재구성 → `tracking_schemas/{area}/{모듈명}.json` 저장
 4. 이미 존재하는 파일은 `--overwrite`가 없으면 건너뜀
 
 ### 출력 파일 구조
@@ -305,23 +305,23 @@ python scripts/sheets_to_json.py \
   --area SRP \
   --overwrite
 ```
-   → 시트 `SRP`에서 모듈 "먼저 둘러보세요" 행만 읽어 → `config/SRP/먼저 둘러보세요.json` 생성
+   → 시트 `SRP`에서 모듈 "먼저 둘러보세요" 행만 읽어 → `tracking_schemas/SRP/먼저 둘러보세요.json` 생성
 
    **또는 시트 전체 변환** (해당 영역 시트의 모든 모듈 → JSON):
 ```bash
 python scripts/sheets_to_json.py --sheet --area SRP --overwrite
 ```
-   → 시트 `SRP`에 있는 모든 모듈마다 `config/SRP/{모듈명}.json` 생성
+   → 시트 `SRP`에 있는 모든 모듈마다 `tracking_schemas/SRP/{모듈명}.json` 생성
 
 5. **생성된 config JSON 사용** (테스트 실행)
 
 ### SRP 모듈별 명령어 예시
 
-`config/SRP/` 폴더의 각 파일에 대한 명령어. 모두 **시트 `SRP`**를 사용합니다.
+`tracking_schemas/SRP/` 폴더의 각 파일에 대한 명령어. 모두 **시트 `SRP`**를 사용합니다.
 
 #### 시트 전체 변환 (SRP 한 번에)
 
-시트 `SRP`에 있는 모든 모듈을 한 번에 `config/SRP/` 아래 JSON 파일로 만들 때:
+시트 `SRP`에 있는 모든 모듈을 한 번에 `tracking_schemas/SRP/` 아래 JSON 파일로 만들 때:
 
 ```bash
 python scripts/sheets_to_json.py --sheet --area SRP --overwrite
@@ -335,7 +335,7 @@ python scripts/sheets_to_json.py --sheet --area SRP --overwrite
 # JSON → 구글 시트 (시트 SRP에 모듈 Upsert)
 python scripts/json_to_sheets.py --input <tracking_all_json_file> --module "4.5 이상" --area SRP
 
-# 구글 시트 → JSON (시트 SRP에서 모듈 읽기 → config/SRP/4.5 이상.json)
+# 구글 시트 → JSON (시트 SRP에서 모듈 읽기 → tracking_schemas/SRP/4.5 이상.json)
 python scripts/sheets_to_json.py --module "4.5 이상" --area SRP --overwrite
 ```
 

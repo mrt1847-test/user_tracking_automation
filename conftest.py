@@ -768,6 +768,8 @@ except json.JSONDecodeError as e:
 
 # TestRail 기록: testrail_report가 Y일 때만 Run 생성·결과 기록
 TESTRAIL_REPORT_ENABLED = (config.get("testrail_report") or "N").strip().upper() == "Y"
+# 세션 종료 시 close_run 호출 여부 (기본 Y, testrail_report로 Run을 만든 경우에만 의미 있음)
+TESTRAIL_CLOSE_RUN_ON_FINISH = (config.get("testrail_close_run_on_finish") or "Y").strip().upper() == "Y"
 
 if TESTRAIL_REPORT_ENABLED:
     try:
@@ -939,8 +941,13 @@ def pytest_sessionstart(session):
     
     print(f"[TestRail] 총 {len(all_case_ids)}개 케이스 수집 완료")
     
-    # 4. Run 생성
-    run_name = f"GUT Automation test dweb {datetime.now():%Y-%m-%d %H:%M:%S}"
+    # 4. Run 생성 (이름은 config.json의 testrail_run_name, 없으면 기본값)
+    _ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    _run_name_tpl = (config.get("testrail_run_name") or "").strip()
+    if not _run_name_tpl:
+        run_name = f"GUT Automation test dweb {_ts}"
+    else:
+        run_name = _run_name_tpl.format(timestamp=_ts, datetime=_ts)
     payload = {
         "suite_id": TESTRAIL_SUITE_ID,
         "name": run_name,
@@ -1049,9 +1056,11 @@ def pytest_sessionfinish(session, exitstatus):
     전체 테스트 종료 후 Run 닫기
     """
     global testrail_run_id
-    if testrail_run_id:
+    if testrail_run_id and TESTRAIL_CLOSE_RUN_ON_FINISH:
         testrail_post(f"close_run/{testrail_run_id}", {})
         print(f"[TestRail] Run {testrail_run_id} 종료 완료")
+    elif testrail_run_id and not TESTRAIL_CLOSE_RUN_ON_FINISH:
+        print(f"[TestRail] testrail_close_run_on_finish가 N — Run 자동 종료 생략 (Run ID={testrail_run_id})")
 
     screenshots_dir = "screenshots"
     if os.path.exists(screenshots_dir):

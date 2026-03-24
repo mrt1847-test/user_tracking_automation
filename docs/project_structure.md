@@ -4,7 +4,7 @@
 
 ```
 user_tracking_automation/
-├── config/                          # 설정 파일
+├── tracking_schemas/                # 트래킹 스키마 JSON
 │   ├── SRP/                         # 영역별 설정 폴더
 │   │   ├── 먼저 둘러보세요.json     # 모듈별 설정 파일
 │   │   └── 일반상품.json
@@ -44,7 +44,7 @@ user_tracking_automation/
 기존의 단일 `module_config.json` 파일을 영역별 폴더 구조로 분리했습니다:
 
 ```
-config/
+tracking_schemas/
 ├── SRP/                             # Search Results Page
 │   ├── 먼저 둘러보세요.json
 │   └── 일반상품.json
@@ -200,7 +200,7 @@ Feature 파일명에서 영역을 자동으로 추론합니다:
 
 1. **모듈 설정 파일 로드**
    - Feature 파일명에서 영역 추론
-   - `config/{area}/{module_title}.json` 파일 로드
+   - `tracking_schemas/{area}/{module_title}.json` 파일 로드
 
 2. **예상 값 생성**
    - 플레이스홀더를 실제 값으로 대체
@@ -270,7 +270,7 @@ Feature 파일명에서 영역을 자동으로 추론합니다:
 
 - 파일명은 정확히 모듈 타이틀과 일치해야 함
 - 예: 모듈 타이틀이 `"먼저 둘러보세요"`면 파일명도 `먼저 둘러보세요.json`이어야 함
-- 파일 경로: `config/{area}/{module_title}.json`
+- 파일 경로: `tracking_schemas/{area}/{module_title}.json`
 
 ### 3. 빈 문자열 vs skip
 
@@ -305,7 +305,7 @@ Feature 파일명에서 영역을 자동으로 추론합니다:
    ↓
    area="SRP", module_title="먼저 둘러보세요"
    ↓
-   config/SRP/먼저 둘러보세요.json 로드
+   tracking_schemas/SRP/먼저 둘러보세요.json 로드
    ```
 
 3. **검증 수행**
@@ -324,7 +324,7 @@ Feature 파일명에서 영역을 자동으로 추론합니다:
 ### 1. 설정 파일 생성
 
 ```
-config/SRP/새모듈명.json
+tracking_schemas/SRP/새모듈명.json
 ```
 
 ### 2. 설정 파일 작성

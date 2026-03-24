@@ -50,7 +50,7 @@ G마켓 웹사이트의 사용자 트래킹 로그를 자동으로 수집하고 
 
 ```
 user_tracking_automation/
-├── config/                          # 설정 파일
+├── tracking_schemas/                # 트래킹 스키마 JSON (영역·모듈별 기대값)
 │   ├── SRP/                         # 영역별 설정 폴더
 │   │   ├── 먼저 둘러보세요.json     # 모듈별 설정 파일
 │   │   ├── 일반상품.json
@@ -202,7 +202,7 @@ pipenv run pytest features/srp_tracking.feature::Scenario -v
 프로젝트는 영역별로 설정 파일을 분리하여 관리합니다:
 
 ```
-config/
+tracking_schemas/
 ├── SRP/                    # Search Results Page
 │   ├── 먼저 둘러보세요.json
 │   ├── 일반상품.json
@@ -397,7 +397,7 @@ TestRail 연동을 위해서는 `config.json`에 TestRail 설정이 필요합니
 ### 주요 기능
 
 1. **JSON → Google Sheets**: tracking_all JSON 파일을 Google Sheets로 변환하여 편집 가능한 형태로 제공
-2. **Google Sheets → JSON**: Google Sheets에서 편집한 데이터를 config JSON 파일로 변환
+2. **Google Sheets → JSON**: Google Sheets에서 편집한 데이터를 `tracking_schemas/` 아래 모듈 JSON으로 변환
 
 ### 사용 방법
 

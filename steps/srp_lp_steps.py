@@ -58,6 +58,7 @@ def given_user_searched_keyword(browser_session, keyword, bdd_context):
         logger.info(f"검색 상태 확인: keyword={keyword}")
         # 이미 검색 결과 페이지에 있는지 확인
         current_url = browser_session.page.url
+        search_page = SearchPage(browser_session.page)
         if 'search' not in current_url.lower():
             # 검색 결과 페이지가 아니면 검색 수행
             when_user_searches_keyword(browser_session, keyword, bdd_context)
@@ -197,6 +198,120 @@ def user_goes_to_top_search_module_page(browser_session, keyword, goodscode, bdd
             bdd_context.store['module_title'] = "최상단 클릭아이템"
         if 'keyword' not in bdd_context.store:
             bdd_context.store['keyword'] = keyword
+
+
+@when(parsers.parse('검색 결과 페이지에서 "{module_title}" 정렬을 선택한다'))
+def when_user_selects_sort_tab_typo(browser_session, module_title, bdd_context):
+    """Feature 문구 호환(에서서). dweb SRP 정렬/탭 클릭"""
+    try:
+        search_page = SearchPage(browser_session.page)
+        try:
+            search_page.close_popup()
+        except Exception as e:
+            pass
+        search_page.select_srp_sort_tab(module_title)
+        bdd_context.store['module_title'] = module_title
+        logger.info(f"정렬/탭 선택 완료: {module_title}")
+    except Exception as e:
+        logger.error(f"정렬/탭 선택 실패: {e}", exc_info=True)
+        record_frontend_failure(
+            browser_session, bdd_context, f"정렬/탭 선택 실패: {str(e)}",
+            '검색 결과 페이지에서서 정렬을 선택한다',
+        )
+        if 'module_title' not in bdd_context.store:
+            bdd_context.store['module_title'] = module_title
+
+
+@when(parsers.parse('사용자가 "{filter_name}" 필터 {nth:d}번째를 적용한다'))
+def select_filter(browser_session, filter_name, nth, bdd_context):
+    """
+    검색 결과 페이지에서 필터를 적용한다.
+    """
+    try:
+        search_page = SearchPage(browser_session.page)
+        search_page.select_filter(filter_name, nth)
+    except Exception as e:
+        logger.error(f"필터 적용 실패: {e}", exc_info=True)
+        record_frontend_failure(
+            browser_session,
+            bdd_context,
+            f"필터 적용 실패: {str(e)}",
+            "사용자가 필터를 적용한다",
+        )
+
+
+@when(parsers.parse('사용자가 "{module_title}" 모듈 내 {product_index}번째 상품을 확인하고 클릭한다'))
+def user_confirms_and_clicks_nth_product_in_module(browser_session, module_title, product_index, bdd_context):
+    """
+    n번째 상품 클릭 + 스키마/아티팩트용 bdd_context['nth'] 설정 (클릭 성공 여부와 무관하게 먼저 설정).
+    """
+    bdd_context['nth'] = product_index
+    try:
+        idx_int = int(product_index)
+    except (TypeError, ValueError):
+        logger.error("product_index는 정수(또는 정수 문자열)여야 합니다: %s", product_index)
+        record_frontend_failure(
+            browser_session, bdd_context,
+            f"product_index 파싱 실패: {product_index}",
+            '사용자가 모듈 내 n번째 상품을 확인하고 클릭한다',
+        )
+        bdd_context.store['module_title'] = module_title
+        return
+
+    try:
+        search_page = SearchPage(browser_session.page)
+        module = search_page.get_module_by_title(module_title)
+        search_page.scroll_module_into_view(module)
+        ad_check = search_page.check_ad_item_in_srp_lp_module(module_title)
+        parent = search_page.get_module_parent(module, 2)
+        product = search_page.get_product_in_module_at(parent, idx_int)
+        search_page.scroll_product_into_view(product)
+        try:
+            expect(product.first).to_be_visible()
+        except AssertionError as e:
+            logger.error(f"상품 노출 확인 실패: {e}")
+            record_frontend_failure(
+                browser_session, bdd_context, f"상품 노출 확인 실패: {str(e)}",
+                '사용자가 모듈 내 n번째 상품을 확인하고 클릭한다',
+            )
+            bdd_context.store['module_title'] = module_title
+            return
+
+        goodscode = search_page.get_product_code(product)
+        if search_page.is_add_to_cart_button_visible(parent, goodscode):
+            try:
+                search_page.click_add_to_cart_button(parent, goodscode)
+            except Exception as e:
+                logger.warning(f"장바구니 담기 버튼 클릭 실패 (계속 진행): {e}")
+
+        if ad_check == "F":
+            is_ad = search_page.check_ad_tag_in_srp_lp_product(product)
+        else:
+            is_ad = ad_check
+
+        try:
+            new_page = search_page.click_product_and_wait_new_page(product)
+            browser_session.switch_to(new_page)
+            bdd_context.store['module_title'] = module_title
+            bdd_context.store['goodscode'] = goodscode
+            bdd_context.store['is_ad'] = is_ad
+            bdd_context.store['product_url'] = new_page.url
+            logger.info(f"{module_title} 모듈 내 {idx_int}번째 상품 클릭 완료: {goodscode}")
+        except Exception as e:
+            logger.error(f"상품 클릭 실패: {e}", exc_info=True)
+            record_frontend_failure(
+                browser_session, bdd_context, f"상품 클릭 실패: {str(e)}",
+                '사용자가 모듈 내 n번째 상품을 확인하고 클릭한다',
+            )
+            bdd_context.store['goodscode'] = goodscode
+            bdd_context.store['module_title'] = module_title
+    except Exception as e:
+        logger.error(f"프론트 동작 중 예외 발생: {e}", exc_info=True)
+        record_frontend_failure(
+            browser_session, bdd_context, str(e),
+            '사용자가 모듈 내 n번째 상품을 확인하고 클릭한다',
+        )
+        bdd_context.store['module_title'] = module_title
 
 
 @when(parsers.parse('사용자가 "{module_title}" 모듈 내 상품을 확인하고 클릭한다'))

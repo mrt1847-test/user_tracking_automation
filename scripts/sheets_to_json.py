@@ -195,7 +195,7 @@ def main():
         '--output',
         type=str,
         default=None,
-        help='출력 JSON 파일 경로 (단일 모듈 모드에서만 사용, 기본값: config/{area}/{module}.json)'
+        help='출력 JSON 파일 경로 (단일 모듈 모드에서만 사용, 기본값: tracking_schemas/{area}/{module}.json)'
     )
     parser.add_argument(
         '--overwrite',
@@ -208,7 +208,7 @@ def main():
     # 시트 단위 변환 모드: --area만 필요
     if args.sheet:
         if args.output:
-            print("경고: --sheet 모드에서는 --output이 무시됩니다. 각 모듈은 config/{area}/{모듈명}.json에 저장됩니다.")
+            print("경고: --sheet 모드에서는 --output이 무시됩니다. 각 모듈은 tracking_schemas/{area}/{모듈명}.json에 저장됩니다.")
         _run_sheet_mode(args)
         return
 
@@ -253,7 +253,7 @@ def _run_sheet_mode(args: Any) -> None:
         sys.exit(0)
 
     print(f"모듈 {len(modules)}개 발견: {modules}")
-    out_dir = project_root / 'config' / args.area
+    out_dir = project_root / 'tracking_schemas' / args.area
     out_dir.mkdir(parents=True, exist_ok=True)
     success = 0
     for module in modules:
@@ -275,7 +275,7 @@ def _run_single_module_mode(args: Any) -> None:
     if args.output:
         output_path = Path(args.output)
     else:
-        output_path = project_root / 'config' / args.area / f"{args.module}.json"
+        output_path = project_root / 'tracking_schemas' / args.area / f"{args.module}.json"
 
     if output_path.exists() and not args.overwrite:
         print(f"오류: 파일이 이미 존재합니다: {output_path}")

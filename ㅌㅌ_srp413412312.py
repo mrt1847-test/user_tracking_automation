@@ -5,7 +5,7 @@ from pages.Etc import Etc
 import json
 from utils.NetworkTracker import NetworkTracker
 from utils.validation_helpers import validate_tracking_logs, EVENT_TYPE_METHODS, load_module_config, _find_spm_recursive, module_title_to_filename
-from config.validation_rules import SRP_VALIDATION_RULES
+from tracking_schemas.validation_rules import SRP_VALIDATION_RULES
 import pytest
 import io
 import contextlib

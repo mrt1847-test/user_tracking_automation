@@ -334,6 +334,8 @@ class SearchPage(BasePage):
     # ============================================
     # 모듈 및 상품 관련 메서드 (Atomic POM)
     # ============================================
+
+
     
     def get_module_by_title(self, module_title: str) -> Locator:
         """
@@ -345,6 +347,9 @@ class SearchPage(BasePage):
         Returns:
             Locator 객체
         """
+        def wait_and_return(loc: Locator) -> Locator:
+            loc.wait_for(state="visible", timeout=3000)
+            return loc
         logger.debug(f"모듈 찾기: {module_title}")
         if module_title == "오늘의 슈퍼딜":
             return self.page.get_by_text("오늘의", exact=True)
@@ -362,6 +367,8 @@ class SearchPage(BasePage):
             return self.page.locator(".text__title", has_text="도 보시겠어요")
         elif module_title == "MD's Pick":
             return self.page.get_by_text("믿고 사는 MD's Pick")
+        elif module_title in ("판매 인기순", "상품평 많은순", "신규 상품순"):
+            return wait_and_return(self.page.locator(".box__component-service-tab"))
         return self.page.locator(".text__title", has_text=module_title)
 
     def get_product_in_module(self, parent_locator: Locator) -> Locator:
@@ -376,7 +383,48 @@ class SearchPage(BasePage):
         """
         logger.debug("모듈 내 상품 요소 찾기")
         return parent_locator.locator("div.box__item-container > div.box__image > a").first
-    
+
+    def get_product_in_module_at(self, parent_locator: Locator, index_1based: int) -> Locator:
+        """
+        모듈 내 n번째(1부터) 상품 앵커 Locator
+        
+        Args:
+            parent_locator: 모듈 부모 Locator
+            index_1based: 1부터 시작하는 상품 순번
+        """
+        if index_1based < 1:
+            raise ValueError("index_1based는 1 이상이어야 합니다")
+        logger.debug("모듈 내 %s번째 상품 요소 찾기", index_1based)
+        return parent_locator.locator("div.box__item-container > div.box__image > a").nth(
+            index_1based - 1
+        )
+
+    def select_srp_sort_tab(self, module_title: str) -> None:
+        """SRP 정렬/탭에서 module_title 텍스트를 가진 항목 클릭 (DOM 지연 고려)."""
+        logger.info(f"정렬/탭 선택: {module_title}")
+
+        # 토글 버튼이 DOM에 렌더링/가시화되기까지 대기 후 클릭
+        toggle = self.page.locator(".button__toggle-sort").first
+        toggle.scroll_into_view_if_needed()
+        toggle.wait_for(state="visible", timeout=3000)
+        toggle.click(force=True)
+
+        # 드롭다운/레이어가 뜬 뒤 해당 텍스트 옵션을 선택
+        option = self.page.locator(".text__sort", has_text=module_title).first
+        try:
+            option.wait_for(state="visible", timeout=3000)
+            option.scroll_into_view_if_needed()
+            option.click(force=True)
+        except Exception:
+            # 마크업이 바뀌었거나 다른 클래스명을 사용하는 경우를 위한 fallback
+            option_fallback = self.page.get_by_text(module_title, exact=True).first
+            option_fallback.scroll_into_view_if_needed()
+            option_fallback.wait_for(state="visible", timeout=3000)
+            option_fallback.click(force=True)
+
+        # UI가 안정화될 시간을 짧게 부여 (대기/리렌더 타이밍 완충)
+        time.sleep(3)
+
     def get_product_in_module_type2(self, parent_locator: Locator) -> Locator:
         """
         모듈 내 상품 요소 찾기
@@ -585,6 +633,9 @@ class SearchPage(BasePage):
             "오늘의 상품이에요": "Y",
             "최상단 클릭아이템": "N",
             "주문내역": "N",
+            "상품평 많은순": "N",
+            "신규 상품순": "N",
+            "판매 인기순": "N",
         }
         
         if modulel_title not in MODULE_AD_CHECK:
@@ -618,3 +669,40 @@ class SearchPage(BasePage):
         except Exception as e:
             logger.warning(f"광고 태그 확인 중 오류 발생: {e}")
             return "N"
+
+    def select_filter(self, filter_name: str, nth: int = 1) -> None:
+        """
+        미니 필터 또는 다이나믹 필터 영역에서 n번째 필터 버튼을 클릭한다.
+
+        Args:
+            filter_name: "미니 필터" 또는 "다이나믹 필터"
+            nth: 선택할 필터 버튼 순번 (1부터)
+
+        Returns:
+            None
+
+        Raises:
+            ValueError: 알 수 없는 filter_name인 경우
+        """
+        idx = max(int(nth) - 1, 0)
+        logger.debug(f"필터 선택: {filter_name}, nth={nth} (index={idx})")
+        if filter_name == "키워드 필터":
+            filter_button = self.page.locator(".box__component-header").locator(".list-item").nth(idx)
+        elif filter_name == "content 필터":
+            filter_button = self.page.locator(".section__content-filter-container").locator(".list-item").nth(idx)
+        else:
+            raise ValueError(f"알 수 없는 필터 유형: {filter_name!r} (기대: 미니 필터, 다이나믹 필터)")
+
+        filter_button.wait_for(state="visible", timeout=10000)
+        filter_button.scroll_into_view_if_needed()
+        filter_button.click()
+        time.sleep(3)
+
+    def close_popup(self):
+        """
+        팝업 닫기
+        """
+        popup_close_button = self.page.locator(".button__popup-close")
+        if popup_close_button.count() > 0:
+            popup_close_button.first.click(force=True, timeout=2000)
+        time.sleep(2)

@@ -62,7 +62,7 @@ sequenceDiagram
 - DOM을 통한 상품 정보 노출
 
 ### 5. Module Config
-- `config/module_config.json` 파일에서 모듈별 설정 로드
+- `tracking_schemas/{area}/{module_title}.json` 파일에서 모듈별 설정 로드
 - 예상값 정의 (SPM, channel_code, expected params 등)
 
 ### 6. Validation Helper (VAL)

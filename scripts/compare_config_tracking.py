@@ -138,8 +138,8 @@ def main():
     # 파일 경로
     project_root = Path(__file__).parent.parent
     tracking_file = project_root / 'json' / 'tracking_all_4.5_이상.json'
-    config_file = project_root / 'config' / 'SRP' / '4.5 이상.json'
-    common_fields_file = project_root / 'config' / '_common_fields_by_event.json'
+    config_file = project_root / 'tracking_schemas' / 'SRP' / '4.5 이상.json'
+    common_fields_file = project_root / 'tracking_schemas' / '_common_fields_by_event.json'
     
     # 파일 읽기
     print("파일 로드 중...")

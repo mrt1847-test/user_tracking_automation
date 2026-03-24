@@ -329,7 +329,7 @@ def print_analysis_results(common_fields_by_event: Dict[str, Dict[str, Any]],
     
     # 전역 공통 필드를 JSON으로 저장
     if global_common:
-        output_path = project_root / 'config' / '_common_fields.json'
+        output_path = project_root / 'tracking_schemas' / '_common_fields.json'
         output_data = {}
         for path, field_data in global_common.items():
             output_data[path] = {
@@ -345,7 +345,7 @@ def print_analysis_results(common_fields_by_event: Dict[str, Dict[str, Any]],
     
     # 이벤트 타입별 공통 필드를 JSON으로 저장
     if common_fields_by_event:
-        output_path = project_root / 'config' / '_common_fields_by_event.json'
+        output_path = project_root / 'tracking_schemas' / '_common_fields_by_event.json'
         output_data = {}
         for event_type, fields in common_fields_by_event.items():
             output_data[event_type] = {}
@@ -372,10 +372,10 @@ def main():
     if sys.stdout.encoding != 'utf-8':
         sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
     
-    config_dir = project_root / 'config'
+    config_dir = project_root / 'tracking_schemas'
     
     if not config_dir.exists():
-        print(f"[ERROR] config 디렉토리를 찾을 수 없습니다: {config_dir}")
+        print(f"[ERROR] tracking_schemas 디렉토리를 찾을 수 없습니다: {config_dir}")
         sys.exit(1)
     
     print("config 파일들을 로드하는 중...")

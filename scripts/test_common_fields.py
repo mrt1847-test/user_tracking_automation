@@ -113,7 +113,7 @@ def test_validation_integration():
     print("=" * 60)
     
     # 실제 config 파일 하나 로드
-    config_dir = project_root / 'config'
+    config_dir = project_root / 'tracking_schemas'
     test_file = config_dir / 'SRP' / '일반상품.json'
     
     if not test_file.exists():

@@ -3,10 +3,13 @@
 이벤트 타입별로 검증 수행
 """
 import json
+import logging
 import os
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
 from utils.NetworkTracker import NetworkTracker
+
+logger = logging.getLogger(__name__)
 
 # 이벤트 타입과 메서드 이름 매핑
 EVENT_TYPE_METHODS = {
@@ -43,6 +46,35 @@ EVENT_TYPE_CONFIG_KEY_MAP = {
 
 # Product Minidetail 검증 시 제외할 가격 관련 필드
 MINIDETAIL_PRICE_EXCLUDE_FIELDS = ['origin_price', 'promotion_price', 'coupon_price']
+
+
+def normalize_nth(nth: Any) -> Optional[str]:
+    """
+    파일명 접미사 `(nth)`에 쓸 문자열로 정규화.
+    None·빈 문자열은 무시, 그 외는 str로 변환 (정수·문자열 모두 허용).
+    """
+    if nth is None:
+        return None
+    if isinstance(nth, str) and nth.strip() == "":
+        return None
+    return str(nth).strip() if isinstance(nth, str) else str(nth)
+
+
+def get_nth_for_tracking(bdd_context: Any) -> Optional[Any]:
+    """
+    BDD context에서 스키마/트래킹 아티팩트용 nth 조회.
+    `bdd_context.get`과 `bdd_context.store` 모두 확인. 빈 문자열만 무시 (0은 유지).
+    """
+    raw: Any = None
+    if hasattr(bdd_context, "get"):
+        raw = bdd_context.get("nth")
+    if raw is None and hasattr(bdd_context, "store"):
+        raw = bdd_context.store.get("nth")
+    if raw is None:
+        return None
+    if isinstance(raw, str) and raw.strip() == "":
+        return None
+    return raw
 
 
 def module_title_to_filename(module_title: str) -> str:
@@ -99,15 +131,20 @@ def detect_area_from_feature_path(feature_path: Optional[str] = None) -> str:
 def load_module_config(
     area: Optional[str] = None,
     module_title: Optional[str] = None,
-    feature_path: Optional[str] = None
+    feature_path: Optional[str] = None,
+    nth: Optional[Any] = None,
 ) -> Dict[str, Any]:
     """
     모듈별 설정을 JSON 파일에서 로드
+    
+    nth가 유효하면 ``tracking_schemas/<AREA>/{module_title}({nth}).json``을 우선 시도하고,
+    없으면 ``{module_title}.json``으로 폴백한다.
     
     Args:
         area: 영역명 (SRP, PDP, HOME, CART 등). None이면 feature_path에서 추론
         module_title: 모듈 타이틀. None이면 전체 영역의 모든 모듈 로드
         feature_path: Feature 파일 경로 (영역 추론용)
+        nth: 스키마 변형 인덱스 (문자열/정수, 빈 문자열 무시)
     
     Returns:
         모듈별 설정 딕셔너리 (module_title이 None이면 {module_title: config} 형태)
@@ -116,16 +153,35 @@ def load_module_config(
     if area is None:
         area = detect_area_from_feature_path(feature_path)
     
-    config_base_path = Path(__file__).parent.parent / 'config' / area
+    config_base_path = Path(__file__).parent.parent / 'tracking_schemas' / area
     
     # module_title이 지정된 경우 해당 파일만 로드
     if module_title:
-        config_file_path = config_base_path / f"{module_title}.json"
-        if config_file_path.exists():
-            with open(config_file_path, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        else:
+        n_suffix = normalize_nth(nth)
+        chosen: Optional[Path] = None
+        if n_suffix:
+            paren_path = config_base_path / f"{module_title}({n_suffix}).json"
+            if paren_path.exists():
+                chosen = paren_path
+        if chosen is None:
+            default_path = config_base_path / f"{module_title}.json"
+            if default_path.exists():
+                chosen = default_path
+        if chosen is None:
+            logger.info(
+                "트래킹 스키마 파일 없음: area=%s module=%s nth=%s (기대: %s(%s).json 또는 %s.json)",
+                area,
+                module_title,
+                n_suffix,
+                module_title,
+                n_suffix or "-",
+                module_title,
+            )
             return {}
+        with open(chosen, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        logger.info("트래킹 스키마 로드: %s", chosen.resolve())
+        return data
     
     # module_title이 None이면 전체 영역의 모든 모듈 로드
     config_dict = {}
@@ -472,7 +528,7 @@ def build_expected_from_module_config(
     exclude_fields: Optional[List[str]] = None
 ) -> Dict[str, Any]:
     """
-    모듈 config 파일(예: config/SRP/4.5 이상.json)의 이벤트 타입별 필드만 사용하여 expected_values 생성.
+    모듈 config 파일(예: tracking_schemas/SRP/4.5 이상.json)의 이벤트 타입별 필드만 사용하여 expected_values 생성.
     공통 필드는 병합하지 않음 (sheets_to_json에서 이미 병합된 config 파일을 사용하므로 중복 제거).
 
     필드명만 저장하여 validate_payload에서 재귀 탐색으로 찾을 수 있도록 함.
@@ -537,7 +593,10 @@ def validate_event_type_logs(
     module_title: str,
     frontend_data: Optional[Dict[str, Any]] = None,
     module_config: Optional[Dict[str, Any]] = None,
-    exclude_fields: Optional[List[str]] = None
+    exclude_fields: Optional[List[str]] = None,
+    area: Optional[str] = None,
+    feature_path: Optional[str] = None,
+    nth: Optional[Any] = None,
 ) -> Tuple[bool, List[str], Dict[str, Any]]:
     """
     특정 이벤트 타입의 트래킹 로그 정합성 검증 (module_config.json만 사용)
@@ -550,6 +609,7 @@ def validate_event_type_logs(
         frontend_data: 프론트에서 읽은 데이터 (price, keyword, is_ad 등)
         module_config: 모듈별 설정 딕셔너리 (None이면 JSON 파일에서 자동 로드)
         exclude_fields: 검증에서 제외할 필드 목록
+        area, feature_path, nth: module_config가 None일 때 load_module_config에 전달
     
     Returns:
         (성공 여부, 에러 메시지 리스트, 통과한 필드와 기대값 딕셔너리)
@@ -559,7 +619,12 @@ def validate_event_type_logs(
     
     # 모듈 설정 로드
     if module_config is None:
-        module_config = load_module_config()
+        module_config = load_module_config(
+            area=area,
+            module_title=module_title,
+            feature_path=feature_path,
+            nth=nth,
+        )
     
     # 모듈별 설정 가져오기
     # module_config가 {module_title: config} 형태인 경우와 이미 모듈 설정 딕셔너리인 경우 모두 처리

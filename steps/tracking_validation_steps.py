@@ -13,6 +13,8 @@ from utils.validation_helpers import (
     _find_spm_recursive,
     get_event_logs,
     module_title_to_filename,
+    get_nth_for_tracking,
+    normalize_nth,
 )
 
 logger = logging.getLogger(__name__)
@@ -46,8 +48,9 @@ def _check_and_validate_event_logs(
         logger.warning(f"[TestRail TC: {tc_id}] Skip: {skip_reason}")
         return True
     
+    nth_val = get_nth_for_tracking(bdd_context)
     # module_config 확인
-    module_config = load_module_config(area=area, module_title=module_title)
+    module_config = load_module_config(area=area, module_title=module_title, nth=nth_val)
     module_config_data = module_config if isinstance(module_config, dict) else {}
     
     if event_config_key not in module_config_data:
@@ -170,9 +173,9 @@ def then_pv_logs_should_pass_validation(bdd_context):
     """PV 로그 정합성 검증 (module_config.json에 정의된 경우만)"""
     try:
         tracker, goodscode, module_title, frontend_data, area = _get_common_context(bdd_context)
-        
+        nth_val = get_nth_for_tracking(bdd_context)
         # module_config.json에서 PV가 정의되어 있는지 확인
-        module_config = load_module_config(area=area, module_title=module_title)
+        module_config = load_module_config(area=area, module_title=module_title, nth=nth_val)
         module_config_data = module_config if isinstance(module_config, dict) else {}
         event_config_key = 'pv'
         
@@ -616,7 +619,8 @@ def _save_tracking_logs(bdd_context, tracker, goodscode, module_title):
         area = bdd_context.get('area')
         if not area:
             raise ValueError("bdd_context에 'area'가 없습니다. Feature 파일 경로에서 영역을 추론하지 못했습니다.")
-        module_config = load_module_config(area=area, module_title=module_title)
+        nth_val = get_nth_for_tracking(bdd_context)
+        module_config = load_module_config(area=area, module_title=module_title, nth=nth_val)
         
         # 모듈별 설정에서 SPM 가져오기 (이벤트 타입별 섹션에서, 재귀적으로 탐색)
         module_spm = None
@@ -717,7 +721,9 @@ def _save_tracking_logs(bdd_context, tracker, goodscode, module_title):
         
         if len(all_logs) > 0:
             module_safe = module_title_to_filename(module_title)
-            all_filepath = Path(f'json/tracking_all_{module_safe}.json')
+            ns = normalize_nth(get_nth_for_tracking(bdd_context))
+            suffix = f"({ns})" if ns else ""
+            all_filepath = Path(f'json/tracking_all_{module_safe}{suffix}.json')
             all_filepath.parent.mkdir(parents=True, exist_ok=True)
             with open(all_filepath, 'w', encoding='utf-8') as f:
                 json.dump(all_logs, f, ensure_ascii=False, indent=2, default=str)
