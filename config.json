@@ -1,14 +1,14 @@
 {
     "driver": "Chrome",
     "match_rate": 0.88,
-    "testrail_run_name": "GUT Automation test dweb {timestamp}",
-    "testrail_close_run_on_finish": "Y",
-    "testrail_report": "N",
-    "milestone_id": "1564",
-    "project_id": "212",
-    "section_id": "69750",
-    "suite_id": "1999",
+    "testrail_run_name": "User Tracking Aoutomation Test - PC",
+    "testrail_close_run_on_finish": "N",
+    "testrail_report": "Y",
+    "milestone_id": "1645",
+    "project_id": "216",
+    "section_id": "86743",
+    "suite_id": "2202",
     "tr_url": "http://172.30.2.20",
     "multiple_test_use": false,
-    "environment": "dev"
+    "environment": "stg"
 }

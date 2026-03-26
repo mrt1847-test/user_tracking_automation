@@ -1022,15 +1022,44 @@ class NetworkTracker:
         
         return False
     
+    def _get_log_collection_timestamp(self, log: Dict[str, Any]) -> float:
+        """
+        로그의 수집(또는 전송) 시각을 초 단위 float로 반환 (정렬·최신 선택용).
+        상단 timestamp 우선, 없으면 payload.ts(밀리초) 사용.
+        """
+        raw = log.get('timestamp')
+        if isinstance(raw, (int, float)):
+            return float(raw)
+        if isinstance(raw, str) and raw.strip():
+            try:
+                return float(raw.strip())
+            except ValueError:
+                pass
+        payload = log.get('payload')
+        if isinstance(payload, dict):
+            pts = payload.get('ts')
+            if pts is not None and str(pts).strip():
+                try:
+                    v = float(str(pts).strip())
+                    if v > 1e12:
+                        v /= 1000.0
+                    return v
+                except ValueError:
+                    pass
+        return 0.0
+    
     def get_module_exposure_logs_by_spm(self, spm: str) -> List[Dict[str, Any]]:
         """
         spm 기준으로 Module Exposure 로그만 반환
+        
+        동일 SPM으로 매칭되는 로그가 여러 건이면 수집 시각이 가장 늦은 1건만 반환한다
+        (이전 노출 로그로 인한 오탐을 막기 위함).
         
         Args:
             spm: SPM 값 (예: "gmktpc.searchlist.cpc")
         
         Returns:
-            해당 spm의 Module Exposure 로그 리스트
+            해당 spm의 Module Exposure 로그 리스트 (최대 1건)
         """
         filtered_logs = []
         
@@ -1048,6 +1077,16 @@ class NetworkTracker:
                     logger.debug(f"SPM 필터링 불일치: log_spm='{log_spm}', target_spm='{spm}'")
             else:
                 logger.debug(f"SPM 추출 실패: 로그에서 spm을 찾을 수 없음")
+        
+        if len(filtered_logs) > 1:
+            filtered_logs.sort(key=lambda lg: self._get_log_collection_timestamp(lg))
+            latest = filtered_logs[-1]
+            t_latest = self._get_log_collection_timestamp(latest)
+            logger.info(
+                f"SPM '{spm}' Module Exposure 동일 매칭 {len(filtered_logs)}건 → "
+                f"최신 수집 시각 기준 1건만 사용 (ts≈{t_latest:.3f})"
+            )
+            filtered_logs = [latest]
         
         logger.info(f"SPM '{spm}'로 필터링된 Module Exposure 로그: {len(filtered_logs)}/{len(module_exposure_logs)}개")
         
@@ -1448,6 +1487,14 @@ class NetworkTracker:
                         expected_value in actual_value):
                         field_passed = True
                         # 포함 매칭 성공, 다음 필드로 (값 저장은 아래에서)
+                    else:
+                        errors.append(
+                            f"키 '{key}'의 값이 일치하지 않습니다. "
+                            f"기대값 (포함 여부): {expected_value}, 실제값: {actual_value}"
+                        )
+                elif key == 'ab_buckets' and isinstance(expected_value, str) and isinstance(actual_value, str):
+                    if expected_value in actual_value:
+                        field_passed = True
                     else:
                         errors.append(
                             f"키 '{key}'의 값이 일치하지 않습니다. "

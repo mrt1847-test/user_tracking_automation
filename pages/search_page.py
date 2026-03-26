@@ -689,7 +689,7 @@ class SearchPage(BasePage):
         if filter_name == "키워드 필터":
             filter_button = self.page.locator(".box__component-header").locator(".list-item").nth(idx)
         elif filter_name == "content 필터":
-            filter_button = self.page.locator(".section__content-filter-container").locator(".list-item").nth(idx)
+            filter_button = self.page.locator(".section__content-filter-container").locator(".list-item",has_text="무료배송").nth(idx)
         else:
             raise ValueError(f"알 수 없는 필터 유형: {filter_name!r} (기대: 미니 필터, 다이나믹 필터)")
 
