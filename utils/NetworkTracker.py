@@ -1120,17 +1120,29 @@ class NetworkTracker:
         goodscode 기준으로 Product Exposure 로그만 반환
         spm이 제공되면 추가로 필터링
         
+        동일 goodscode로 여러 네트워크 로그가 잡히면 수집 시각이 가장 늦은 1건만 반환한다.
+        
         Args:
             goodscode: 상품 번호
             spm: SPM 값 (선택적, 예: "gmktpc.searchlist.cpc")
         
         Returns:
-            해당 goodscode의 Product Exposure 로그 리스트
+            해당 goodscode의 Product Exposure 로그 리스트 (최대 1건)
         """
         logs = self.get_logs_by_goodscode(goodscode, 'Product Exposure')
         
-        # spm 필터링이 없으면 바로 반환
+        # spm 필터링이 없으면 바로 반환 (동일 goodscode 다건이면 최신 수집 1건만)
         if not spm:
+            if len(logs) > 1:
+                n = len(logs)
+                logs_sorted = sorted(logs, key=lambda lg: self._get_log_collection_timestamp(lg))
+                latest = logs_sorted[-1]
+                t_latest = self._get_log_collection_timestamp(latest)
+                logger.info(
+                    f"goodscode '{goodscode}' Product Exposure {n}건 → "
+                    f"최신 수집 시각 기준 1건만 사용 (ts≈{t_latest:.3f})"
+                )
+                return [latest]
             return logs
         
         filtered_logs = []
@@ -1196,6 +1208,17 @@ class NetworkTracker:
                 filtered_logs.append(filtered_log)
             else:
                 logger.debug(f"Product Exposure 로그 필터링 제외: goodscode={goodscode}, spm={spm}와 매칭되는 항목 없음")
+        
+        if len(filtered_logs) > 1:
+            n = len(filtered_logs)
+            filtered_logs.sort(key=lambda lg: self._get_log_collection_timestamp(lg))
+            latest = filtered_logs[-1]
+            t_latest = self._get_log_collection_timestamp(latest)
+            logger.info(
+                f"goodscode '{goodscode}', SPM '{spm}' Product Exposure {n}건 → "
+                f"최신 수집 시각 기준 1건만 사용 (ts≈{t_latest:.3f})"
+            )
+            filtered_logs = [latest]
         
         logger.info(f"SPM '{spm}'로 필터링된 Product Exposure 로그: {len(filtered_logs)}/{len(logs)}개 (매칭된 항목: {matched_items}/{total_items}개)")
         
