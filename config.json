@@ -10,5 +10,5 @@
     "suite_id": "2202",
     "tr_url": "http://172.30.2.20",
     "multiple_test_use": false,
-    "environment": "stg"
+    "environment": "prod"
 }
